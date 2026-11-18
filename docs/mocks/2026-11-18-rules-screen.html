@@ -1,0 +1,270 @@
+<!--
+  Rules screen mock (write and confirm), chosen by William on 18 November 2026: "Rule cards".
+  Same OKX Wallet look as docs/mocks/2026-11-18-miner-page.html (dark and light).
+  Static mock: the plain-words read-back and the allowed/refused verdicts are sample data. The real ones come from
+  Furqaan's policy schema and AI rules drafting, which are not drafted yet. Build to this; a layout or flow change is a
+  new mock and a new choice.
+  Settled with William for this screen:
+  - This page covers writing and confirming rules only. Tape-out, paper run and agent key are their own screens.
+  - Input is a plain text box plus tap-to-add starters.
+  - Each rule becomes a card (Sell, Rent, Lend) with allowed and refused examples drawn from this miner's live offers.
+  - Where the wording is ambiguous, Foreman asks one question; Confirm stays disabled until it is answered.
+  - Selling stays off unless a rule turns it on. Nothing happens until the owner confirms.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foreman · Rules</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --raise:#F5F5F5; --ink:#000000; --ink-2:#6B6B6B; --ink-3:#9A9A9A; --line:#EBEBEB;
+  --accent:#C2F24B; --on-accent:#000000; --live:#14A44D; --stale:#C4231B; --stale-bg:#FDECEA;
+  --btn:#000000; --on-btn:#FFFFFF; --track:#E6E6E6; --span:#BDBDBD;
+  --sans:"Geist","Noto Sans SC",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+    --live:#3DDC84; --stale:#FF7A6B; --stale-bg:#2A1210;
+    --btn:#FFFFFF; --on-btn:#000000; --track:#262626; --span:#4A4A4A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+  --live:#3DDC84; --stale:#FF7A6B; --stale-bg:#2A1210;
+  --btn:#FFFFFF; --on-btn:#000000; --track:#262626; --span:#4A4A4A;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{background:var(--bg)}
+::selection{background:var(--accent);color:var(--on-accent)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+button{font:inherit;color:inherit}
+a{color:inherit}
+
+/* top bar */
+.top{display:grid;grid-template-columns:auto minmax(0,480px) auto;justify-content:space-between;align-items:center;gap:24px;height:64px;padding:0 32px;border-bottom:1px solid var(--line)}
+.mark{display:flex;align-items:center;gap:9px;font:700 18px/1 var(--sans);letter-spacing:-.02em}
+.mark svg{display:block}
+.search{display:flex;align-items:center;gap:10px;height:40px;padding:0 6px 0 14px;border-radius:999px;background:var(--raise)}
+.search svg{flex:none;color:var(--ink-2)}
+.search input{all:unset;flex:1;min-width:0;font:500 14px/1 var(--sans)}
+.search input::placeholder{color:var(--ink-2)}
+.search button{all:unset;cursor:pointer;font:600 13px/1 var(--sans);padding:8px 12px;border-radius:999px;background:var(--btn);color:var(--on-btn)}
+.right{display:flex;align-items:center;gap:6px}
+.right nav{display:flex;gap:2px;margin-right:8px}
+.right nav a{font:500 14px/1 var(--sans);color:var(--ink-2);text-decoration:none;padding:9px 12px;border-radius:999px}
+.right nav a:hover{color:var(--ink)}
+.right nav a[aria-current=page]{color:var(--ink);background:var(--raise)}
+.icon{all:unset;cursor:pointer;display:grid;place-items:center;width:36px;height:36px;border-radius:999px;color:var(--ink-2)}
+.icon:hover{background:var(--raise);color:var(--ink)}
+.lang{font:600 13px/1 var(--sans);color:var(--ink-2);padding:0 6px}
+.wallet{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;font:600 13px/1 var(--sans);padding:10px 14px;border-radius:999px;background:var(--raise);white-space:nowrap;margin-left:4px}
+.wallet i{width:7px;height:7px;border-radius:50%;background:var(--live)}
+
+.page{max-width:1200px;margin:0 auto;padding:36px 32px 56px;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:56px;align-items:start}
+
+/* miner header */
+.who{display:flex;align-items:center;gap:14px}
+.badge{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:999px;background:var(--ink);color:var(--bg);font:700 14px/1 var(--sans);letter-spacing:.02em}
+:root{--ok-bg:#E8F6EE;--ask-bg:#FFF6CC;--ask-line:#E9D98A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ok-bg:#0F2A1A;--ask-bg:#29230C;--ask-line:#4A4018}}
+:root[data-theme="dark"]{--ok-bg:#0F2A1A;--ask-bg:#29230C;--ask-line:#4A4018}
+.page{display:block;max-width:1200px;padding-top:28px}
+.back{flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:999px;background:var(--raise);color:var(--ink);text-decoration:none}
+.back:hover{background:var(--line)}
+.who .badge{width:36px;height:36px;font-size:12px}
+.who .k{font:600 15px/1.3 var(--sans)}
+.who .k small{display:block;font:400 13px/1.35 var(--sans);color:var(--ink-2)}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:22px 0 16px}
+h1{font:600 30px/1.15 var(--sans);letter-spacing:-.02em}
+.head p{font-size:14px;color:var(--ink-2)}
+h2{font:600 17px/1.3 var(--sans)}
+
+/* writing */
+.write{position:relative}
+.write textarea{all:unset;box-sizing:border-box;display:block;width:100%;min-height:120px;field-sizing:content;padding:18px 20px 40px;border-radius:16px;background:var(--raise);font:500 17px/1.55 var(--sans);color:var(--ink);white-space:pre-wrap}
+.write textarea:focus-visible{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.write .count{position:absolute;right:16px;bottom:12px;font:500 12px/1 var(--sans);color:var(--ink-2)}
+.starters{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.starters button{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font:500 13px/1 var(--sans);padding:9px 12px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--line);white-space:nowrap}
+.starters button:hover{background:var(--raise)}
+
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:28px}
+.card{border-radius:20px;box-shadow:inset 0 0 0 1px var(--line);padding:20px;transition:box-shadow .3s}
+.card.flag{box-shadow:inset 0 0 0 1.5px var(--ask-line)}
+.ch{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.on{display:inline-flex;align-items:center;gap:6px;font:600 12px/1 var(--sans);padding:5px 8px;border-radius:6px;background:var(--raise);color:var(--ink)}
+.on::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--live)}
+.pw{font:500 16px/1.45 var(--sans);margin-top:10px}
+.note{font-size:13px;line-height:1.45;color:var(--ink-2);margin-top:6px}
+.card ul{list-style:none;padding:0;margin-top:14px}
+.card li{display:grid;grid-template-columns:92px minmax(0,1fr);gap:10px;align-items:start;padding:11px 0;border-top:1px solid var(--line);font:500 14px/1.4 var(--sans)}
+.card li small{display:block;font:400 13px/1.4 var(--sans);color:var(--ink-2);margin-top:2px}
+.v{display:inline-flex;align-items:center;gap:6px;justify-self:start;font:600 12px/1 var(--sans);padding:5px 8px;border-radius:6px;white-space:nowrap}
+.v svg{flex:none}
+.v.yes{background:var(--ok-bg);color:var(--live)}
+.v.no{background:var(--stale-bg);color:var(--stale)}
+
+/* question, built-in, confirm */
+.ask{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;margin-top:20px;padding:16px 18px;border-radius:16px;background:var(--ask-bg)}
+.ask .q{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--bg);font:700 13px/1 var(--sans)}
+.ask p{font-size:14px;line-height:1.5}
+.ask p b{font-weight:600}
+.choices{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.choices button{all:unset;cursor:pointer;font:600 13px/1 var(--sans);padding:9px 12px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line)}
+.choices button[aria-pressed=true]{background:var(--btn);color:var(--on-btn);box-shadow:none}
+.ask.done{background:var(--raise)}
+.built{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:20px;font-size:13px;color:var(--ink-2)}
+.built b{color:var(--ink);font-weight:600}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
+.bar p{font-size:14px;color:var(--ink-2);max-width:56ch}
+.acts{display:flex;gap:10px}
+.btn{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;height:48px;padding:0 24px;border-radius:999px;background:var(--btn);color:var(--on-btn);font:600 15px/1 var(--sans);white-space:nowrap}
+.btn:hover{opacity:.88}
+.btn[aria-disabled=true]{opacity:.35;cursor:not-allowed}
+.btn.ghost{background:none;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.btn.ghost:hover{background:var(--raise);opacity:1}
+.ok{display:none;margin-top:24px;padding:18px 20px;border-radius:16px;background:var(--ok-bg)}
+.ok b{display:block;font:600 16px/1.3 var(--sans);color:var(--ink)}
+.ok span{font-size:14px;color:var(--ink-2)}
+body.confirmed .ok{display:block} body.confirmed .bar{display:none}
+.legal{margin-top:20px;font-size:12px;color:var(--ink-2)}
+
+@media (max-width:1040px){ .right nav{display:none} .cards{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+@media (max-width:760px){
+  .top{grid-template-columns:auto auto;height:auto;padding:12px 16px;gap:12px}
+  .search{grid-column:1/-1;grid-row:2}
+  .lang{display:none}
+  .page{padding:20px 16px 120px}
+  h1{font-size:26px}
+  .cards{grid-template-columns:minmax(0,1fr)}
+  .bar{position:fixed;left:0;right:0;bottom:0;margin:0;padding:12px 16px;background:var(--bg);z-index:2}
+  .bar p{display:none}
+  .acts{width:100%} .acts .btn{flex:1;padding:0 12px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="mark"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="9" height="9" rx="2" fill="currentColor"/><rect x="12" y="1" width="9" height="9" rx="2" fill="currentColor" opacity=".35"/><rect x="1" y="12" width="9" height="9" rx="2" fill="currentColor" opacity=".35"/><rect x="12" y="12" width="9" height="9" rx="2" fill="#C2F24B"/></svg>Foreman</div>
+  <form class="search" role="search" onsubmit="return false">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <input aria-label="Miner key" placeholder="Paste a miner key" value="0x3f9a6b1e…8d07c21e"><button>Value</button>
+  </form>
+  <div class="right">
+    <nav><a href="#">Miners</a><a href="#" aria-current="page">Rules</a><a href="#">Action log</a></nav>
+    <span class="lang">EN · 中文</span>
+    <button class="icon" id="theme" aria-label="Switch light or dark"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M3.7 14.3l1.4-1.4M12.9 5.1l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button class="wallet"><i></i>0x7c4e…19ab</button>
+  </div>
+</header>
+
+<main class="page">
+  <div class="who">
+    <a class="back" href="#" aria-label="Back to the decision screen"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    <span class="badge" aria-hidden="true">3F</span>
+    <span class="k">Rules for miner 0x3f9a…c21e<small>Verified · holds the design bonus · Sample</small></span>
+  </div>
+  <div class="head"><h1>Your rules</h1><p>Write them in your own words. Examples use this miner's live offers.</p></div>
+
+  <div class="write">
+    <textarea id="rules" aria-label="Your rules" rows="2">Never sell below 400 BEM. Only rent for 30 days or less, and only if it pays more than holding. Borrow at most 25 BEM.</textarea>
+    <span class="count">3 rules found</span>
+  </div>
+  <div class="starters" aria-label="Add a starter">
+    <button data-add="Never sell below 400 BEM.">+ Never sell below …</button>
+    <button data-add="Only rent for 30 days or less.">+ Only rent for … days or less</button>
+    <button data-add="Borrow at most 25 BEM.">+ Borrow at most …</button>
+    <button data-add="Never sell.">+ Never sell</button>
+  </div>
+
+  <div class="cards">
+    <section class="card" aria-label="Rule 1, Sell">
+      <div class="ch"><h2>Sell</h2><span class="on">On</span></div>
+      <p class="pw">Selling is on, only at 400 BEM or more.</p>
+      <p class="note">Selling stays off unless one of your rules turns it on.</p>
+      <ul>
+        <li><span class="v yes"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1.5 5.2l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>Allowed</span><span>Sell for 410 BEM<small>At or above your 400 BEM floor</small></span></li>
+        <li><span class="v no"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.8"/></svg>Refused</span><span>Sell for 380 BEM<small>Below your 400 BEM floor</small></span></li>
+      </ul>
+    </section>
+    <section class="card flag" id="rent" aria-label="Rule 2, Rent">
+      <div class="ch"><h2>Rent</h2><span class="on">On</span></div>
+      <p class="pw">Renting is on for 30 days or less, only when it pays more than holding.</p>
+      <p class="note" id="rent-basis">"More than holding" read as: over the rental, base case.</p>
+      <ul>
+        <li><span class="v yes"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1.5 5.2l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>Allowed</span><span>Rent for 30 days at 1.98 BEM a day<small id="r1">Pays 7.71 BEM more than holding</small></span></li>
+        <li><span class="v no"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.8"/></svg>Refused</span><span>Rent for 45 days at 1.70 BEM a day<small>Longer than 30 days</small></span></li>
+        <li id="r3li"><span class="v no" id="r3v"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.8"/></svg>Refused</span><span>Rent for 14 days at 1.60 BEM a day<small id="r3">Pays 2.49 BEM less than holding</small></span></li>
+      </ul>
+    </section>
+    <section class="card" aria-label="Rule 3, Lend">
+      <div class="ch"><h2>Lend</h2><span class="on">On</span></div>
+      <p class="pw">Borrowing is on, at most 25 BEM at a time.</p>
+      <ul>
+        <li><span class="v yes"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1.5 5.2l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>Allowed</span><span>Borrow 22.80 BEM from TapePool<small>Under your 25 BEM limit</small></span></li>
+        <li><span class="v no"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.8"/></svg>Refused</span><span>Borrow 40 BEM from TapePool<small>Over your 25 BEM limit</small></span></li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="ask" id="ask" role="group" aria-labelledby="ask-t">
+    <span class="q" aria-hidden="true">?</span>
+    <div>
+      <p id="ask-t"><b>One thing to check.</b> "Only if it pays more than holding": compared with holding in which case?</p>
+      <div class="choices">
+        <button data-c="base" aria-pressed="false">Base case (our best estimate)</button>
+        <button data-c="low" aria-pressed="false">Low case (more cautious about holding, so more rentals pass)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="built"><span><b>Always on:</b> Foreman never holds your miner.</span><span>A refused move is logged and never retried in another form.</span><span>You can change these rules at any time.</span></div>
+
+  <div class="bar">
+    <p id="bar-t">Answer the question above to confirm. Nothing happens until you confirm.</p>
+    <div class="acts"><button class="btn ghost" id="edit">Edit rules</button><button class="btn" id="confirm" aria-disabled="true">Confirm these rules</button></div>
+  </div>
+  <div class="ok" role="status"><b>Rules confirmed</b><span>Next: we build your rules circuit, then show a paper run of what these rules would have done. No move is made yet.</span></div>
+
+  <p class="legal">Examples use offers checked 2 min ago. Estimated values under stated assumptions. Not financial advice.</p>
+</main>
+
+<script>
+// Static mock: the read-back and verdicts are sample data; the policy shape waits on Furqaan's schema
+const $=(id)=>document.getElementById(id);
+let answered=false;
+document.querySelectorAll(".choices button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".choices button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+  answered=true;
+  const low=b.dataset.c==="low";
+  $("rent-basis").textContent=low?'"More than holding" read as: over the rental, low case.':'"More than holding" read as: over the rental, base case.';
+  $("r1").textContent=low?"Pays 48.32 BEM more than holding":"Pays 7.71 BEM more than holding";
+  const yes=$("r3v");
+  if(low){yes.className="v yes";yes.innerHTML='<svg width="10" height="10" viewBox="0 0 10 10"><path d="M1.5 5.2l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>Allowed';$("r3").textContent="Pays 16.82 BEM more than holding's low case";}
+  else{yes.className="v no";yes.innerHTML='<svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.8"/></svg>Refused';$("r3").textContent="Pays 2.49 BEM less than holding";}
+  $("rent").classList.remove("flag");$("ask").classList.add("done");
+  $("confirm").setAttribute("aria-disabled","false");
+  $("bar-t").textContent="Check the examples, then confirm. Nothing happens until you confirm.";
+}));
+$("confirm").addEventListener("click",()=>{ if(answered) document.body.classList.add("confirmed"); });
+$("edit").addEventListener("click",()=>$("rules").focus());
+document.querySelectorAll(".starters button").forEach(b=>b.addEventListener("click",()=>{const t=$("rules");t.value=(t.value.trim()+" "+b.dataset.add).trim();t.focus();}));
+$("theme").addEventListener("click",()=>{
+  const r=document.documentElement;
+  const dark=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme=dark?"light":"dark";
+});
+</script>
+</body>
+</html>
