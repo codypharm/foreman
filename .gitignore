@@ -18,3 +18,7 @@ node_modules/
 dist/
 coverage/
 *.tsbuildinfo
+
+# impeccable working files (draft mocks, decision pages, hook cache); chosen mocks go in docs/mocks
+.impeccable/*
+!.impeccable/config.json
