@@ -1,0 +1,16 @@
+{
+	"name": "@foreman/valuation",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"typecheck": "tsc -p ."
+	},
+	"devDependencies": {
+		"vitest": "^5.1.0"
+	}
+}

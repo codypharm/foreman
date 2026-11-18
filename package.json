@@ -1,0 +1,19 @@
+{
+	"name": "foreman",
+	"private": true,
+	"type": "module",
+	"packageManager": "pnpm@11.21.0",
+	"engines": {
+		"node": ">=24"
+	},
+	"scripts": {
+		"test": "pnpm -r --if-present test",
+		"typecheck": "pnpm -r --if-present typecheck",
+		"check": "biome check .",
+		"fix": "biome check --write ."
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.6.8",
+		"typescript": "^7.0.2"
+	}
+}

@@ -12,3 +12,9 @@
 
 # Personal Claude Code permissions (blanket Bash allow); not shared
 .claude/settings.json
+
+# Node
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
