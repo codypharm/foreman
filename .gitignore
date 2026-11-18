@@ -1,0 +1,14 @@
+# impeccable skill: platform binary (18 MB, macOS arm64 only). The launcher
+# downloads and checksum-verifies the right binary when it is missing.
+.claude/skills/impeccable/scripts/bin/
+
+# Secrets: names only go in .env.example (see CLAUDE.md, "Security first")
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+
+# Personal Claude Code permissions (blanket Bash allow); not shared
+.claude/settings.json
