@@ -1,0 +1,307 @@
+<!--
+  Decision screen mock, chosen by William on 18 November 2026: "Head to head" with the "How they add up" chart.
+  Same OKX Wallet look as docs/mocks/2026-11-18-miner-page.html (dark and light).
+  Static mock: holding figures from packages/valuation; offers (renter, bidder, TapePool terms) are made-up sample data
+  until the X Layer offer reader exists. Build to this; a layout or flow change is a new mock and a new choice.
+  Settled with William for this screen:
+  - Every option is measured in BEM against holding, base case. Rent and Lend against holding over the same window;
+    Sell against holding until the 2030 halving, because selling gives up all future output.
+  - Ranked by BEM vs holding; the top option is marked "Pays most vs holding". Never "you should".
+  - The best offer per option shows; the rest are folded ("2 more offers").
+  - "Compare with Hold" swaps any option into the head-to-head slot; the chart follows it.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foreman · Decision</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --raise:#F5F5F5; --ink:#000000; --ink-2:#6B6B6B; --ink-3:#9A9A9A; --line:#EBEBEB;
+  --accent:#C2F24B; --on-accent:#000000; --live:#14A44D; --stale:#C4231B; --stale-bg:#FDECEA;
+  --btn:#000000; --on-btn:#FFFFFF; --track:#E6E6E6; --span:#BDBDBD;
+  --sans:"Geist","Noto Sans SC",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+    --live:#3DDC84; --stale:#FF7A6B; --stale-bg:#2A1210;
+    --btn:#FFFFFF; --on-btn:#000000; --track:#262626; --span:#4A4A4A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+  --live:#3DDC84; --stale:#FF7A6B; --stale-bg:#2A1210;
+  --btn:#FFFFFF; --on-btn:#000000; --track:#262626; --span:#4A4A4A;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{background:var(--bg)}
+::selection{background:var(--accent);color:var(--on-accent)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+button{font:inherit;color:inherit}
+a{color:inherit}
+
+/* top bar */
+.top{display:grid;grid-template-columns:auto minmax(0,480px) auto;justify-content:space-between;align-items:center;gap:24px;height:64px;padding:0 32px;border-bottom:1px solid var(--line)}
+.mark{display:flex;align-items:center;gap:9px;font:700 18px/1 var(--sans);letter-spacing:-.02em}
+.mark svg{display:block}
+.search{display:flex;align-items:center;gap:10px;height:40px;padding:0 6px 0 14px;border-radius:999px;background:var(--raise)}
+.search svg{flex:none;color:var(--ink-2)}
+.search input{all:unset;flex:1;min-width:0;font:500 14px/1 var(--sans)}
+.search input::placeholder{color:var(--ink-2)}
+.search button{all:unset;cursor:pointer;font:600 13px/1 var(--sans);padding:8px 12px;border-radius:999px;background:var(--btn);color:var(--on-btn)}
+.right{display:flex;align-items:center;gap:6px}
+.right nav{display:flex;gap:2px;margin-right:8px}
+.right nav a{font:500 14px/1 var(--sans);color:var(--ink-2);text-decoration:none;padding:9px 12px;border-radius:999px}
+.right nav a:hover{color:var(--ink)}
+.right nav a[aria-current=page]{color:var(--ink);background:var(--raise)}
+.icon{all:unset;cursor:pointer;display:grid;place-items:center;width:36px;height:36px;border-radius:999px;color:var(--ink-2)}
+.icon:hover{background:var(--raise);color:var(--ink)}
+.lang{font:600 13px/1 var(--sans);color:var(--ink-2);padding:0 6px}
+.wallet{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;font:600 13px/1 var(--sans);padding:10px 14px;border-radius:999px;background:var(--raise);white-space:nowrap;margin-left:4px}
+.wallet i{width:7px;height:7px;border-radius:50%;background:var(--live)}
+
+.page{max-width:1200px;margin:0 auto;padding:36px 32px 56px;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:56px;align-items:start}
+
+/* miner header */
+.who{display:flex;align-items:center;gap:14px}
+.badge{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:999px;background:var(--ink);color:var(--bg);font:700 14px/1 var(--sans);letter-spacing:.02em}
+.page{grid-template-columns:minmax(0,1fr) 320px;padding-top:28px}
+.back{flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:999px;background:var(--raise);color:var(--ink);text-decoration:none}
+.back:hover{background:var(--line)}
+.who .badge{width:36px;height:36px;font-size:12px}
+.who .k{font:600 15px/1.25 var(--sans)}
+.who .k small{display:block;font:400 13px/1.35 var(--sans);color:var(--ink-2)}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:22px 0}
+h1{font:600 30px/1.15 var(--sans);letter-spacing:-.02em}
+.tag{font:600 12px/1 var(--sans);padding:5px 8px;border-radius:6px;background:var(--stale-bg);color:var(--stale);white-space:nowrap}
+.pill{display:inline-block;font:600 12px/1 var(--sans);padding:6px 9px;border-radius:999px;background:var(--accent);color:var(--on-accent);white-space:nowrap}
+.new{display:inline-block;font:600 12px/1 var(--sans);padding:5px 8px;border-radius:6px;background:var(--ink);color:var(--bg);white-space:nowrap}
+.up{color:var(--live)} .down{color:var(--stale)}
+
+/* head to head */
+.vs{display:grid;grid-template-columns:minmax(0,1fr) 128px minmax(0,1fr);border-radius:20px;background:var(--raise);padding:28px}
+.side .lbl{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font:600 17px/1.3 var(--sans);min-height:26px}
+.side .num{display:flex;align-items:baseline;gap:8px;margin-top:14px}
+.side .num strong{font:600 56px/1 var(--sans);letter-spacing:-.035em}
+.side .num span{font:600 18px/1 var(--sans);color:var(--ink-2)}
+.side p{font-size:14px;color:var(--ink-2);margin-top:8px;line-height:1.45}
+.side .meta{font-size:13px}
+.act{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;height:48px;margin-top:20px;padding:0 24px;border-radius:999px;background:var(--btn);color:var(--on-btn);font:600 15px/1 var(--sans);white-space:nowrap}
+.act:hover{opacity:.88}
+.gap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;margin:0 20px;border-left:1px solid var(--line);border-right:1px solid var(--line);text-align:center}
+.gap b{font:600 24px/1 var(--sans);letter-spacing:-.01em}
+.gap small{font-size:12px;line-height:1.35;color:var(--ink-2)}
+.side .bar{position:relative;height:22px;margin-top:18px}
+.side .bar .t{position:absolute;left:0;right:0;top:9px;height:4px;border-radius:2px;background:var(--track)}
+.side .bar .s{position:absolute;top:9px;height:4px;border-radius:2px;background:var(--span);transition:left .4s cubic-bezier(.16,1,.3,1),width .4s cubic-bezier(.16,1,.3,1)}
+.side .bar .b{position:absolute;top:2px;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--raise);transition:left .4s cubic-bezier(.16,1,.3,1)}
+.lh{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-2);margin-top:6px}
+.lh b{color:var(--ink);font-weight:600}
+
+/* other options */
+.sec{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.sec h2{font:600 17px/1.2 var(--sans)}
+.sec small{font-size:13px;color:var(--ink-2)}
+.others{margin-top:36px}
+.row{display:grid;grid-template-columns:24px minmax(0,1fr) minmax(0,1.3fr) 110px auto;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid var(--line)}
+.row .n{font:600 14px/1 var(--sans);color:var(--ink-2)}
+.row .o{font:600 16px/1.3 var(--sans)}
+.row small{display:block;font:400 13px/1.4 var(--sans);color:var(--ink-2);margin-top:2px}
+.row .t2{font:500 15px/1.3 var(--sans)}
+.row .d{text-align:right;font:600 16px/1.2 var(--sans)}
+.row .d small{font-size:12px}
+.swap{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;height:38px;padding:0 16px;border-radius:999px;font:600 14px/1 var(--sans);box-shadow:inset 0 0 0 1px var(--line);white-space:nowrap}
+.swap:hover{background:var(--raise)}
+
+/* chart */
+.over{margin-top:40px}
+.chart{display:block;width:100%;height:auto;margin-top:16px;overflow:visible}
+.chart text{font:500 12px var(--sans);fill:var(--ink-2)}
+.chart .end{font:600 13px var(--sans);fill:var(--ink)}
+.chart .gl{stroke:var(--line)}
+.chart .band{fill:var(--ink);opacity:.07}
+.chart .hold{fill:none;stroke:var(--ink-3);stroke-width:2.5}
+.chart .rent{stroke:var(--ink);stroke-width:3}
+.chart .lend{fill:none;stroke:var(--ink);stroke-width:2;stroke-dasharray:5 4}
+.chart .dot{fill:var(--accent);stroke:var(--ink);stroke-width:2}
+.chart .arrow{stroke:var(--ink);stroke-width:2;fill:none}
+.chart g.opt{transition:opacity .3s}
+.chart[data-focus="rent"] g.opt:not([data-o="rent"]),.chart[data-focus="lend"] g.opt:not([data-o="lend"]),.chart[data-focus="sell"] g.opt:not([data-o="sell"]){opacity:.3}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px;font:500 13px/1 var(--sans);color:var(--ink-2)}
+.legend span{display:flex;align-items:center;gap:7px}
+.legend i{width:18px;height:3px;border-radius:2px;background:var(--ink)}
+.legend i.h{background:var(--ink-3)} .legend i.r{height:10px;background:var(--ink);opacity:.1}
+.legend i.a{width:3px;height:12px}
+.legend i.l{background:repeating-linear-gradient(90deg,var(--ink) 0 5px,transparent 5px 9px)}
+.note{margin-top:14px;font-size:14px;color:var(--ink-2)}
+
+.legal{margin-top:16px;font-size:12px;color:var(--ink-2)}
+/* aside */
+aside{position:sticky;top:24px}
+aside ul{list-style:none;padding:0}
+aside li{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+aside li span{color:var(--ink-2)} aside li b{font-weight:600;text-align:right}
+aside li.x span,aside li.x b{color:var(--stale)}
+.trust{margin-top:24px;padding:18px;border-radius:16px;background:var(--raise);font-size:14px;line-height:1.5;color:var(--ink-2)}
+.trust b{display:block;font:600 15px/1.3 var(--sans);color:var(--ink);margin-bottom:6px}
+
+@media (max-width:1040px){ .right nav{display:none} .page{grid-template-columns:minmax(0,1fr) 280px;gap:40px} .vs{grid-template-columns:minmax(0,1fr);gap:20px} .gap{flex-direction:row;justify-content:flex-start;gap:10px;margin:0;padding:14px 0;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);text-align:left} }
+@media (max-width:760px){
+  .top{grid-template-columns:auto auto;height:auto;padding:12px 16px;gap:12px}
+  .search{grid-column:1/-1;grid-row:2}
+  .lang{display:none}
+  .page{grid-template-columns:minmax(0,1fr);padding:20px 16px 40px;gap:40px}
+  aside{position:static}
+  h1{font-size:26px}
+  .vs{padding:20px}
+  .side .num strong{font-size:48px}
+  .act{display:flex;width:100%}
+  .row{grid-template-columns:minmax(0,1fr) auto;gap:6px 12px}
+  .row .n{display:none}
+  .row .t2{grid-column:1;grid-row:2}
+  .row .d{grid-column:2;grid-row:1/3}
+  .row .swap{grid-column:1/-1;width:100%;margin-top:8px}
+  .chart text{font-size:24px} .chart .end,.chart .lbl2{display:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="mark"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="9" height="9" rx="2" fill="currentColor"/><rect x="12" y="1" width="9" height="9" rx="2" fill="currentColor" opacity=".35"/><rect x="1" y="12" width="9" height="9" rx="2" fill="currentColor" opacity=".35"/><rect x="12" y="12" width="9" height="9" rx="2" fill="#C2F24B"/></svg>Foreman</div>
+  <form class="search" role="search" onsubmit="return false">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <input aria-label="Miner key" placeholder="Paste a miner key" value="0x3f9a6b1e…8d07c21e"><button>Value</button>
+  </form>
+  <div class="right">
+    <nav><a href="#" aria-current="page">Miners</a><a href="#">Rules</a><a href="#">Action log</a></nav>
+    <span class="lang">EN · 中文</span>
+    <button class="icon" id="theme" aria-label="Switch light or dark"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M3.7 14.3l1.4-1.4M12.9 5.1l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button class="wallet"><i></i>0x7c4e…19ab</button>
+  </div>
+</header>
+
+<div class="page">
+  <main>
+    <div class="who">
+      <a class="back" href="#" aria-label="Back to the miner"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      <span class="badge" aria-hidden="true">3F</span>
+      <span class="k">Miner 0x3f9a…c21e<small>Verified · holds the design bonus · Sample</small></span>
+    </div>
+    <div class="head"><h1>Hold, Rent, Lend or Sell</h1><span class="tag">BEM price 41 min old</span></div>
+
+    <section class="vs" aria-label="Compared with holding" aria-live="polite">
+      <div class="side">
+        <div class="lbl" id="o-lbl"></div>
+        <div class="num"><strong id="o-num"></strong><span id="o-unit"></span></div>
+        <p id="o-desc"></p>
+        <p class="meta" id="o-meta"></p>
+        <button class="act" id="o-act"></button>
+      </div>
+      <div class="gap"><b id="g-val"></b><small id="g-txt"></small></div>
+      <div class="side">
+        <div class="lbl">Hold</div>
+        <div class="num"><strong id="h-num"></strong><span>BEM</span></div>
+        <p id="h-txt"></p>
+        <div class="bar" aria-hidden="true"><div class="t"></div><div class="s" id="h-s"></div><div class="b" id="h-b"></div></div>
+        <div class="lh"><span>Low <b id="h-low"></b></span><span>High <b id="h-high"></b></span></div>
+      </div>
+    </section>
+
+    <section class="others" aria-label="The other options">
+      <div class="sec"><h2>The other options</h2><small>Ranked by BEM vs holding, base case</small></div>
+      <div id="rows"></div>
+    </section>
+
+    <section class="over" aria-label="BEM over the next 30 days">
+      <div class="sec"><h2>How they add up</h2><small>BEM in your hands over the next 30 days, base case</small></div>
+      <svg class="chart" id="chart" data-focus="rent" viewBox="0 0 840 330" role="img" aria-label="Over 30 days: Rent reaches 59.40 BEM, Hold 51.69, Lend 48.95. Selling gives 410 BEM on day one.">
+        <line class="gl" x1="56" x2="736" y1="300" y2="300"/><line class="gl" x1="56" x2="736" y1="220" y2="220"/><line class="gl" x1="56" x2="736" y1="140" y2="140"/><line class="gl" x1="56" x2="736" y1="60" y2="60"/>
+        <text x="44" y="304" text-anchor="end">0</text><text x="44" y="224" text-anchor="end">20</text><text x="44" y="144" text-anchor="end">40</text><text x="44" y="64" text-anchor="end">60</text>
+        <text x="56" y="322">Today</text><text x="282" y="322" text-anchor="middle">Day 10</text><text x="509" y="322" text-anchor="middle">Day 20</text><text x="736" y="322" text-anchor="end">Day 30</text>
+        <polygon class="band" points="56,300 736,81.1 736,255.7 509.3,269 282.7,283.7"/>
+        <polyline class="hold" points="56,300 169.3,263.8 282.7,228.4 396,193.6 509.3,159.2 622.7,126 736,93.2"/>
+        <text class="end" x="748" y="96">Hold 51.69</text>
+        <g class="opt" data-o="lend"><polyline class="lend" points="56,300 56,208.8 373.3,208.8 509.3,168 622.7,135.2 736,104.2"/></g>
+        <g class="opt" data-o="rent"><line class="rent" x1="56" y1="300" x2="736" y2="62.4"/><circle class="dot" cx="736" cy="62.4" r="6"/></g>
+        <g class="opt" data-o="sell"><path class="arrow" d="M56 40V12M50 20l6-8 6 8"/></g>
+        <text class="lbl2" x="384" y="200">Repaying TapePool</text>
+        <text class="end" x="748" y="66">Rent 59.40</text><text class="end" x="748" y="120">Lend 48.95</text>
+        <text class="end sl" x="68" y="24">Sell: 410 BEM on day one, above the chart</text>
+      </svg>
+      <div class="legend"><span><i></i>Rent 59.40</span><span><i class="h"></i>Hold, base 51.69</span><span><i class="r"></i>Hold, low to high</span><span><i class="l"></i>Lend 48.95</span><span><i class="a"></i>Sell 410, day one</span></div>
+      <p class="note">Selling ends the miner's output for you. Its 410 BEM is compared with holding to the 2030 halving, estimated 455.98 BEM.</p>
+    </section>
+  </main>
+
+  <aside aria-label="What it's based on">
+    <div class="sec"><h2>What it's based on</h2></div>
+    <ul>
+      <li><span>Holding, next 30 days</span><b>11.08 · 51.69 · 54.73</b></li>
+      <li><span>Holding, to the 2030 halving</span><b>42.94 · 455.98 · 2,497.94</b></li>
+      <li><span>Offers checked</span><b>2 min ago</b></li>
+      <li class="x"><span>BEM price</span><b>$38.20 · 41 min old</b></li>
+      <li><span>Block · model</span><b>134,351,215 · v0.1</b></li>
+    </ul>
+    <div class="trust"><b>You sign every move</b>Each action opens in OKX Wallet for you to approve. Foreman never holds your miner.</div>
+    <p class="legal">Estimated values under stated assumptions. Not financial advice.</p>
+  </aside>
+</div>
+
+<script>
+// Sample data: holding from packages/valuation; offers are made up until the X Layer offer reader exists
+const HOLD={
+  d30:{num:"51.69",txt:"Estimated output, next 30 days, base case",low:11.08,base:51.69,high:54.73,max:60},
+  y2030:{num:"455.98",txt:"Estimated output until the 2030 halving, base case",low:42.94,base:455.98,high:2497.94,max:2600}
+};
+const O={
+  rent:{rank:1,name:"Rent",num:"59.40",unit:"BEM",gap:"+7.71",up:true,hold:"d30",
+    desc:"Fixed: 1.98 BEM a day for 30 days, whatever the network does.",
+    meta:"X Layer market · renter 0x9d2e…41b0 · ≈ $2,269 · 2 more offers",
+    gapTxt:"BEM vs holding<br>+4.67 to +48.32",act:"Rent out for 30 days",
+    row:"59.40 BEM over 30 days",rowSub:"Fixed, 1.98 BEM a day",src:"X Layer market · 2 more offers"},
+  lend:{rank:3,name:"Lend",num:"22.80",unit:"BEM now",gap:"−2.74",up:false,hold:"d30",
+    desc:"Repaid from the miner's output: 25.54 BEM, in about 14 days, up to 65 if the bonus is lost.",
+    meta:"TapePool · ≈ $871 · 1 more term",
+    gapTxt:"BEM vs holding<br>the cost of borrowing",act:"Borrow 22.80 BEM",
+    row:"22.80 BEM now",rowSub:"Repaid from output in about 14 days",src:"TapePool · 1 more term"},
+  sell:{rank:4,name:"Sell",num:"410.00",unit:"BEM now",gap:"−45.98",up:false,hold:"y2030",isNew:true,
+    desc:"A lump sum. The miner's future output goes with it, and so do unclaimed rewards: claim first.",
+    meta:"X Layer market · bidder 0x44f1…a2c7 · ≈ $15,662 · 1 more bid",
+    gapTxt:"BEM vs holding to 2030<br>+367.06 to −2,087.94",act:"Sell for 410 BEM",
+    row:"410 BEM now",rowSub:"Gives up output to 2030, est. 455.98",src:"X Layer market · 1 more bid"}
+};
+const $=(id)=>document.getElementById(id);
+const f=(v)=>v.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+function show(k){
+  const o=O[k],h=HOLD[o.hold];
+  $("o-lbl").innerHTML=o.name+(o.rank===1?' <span class="pill">Pays most vs holding</span>':"")+(o.isNew?' <span class="new">New bid · 3 min ago</span>':"");
+  $("o-num").textContent=o.num;$("o-unit").textContent=o.unit;
+  $("o-desc").textContent=o.desc;$("o-meta").textContent=o.meta;$("o-act").textContent=o.act;
+  $("g-val").textContent=o.gap;$("g-val").className=o.up?"up":"down";$("g-txt").innerHTML=o.gapTxt;
+  $("h-num").textContent=h.num;$("h-txt").textContent=h.txt;$("h-low").textContent=f(h.low);$("h-high").textContent=f(h.high);
+  $("h-s").style.left=(h.low/h.max*100)+"%";$("h-s").style.width=((h.high-h.low)/h.max*100)+"%";$("h-b").style.left=(h.base/h.max*100)+"%";
+  $("rows").innerHTML=Object.entries(O).filter(([x])=>x!==k).sort((a,b)=>a[1].rank-b[1].rank).map(([x,r])=>
+    `<div class="row"><span class="n">${r.rank}</span><span class="o">${r.name}<small>${r.isNew?'<span class="new">New bid · 3 min ago</span> ':""}${r.src}</small></span>`+
+    `<span class="t2">${r.row}<small>${r.rowSub}</small></span><span class="d ${r.up?"up":"down"}">${r.gap}<small>BEM vs holding</small></span>`+
+    `<button class="swap" data-k="${x}">Compare with Hold</button></div>`).join("");
+  document.querySelectorAll(".swap").forEach(b=>b.addEventListener("click",()=>show(b.dataset.k)));
+  $("chart").dataset.focus=k;
+}
+show("rent");
+$("theme").addEventListener("click",()=>{
+  const r=document.documentElement;
+  const dark=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme=dark?"light":"dark";
+});
+</script>
+</body>
+</html>
