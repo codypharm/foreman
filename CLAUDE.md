@@ -68,7 +68,7 @@ Built for **X Layer TapeOut Accelerate** (OKX Build X series). Judged on user va
 | Product | `docs/PRODUCT.md` | The problem, users, the eight-step pipeline, the four options, MVP scope, owners, build order, demo story. Source of truth |
 | Brief | [Google Doc](https://docs.google.com/document/d/1PA3ftj2tFWzcKyj02hxZelqzRayx-DF3gd0w3vSYUjM/edit) | The research behind the product: revenue, competition, checks, risks |
 | Data contract | `docs/data-contract.md` (not written yet) | Shared shapes and API paths |
-| Decisions | `docs/decisions/` (not created yet) | Dated ADRs, never edited after the fact |
+| Decisions | `docs/decisions/` | Dated ADRs, never edited after the fact |
 | Chain check | `scripts/check_pod_mining.py` | Reads recent BEM claims and the mining contract's per-miner events from BNB Chain |
 
 ---
@@ -118,29 +118,39 @@ Only facts confirmed on chain or on an official TapeOut page go here, each with 
 
 ## Tech stack
 
-**Not yet decided:** everything except the chains and TapeOut parts. Each item below gets 2–3 options, the human chooses, it gets an ADR, then it is filled in here.
+Each item gets 2–3 options, the human chooses, it gets an ADR in `docs/decisions/`, then it is filled in here. Items still marked Open are not decided.
 
 | Job | Status |
 | --- | --- |
-| Reading BNB Chain and X Layer (indexer) | Open |
-| Valuation engine language and hosting | Open |
-| API and job runner | Open |
-| Frontend | Open. Must work with OKX Wallet first, and be publishable as a static mirror on DeWEB |
+| Reading BNB Chain and X Layer (indexer) | Open (Furqaan). TypeScript with viem proposed so readers share the contract types: `2026-11-18-language.md` |
+| Valuation engine language and hosting | TypeScript; token amounts as `bigint`, never `number`: `2026-11-18-language.md`. Hosting open |
+| API and job runner | Hono on Node, Postgres, pg-boss: `2026-11-18-api-and-jobs.md`. Hosting open |
+| Frontend | Vite, React, wagmi and viem; static build for DeWEB, OKX Wallet first: `2026-11-18-frontend.md` |
 | Rules compiler route | Open: plain English → policy → Verilog → existing netlist tooling (such as TapeSynth), or our own netlist generator |
 | Owner wallet | Open: our own smart wallet or module, or TapeOut's own account system on X Layer if it supports restricted keys |
 | AI model for rules drafting and explanations | Open |
 | Fee token | Open: BEM, USDT or both |
-| Package manager and layout | Open |
+| Package manager and layout | pnpm workspaces: `2026-11-18-package-layout.md` |
 
 ---
 
 ## Repository layout
 
-Not chosen yet. Today the repo holds:
+pnpm workspaces (`docs/decisions/2026-11-18-package-layout.md`). Planned for William's areas, created at scaffold time:
+
+| Path | What |
+| --- | --- |
+| `apps/web` | Web app (Vite, React) |
+| `apps/api` | Hono API and jobs |
+| `packages/contract` | The data contract's types (shapes owned by Furqaan; location pending his confirmation) |
+| `packages/valuation` | Valuation engine and backtests |
+
+Furqaan lays out his own areas. Today the repo holds:
 
 | Path | What |
 | --- | --- |
 | `CLAUDE.md` | This file |
+| `docs/decisions/` | Dated ADRs |
 | `docs/PRODUCT.md` | The product: scope, owners, build order, demo story |
 | `scripts/check_pod_mining.py` | Chain check: finds recent BEM mints and prints the mining contract's per-miner events. Python 3 standard library only |
 
@@ -243,7 +253,7 @@ The `grill-me` queue. Strike an item when an ADR settles it.
 - Do copied or wrapper circuits earn mining rewards (decides the copy discount)?
 - Will TapePool and the market pay referral fees?
 - Does anyone already publish fair values or a sell-vs-rent comparison?
-- Every item in "Tech stack".
+- Every item still marked Open in "Tech stack": chain readers, rules compiler route, owner wallet, AI model, fee token, and hosting.
 
 ---
 
