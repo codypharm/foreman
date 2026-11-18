@@ -63,3 +63,19 @@ The brief says "a few thousand miners". The chain says about 20,800 are mining.
 - **Backtest:** compare the formula's prediction with real claims for real miners. Needs each miner's weight over time from the BNB reader (`getMiner` and `totalVerifWeight` at past blocks, or rebuilt from `Started`, `Demoted`, `Revoked` and `Stopped` events).
 - Confirm topic0 for `Claimed`.
 - Not read yet: how `b*`, the bonus and `P` are set at `start()`, and whether copied or wrapper circuits earn (the copy discount). The answer is in `start()` and the design commitment logic.
+
+## Addendum, 18 Nov 2026: do miners have images?
+
+Read-only `eth_call`s against BNB Chain (publicnode), block about 134,362,487. These addresses are for you to confirm. None of them is used in code.
+
+| Finding | Detail |
+| --- | --- |
+| Where a miner lives | `miners(key)` gives `circuits` (the processor contract, which is also the NFT) and `circuitId` (the token id). `keccak256(abi.encodePacked(circuits, circuitId))` rebuilt the claim's miner key exactly |
+| Processor seen | `0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c`, name `Blonskr_No1`, symbol `BLN1`. Both of the two recent claimed miners sampled (ids 2430 and 2529) are on it |
+| Contract shape | Beacon proxy. Beacon `0xf8d6d8eb894d6971c8976ad8b4971cbefe028156`, implementation `0x8e1d125def6d3826c278299273a0760d47626068`. None of the three is verified on Sourcify. BscScan not checked |
+| Image | `supportsInterface(ERC721Metadata)` is true, but `tokenURI` returns an empty string for both tokens and `contractURI()` reverts. **No image or metadata on chain for these miners** |
+| The circuit itself is readable | `circuitInfo(2430)` = 7 inputs, 3 outputs, 0 state, 59 gates. `netlist(2430)` returns 413 bytes and `netlist(2529)` 259 bytes. The format is in `PodNetlist.sol` in the verified mining source |
+
+Not checked: other processors. `ProcessorSet` events list them, and one may set a `tokenURI`.
+
+**For the UI (William):** until a processor shows an image, the miner page uses a two-letter badge from the miner key. A possible later feature is to draw the miner's real circuit from its netlist. That needs a netlist decoder on the reader side, which is your call.
