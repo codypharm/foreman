@@ -1,0 +1,366 @@
+<!--
+  Action log mock, chosen by William on 18 November 2026: "Activity feed".
+  Same OKX Wallet look as docs/mocks/2026-11-18-miner-page.html (dark and light); top bar with the Autopilot pill from
+  docs/mocks/2026-11-18-agent-key.html.
+  Static mock: miners, offers, transactions, rules circuit addresses and counts are sample data. Moves and their
+  checks come from Furqaan's agent loop and owner wallet module. Build to this; a layout or flow change is a new mock
+  and a new choice.
+  Settled with William for this screen:
+  - One log for all of the owner's miners, filterable by miner and by All / Done / Refused, with a 7-day summary
+    (done, refused by the rules circuit, retried: always 0).
+  - One line per move: what it did, why, and what the other options paid. Tap to open its details: the rule that
+    allowed or refused it, the on-chain rules circuit check, the transaction, and what happens next.
+  - Refused moves sit in the same list, marked, and say they are not retried. Agent key events and setup (tape-out,
+    paper run) appear in All only.
+  Open for Furqaan: does a refused move leave a transaction the wallet stopped (shown here), and does a refused move
+  count toward the daily limit (shown here as yes)? Same open question as the agent key mock: may an agent key sell.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foreman · Action log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --raise:#F5F5F5; --ink:#000000; --ink-2:#6B6B6B; --ink-3:#9A9A9A; --line:#EBEBEB;
+  --accent:#C2F24B; --on-accent:#000000; --live:#14A44D; --stale:#C4231B; --stale-bg:#FDECEA;
+  --btn:#000000; --on-btn:#FFFFFF; --track:#E6E6E6; --span:#BDBDBD;
+  --sans:"Geist","Noto Sans SC",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+    --live:#3DDC84; --stale:#FF7A6B; --stale-bg:#2A1210;
+    --btn:#FFFFFF; --on-btn:#000000; --track:#262626; --span:#4A4A4A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+  --live:#3DDC84; --stale:#FF7A6B; --stale-bg:#2A1210;
+  --btn:#FFFFFF; --on-btn:#000000; --track:#262626; --span:#4A4A4A;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{background:var(--bg)}
+::selection{background:var(--accent);color:var(--on-accent)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+button{font:inherit;color:inherit}
+a{color:inherit}
+
+/* top bar */
+.top{display:grid;grid-template-columns:auto minmax(0,480px) auto;justify-content:space-between;align-items:center;gap:24px;height:64px;padding:0 32px;border-bottom:1px solid var(--line)}
+.mark{display:flex;align-items:center;gap:9px;font:700 18px/1 var(--sans);letter-spacing:-.02em}
+.mark svg{display:block}
+.search{display:flex;align-items:center;gap:10px;height:40px;padding:0 6px 0 14px;border-radius:999px;background:var(--raise)}
+.search svg{flex:none;color:var(--ink-2)}
+.search input{all:unset;flex:1;min-width:0;font:500 14px/1 var(--sans)}
+.search input::placeholder{color:var(--ink-2)}
+.search button{all:unset;cursor:pointer;font:600 13px/1 var(--sans);padding:8px 12px;border-radius:999px;background:var(--btn);color:var(--on-btn)}
+.right{display:flex;align-items:center;gap:6px}
+.right nav{display:flex;gap:2px;margin-right:8px}
+.right nav a{font:500 14px/1 var(--sans);color:var(--ink-2);text-decoration:none;padding:9px 12px;border-radius:999px}
+.right nav a:hover{color:var(--ink)}
+.right nav a[aria-current=page]{color:var(--ink);background:var(--raise)}
+.icon{all:unset;cursor:pointer;display:grid;place-items:center;width:36px;height:36px;border-radius:999px;color:var(--ink-2)}
+.icon:hover{background:var(--raise);color:var(--ink)}
+.lang{font:600 13px/1 var(--sans);color:var(--ink-2);padding:0 6px}
+.wallet{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;font:600 13px/1 var(--sans);padding:10px 14px;border-radius:999px;background:var(--raise);white-space:nowrap;margin-left:4px}
+.wallet i{width:7px;height:7px;border-radius:50%;background:var(--live)}
+:root{--ok-bg:#E8F6EE;--on-stale:#FFFFFF}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ok-bg:#0F2A1A;--on-stale:#000000}}
+:root[data-theme="dark"]{--ok-bg:#0F2A1A;--on-stale:#000000}
+[hidden]{display:none!important}
+
+/* autopilot pill in the top bar, only while a key is live */
+.auto{display:flex;align-items:center;gap:8px;margin-right:4px;padding:5px 5px 5px 12px;border-radius:999px;background:var(--ok-bg);font:600 13px/1 var(--sans);color:var(--live);white-space:nowrap}
+.auto i{width:7px;height:7px;border-radius:50%;background:var(--live)}
+.auto button{all:unset;cursor:pointer;padding:7px 10px;border-radius:999px;background:var(--bg);color:var(--stale);font:600 12px/1 var(--sans)}
+.auto button:hover{background:var(--stale-bg)}
+.auto{margin-right:4px}
+
+.page{max-width:960px;margin:0 auto;padding:32px 32px 72px}
+h1{font:600 30px/1.15 var(--sans);letter-spacing:-.02em}
+.lead{font-size:15px;line-height:1.5;color:var(--ink-2);margin-top:8px;max-width:46ch}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px 24px;flex-wrap:wrap}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.sel{position:relative}
+.sel select{all:unset;cursor:pointer;height:38px;padding:0 36px 0 14px;border-radius:999px;background:var(--raise);font:500 14px/38px var(--sans)}
+.sel::after{content:"";position:absolute;right:16px;top:14px;width:6px;height:6px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(45deg);pointer-events:none}
+.seg{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:var(--raise)}
+.seg button{all:unset;cursor:pointer;font:500 13px/1 var(--sans);color:var(--ink-2);padding:9px 14px;border-radius:999px;white-space:nowrap}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed=true]{background:var(--btn);color:var(--on-btn);font-weight:600}
+.seg em{font-style:normal;opacity:.7;margin-left:4px}
+
+.sum{display:flex;gap:8px 20px;flex-wrap:wrap;margin-top:20px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:14px;color:var(--ink-2)}
+.sum b{color:var(--ink);font-weight:600}
+.sum .z{color:var(--live)}
+
+.day{font:600 13px/1 var(--sans);color:var(--ink-2);margin:28px 0 4px}
+.it{border-bottom:1px solid var(--line)}
+.it>button{all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:grid;grid-template-columns:32px minmax(0,1fr) auto 16px;gap:14px;align-items:start;padding:16px 0}
+.it>button:hover .l{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+.it>button:focus-visible{outline-offset:-2px}
+.chev{width:16px;height:16px;margin-top:4px;color:var(--ink-2);transition:transform .2s cubic-bezier(.2,.7,.2,1)}
+.it[data-open] .chev{transform:rotate(180deg)}
+.l{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font:600 15px/1.4 var(--sans)}
+.it small{display:block;font:400 14px/1.5 var(--sans);color:var(--ink-2);margin-top:3px;max-width:68ch}
+.t{font-size:13px;line-height:22px;color:var(--ink-2);text-align:right;white-space:nowrap}
+.v{display:inline-flex;align-items:center;font:600 12px/1 var(--sans);padding:5px 8px;border-radius:6px;white-space:nowrap}
+.v.done{background:var(--ok-bg);color:var(--live)}
+.v.refused{background:var(--stale-bg);color:var(--stale)}
+.v.key,.v.setup{background:var(--raise);color:var(--ink-2)}
+.badge{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:999px;background:var(--ink);color:var(--bg);font:700 11px/1 var(--sans)}
+.badge.b{background:var(--raise);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.badge.c{background:var(--accent);color:var(--on-accent)}
+
+.open{margin:0 30px 18px 46px;padding:16px 18px;border-radius:16px;background:var(--raise);display:grid;grid-template-columns:140px minmax(0,1fr);gap:10px 16px;font-size:14px;line-height:1.45}
+.open>span{color:var(--ink-2)}
+.open>b{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.open b .muted{color:var(--ink-2);font-weight:400}
+.open a{text-underline-offset:3px;text-decoration-thickness:1px}
+.no{color:var(--stale)} .yes{color:var(--live)}
+.cmp{grid-column:1/-1;margin:2px 0 4px;border-radius:12px;background:var(--bg);padding:4px 14px}
+.cmp div{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 0;font-size:14px}
+.cmp div+div{border-top:1px solid var(--line)}
+.cmp i{display:block;height:8px;border-radius:4px;background:var(--span)}
+.cmp .win i{background:var(--live)}
+.cmp .hold i{background:var(--ink)}
+.cmp .x i{background:transparent;box-shadow:inset 0 0 0 1px var(--span)}
+.cmp u{text-decoration:none;font-weight:600;text-align:right;white-space:nowrap}
+.cmp u small{display:inline;margin:0 0 0 6px;font-weight:400;color:var(--ink-2)}
+.cmp .cap{display:block;grid-template-columns:none;font-size:12px;color:var(--ink-2);padding:8px 0 6px}
+
+.empty{padding:40px 0;text-align:center;color:var(--ink-2)}
+.empty b{display:block;color:var(--ink);font-weight:600;margin-bottom:4px}
+.more{all:unset;cursor:pointer;display:block;margin:24px auto 0;padding:11px 18px;border-radius:999px;background:var(--raise);font:600 14px/1 var(--sans)}
+.more:hover{background:var(--line)}
+.legal{margin-top:32px;font-size:12px;color:var(--ink-2);max-width:72ch}
+
+@media (max-width:1040px){ .right nav{display:none} }
+@media (max-width:760px){
+  .top{grid-template-columns:auto auto;height:auto;padding:12px 16px;gap:12px}
+  .search{grid-column:1/-1;grid-row:2}
+  .lang,#theme{display:none}
+  .auto{padding-left:10px} .auto span{display:none}
+  .page{padding:20px 16px 56px}
+  h1{font-size:26px}
+  .head{align-items:stretch;flex-direction:column}
+  .filters{display:grid;grid-template-columns:minmax(0,1fr)}
+  .sel select{width:100%;box-sizing:border-box}
+  .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .seg button{text-align:center}
+  .it>button{grid-template-columns:32px minmax(0,1fr) auto;gap:12px}
+  .chev{display:none}
+  .open{margin:0 0 16px;grid-template-columns:minmax(0,1fr);gap:2px}
+  .open>b{margin-bottom:8px}
+  .cmp{margin-top:4px}
+}
+@media (prefers-reduced-motion:reduce){.chev{transition:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="mark"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="9" height="9" rx="2" fill="currentColor"/><rect x="12" y="1" width="9" height="9" rx="2" fill="currentColor" opacity=".35"/><rect x="1" y="12" width="9" height="9" rx="2" fill="currentColor" opacity=".35"/><rect x="12" y="12" width="9" height="9" rx="2" fill="#C2F24B"/></svg>Foreman</div>
+  <form class="search" role="search" onsubmit="return false">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <input aria-label="Miner key" placeholder="Paste a miner key"><button>Value</button>
+  </form>
+  <div class="right">
+    <nav><a href="#">Miners</a><a href="#">Rules</a><a href="#" aria-current="page">Action log</a></nav>
+    <span class="lang">EN · 中文</span>
+    <div class="auto"><i></i><span>Autopilot on</span><button>Revoke</button></div>
+    <button class="icon" id="theme" aria-label="Switch light or dark"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M3.7 14.3l1.4-1.4M12.9 5.1l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button class="wallet"><i></i>0x7c4e…19ab</button>
+  </div>
+</header>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <h1>Action log</h1>
+      <p class="lead">Every move autopilot made or tried for your miners: what it did, why, and what the other options paid. Tap a line to see the check behind it.</p>
+    </div>
+    <div class="filters">
+      <label class="sel"><select id="miner" aria-label="Miner">
+        <option value="all">All miners</option>
+        <option value="3F">3F · 0x3f9a…c21e</option>
+        <option value="51">51 · 0x51cd…9e30</option>
+        <option value="8B">8B · 0x8b21…04fa</option>
+      </select></label>
+      <div class="seg" role="group" aria-label="Show">
+        <button aria-pressed="true" data-k="all">All</button>
+        <button aria-pressed="false" data-k="done">Done<em id="n-done"></em></button>
+        <button aria-pressed="false" data-k="refused">Refused<em id="n-refused"></em></button>
+      </div>
+    </div>
+  </div>
+
+  <p class="sum" id="sum"></p>
+
+  <div id="feed">
+    <div class="day" data-day>Today, 18 Nov</div>
+
+    <div class="it" data-m="3F" data-k="refused" data-open>
+      <button aria-expanded="true"><span class="badge">3F</span>
+        <span><span class="l"><span class="v refused">Refused</span>Sell 3F for 380 BEM</span>
+        <small>Below your 400 BEM floor. Your rules circuit said no on chain, so nothing moved. It won't be retried.</small></span>
+        <span class="t">14:05</span><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <div class="open">
+        <span>Offer</span><b>380 BEM bid on the X Layer market <span class="muted">· estimated value to 2030: 42.94 / 455.98 / 2,497.94 BEM</span></b>
+        <span>Refused by</span><b>Rule 1 · Never sell below 400 BEM</b>
+        <span>Checked</span><b>On chain by your rules circuit 0x5b1e…c09d · <span class="no">no</span></b>
+        <span>Transaction</span><b><a href="#">0x9c4d…e1a0</a> <span class="muted">· stopped by your wallet, the miner stayed put</span></b>
+        <span>Next</span><b>Not retried in any other shape. The bid stays on the decision screen if you want to sell by hand.</b>
+      </div>
+    </div>
+
+    <div class="it" data-m="3F" data-k="done">
+      <button aria-expanded="false"><span class="badge">3F</span>
+        <span><span class="l"><span class="v done">Done</span>Rented 3F for 30 days at 1.98 BEM a day</span>
+        <small>59.40 BEM over 30 days, 7.71 more than holding. Lending would have paid 2.74 less than holding.</small></span>
+        <span class="t">09:40</span><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <div class="open" hidden>
+        <div class="cmp">
+          <span class="cap">The four options for 3F over the next 30 days, in BEM</span>
+          <div class="win"><span>Rent</span><i style="width:100%"></i><u>59.40<small>chosen</small></u></div>
+          <div class="hold"><span>Hold</span><i style="width:87%"></i><u>51.69<small>base</small></u></div>
+          <div><span>Lend</span><i style="width:82%"></i><u>48.95</u></div>
+          <div class="x"><span>Sell</span><i style="width:0"></i><u>380 bid<small>below your floor</small></u></div>
+        </div>
+        <span>Allowed by</span><b>Rule 2 · Only rent for 30 days or less, and only if it pays more than holding</b>
+        <span>Checked</span><b>On chain by your rules circuit 0x5b1e…c09d · <span class="yes">yes</span></b>
+        <span>Transaction</span><b><a href="#">0x41a7…3b9e</a></b>
+        <span>Until</span><b>18 Dec 2026. The renter gets 3F's output until then; 3F stays in your wallet.</b>
+      </div>
+    </div>
+
+    <div class="it" data-m="3F" data-k="key">
+      <button aria-expanded="false"><span class="badge">3F</span>
+        <span><span class="l"><span class="v key">Key</span>Agent key issued for 3F</span>
+        <small>Rent, Lend and Sell within your rules, up to 3 moves a day, until 18 Dec. Signed by you in OKX Wallet.</small></span>
+        <span class="t">09:12</span><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <div class="open" hidden>
+        <span>Agent key</span><b>0x2d81…77f0</b>
+        <span>May do</span><b>Rent, Lend, Sell, only as your 3 rules allow</b>
+        <span>Used today</span><b>2 of 3 moves <span class="muted">· a refused move still counts</span></b>
+        <span>Transaction</span><b><a href="#">0x6e02…a41c</a></b>
+        <span>Stop it</span><b><a href="#">Revoke this key</a> <span class="muted">· one tap, takes effect on the next block</span></b>
+      </div>
+    </div>
+
+    <div class="day" data-day>Yesterday, 17 Nov</div>
+
+    <div class="it" data-m="51" data-k="done">
+      <button aria-expanded="false"><span class="badge b">51</span>
+        <span><span class="l"><span class="v done">Done</span>Borrowed 12.00 BEM against 51 from TapePool</span>
+        <small>Repaid from 51's output in about 19 days. Renting would have paid less: the best offer was 0.55 BEM a day.</small></span>
+        <span class="t">16:30</span><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <div class="open" hidden>
+        <span>Received</span><b>12.00 BEM now <span class="muted">· repaid from output in 17 to 22 days</span></b>
+        <span>Allowed by</span><b>Rule 3 · Borrow up to 25 BEM against 51</b>
+        <span>Checked</span><b>On chain by your rules circuit 0x7a30…e5d2 · <span class="yes">yes</span></b>
+        <span>Transaction</span><b><a href="#">0xb817…02cd</a></b>
+        <span>While repaying</span><b>51 keeps mining in your wallet; its BEM goes to TapePool until the loan is paid.</b>
+      </div>
+    </div>
+
+    <div class="it" data-m="51" data-k="refused">
+      <button aria-expanded="false"><span class="badge b">51</span>
+        <span><span class="l"><span class="v refused">Refused</span>Rent 51 for 45 days at 0.61 BEM a day</span>
+        <small>Longer than your 30-day limit. Your rules circuit said no on chain, so nothing moved. It won't be retried.</small></span>
+        <span class="t">11:02</span><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <div class="open" hidden>
+        <span>Offer</span><b>45 days at 0.61 BEM a day on the X Layer market</b>
+        <span>Refused by</span><b>Rule 2 · Only rent for 30 days or less</b>
+        <span>Checked</span><b>On chain by your rules circuit 0x7a30…e5d2 · <span class="no">no</span></b>
+        <span>Transaction</span><b><a href="#">0x03f9…c6b2</a> <span class="muted">· stopped by your wallet, the miner stayed put</span></b>
+        <span>Next</span><b>Not retried in any other shape.</b>
+      </div>
+    </div>
+
+    <div class="day" data-day>16 Nov</div>
+
+    <div class="it" data-m="3F" data-k="setup">
+      <button aria-expanded="false"><span class="badge">3F</span>
+        <span><span class="l"><span class="v setup">Setup</span>Rules circuit taped out for 3F</span>
+        <small>Your 3 confirmed rules, 412 gates. Its 30-day paper run made 8.30 BEM more than holding.</small></span>
+        <span class="t">18:44</span><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <div class="open" hidden>
+        <span>Rules circuit</span><b>0x5b1e…c09d · 412 gates</b>
+        <span>Paper run</span><b>61.10 BEM against 52.80 holding <span class="muted">· 2 moves made, 4 refused</span></b>
+        <span>Transaction</span><b><a href="#">0xd7a2…5e11</a></b>
+      </div>
+    </div>
+
+    <div class="it" data-m="8B" data-k="key">
+      <button aria-expanded="false"><span class="badge c">8B</span>
+        <span><span class="l"><span class="v key">Key</span>Agent key for 8B expired</span>
+        <small>Autopilot stopped for 8B. Nothing moves for it until you issue a new key.</small></span>
+        <span class="t">00:00</span><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <div class="open" hidden>
+        <span>Agent key</span><b>0x91fe…3d58 <span class="muted">· issued 17 Oct, 30 days</span></b>
+        <span>In its 30 days</span><b>4 moves made, 3 refused</b>
+        <span>Next</span><b><a href="#">Issue a new key for 8B</a> <span class="muted">· after its paper run</span></b>
+      </div>
+    </div>
+
+    <div class="empty" id="empty" hidden><b>Nothing to show</b><span id="empty-t"></span></div>
+  </div>
+
+  <button class="more" id="more">Show earlier</button>
+
+  <p class="legal">Values are estimates under stated assumptions, shown as low / base / high. They are not financial advice and not a promise of earnings. Every move in this log was checked by your own rules circuit on chain before it could happen.</p>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const items=[...document.querySelectorAll(".it")];
+let miner="all",kind="all";
+
+items.forEach(it=>{
+  const b=it.querySelector("button"),o=it.querySelector(".open");
+  b.addEventListener("click",()=>{
+    const open=!it.hasAttribute("data-open");
+    it.toggleAttribute("data-open",open);o.hidden=!open;b.setAttribute("aria-expanded",open);
+  });
+});
+
+function render(){
+  const inMiner=items.filter(it=>miner==="all"||it.dataset.m===miner);
+  const c=k=>inMiner.filter(it=>it.dataset.k===k).length;
+  $("n-done").textContent=c("done");$("n-refused").textContent=c("refused");
+  const who=miner==="all"?"your miners":miner;
+  const r=c("refused");
+  $("sum").innerHTML=`<span>Last 7 days for ${who}:</span><span><b>${c("done")}</b> done</span><span><b>${r}</b> refused by ${miner==="all"?"their":"its"} rules circuit</span><span><b class="z">0</b> retried</span>`;
+  items.forEach(it=>{it.hidden=!((miner==="all"||it.dataset.m===miner)&&(kind==="all"||it.dataset.k===kind))});
+  document.querySelectorAll("[data-day]").forEach(d=>{
+    let n=d.nextElementSibling,any=false;
+    while(n&&n.classList.contains("it")){if(!n.hidden)any=true;n=n.nextElementSibling}
+    d.hidden=!any;
+  });
+  const none=items.every(it=>it.hidden);
+  $("empty").hidden=!none;$("more").hidden=none;
+  if(none)$("empty-t").textContent=kind==="refused"?`Your rules circuit hasn't refused anything for ${who} in the last 7 days.`:kind==="done"?`Autopilot hasn't moved ${who} in the last 7 days.`:`No moves for ${who} in the last 7 days.`;
+}
+$("miner").addEventListener("change",e=>{miner=e.target.value;render()});
+document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",()=>{
+  kind=b.dataset.k;document.querySelectorAll(".seg button").forEach(x=>x.setAttribute("aria-pressed",x===b));render();
+}));
+$("more").addEventListener("click",e=>{e.target.textContent="That's everything since autopilot started";e.target.disabled=true});
+$("theme").addEventListener("click",()=>{
+  const r=document.documentElement;
+  const dark=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme=dark?"light":"dark";
+});
+render();
+</script>
+</body>
+</html>
