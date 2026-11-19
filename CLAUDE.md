@@ -111,8 +111,11 @@ Only facts confirmed on chain or on an official TapeOut page go here, each with 
 | Per-miner claim event | `Claimed(bytes32 indexed key, address indexed to, uint256 amount)`; topic0 `0x0508a8b4117d9a7b3d8f5895f6413e61b4f9a2df35afbfb41e78d0ecfff1843f`; topic1 = miner key (bytes32); topic2 = owner wallet; data = amount (8 decimals, equals the BEM minted). One event per miner, even when one transaction claims many | 18 Nov 2026, script run; name and topic0 from the verified source, 19 Nov 2026 |
 | Batch claim function | selector `0x7ed51748` (name unconfirmed) | 18 Nov 2026, script run |
 | Emission | 8,333,333 base units a second (7,199.999712 BEM a day) in era 0; 99% to the verified pool, 1% to unverified. Halves every 126,000,000 s from 21 Aug 2026 13:15:32 UTC; first halving 18 Aug 2030 21:15:32 UTC | 18 Nov 2026, verified source and storage read |
+| RIG voucher (X Layer) | `0x9cfc959cd42b2e1d39a0d850c528210e818ae520`, ERC-721 "TapeOut Rig" (RIG), UUPS proxy upgradeable by TapeOut. One voucher = one miner held in the BNB rig vault; its BEM goes to the voucher holder. No protocol rental (removed in v2) | 19 Nov 2026: verified source; three live vouchers matched to active PodMining miners whose NFTs the vault holds (`docs/notes/2026-11-19-xlayer-market-findings.md`) |
+| Rig vault (BNB Chain) | `0x48d43345656f0f9510dc3c06cba99dff597617c2`; `voucher()` = the RIG address | 19 Nov 2026, eth_call |
+| BEM (X Layer) | `0x60e62efa9405d6873c5deabd4e6cc91c25363952`, 8 decimals, LayerZero OFT; the RIG voucher's `bem()` | 19 Nov 2026, eth_call |
 
-**Unconfirmed** (from other projects' READMEs, do not use until checked): X Layer TapeOut factory `0x1f09daefa827f02cbb40967cc91b259763760761`, account opener `0x536add8f30f03b69f6fbf29d425a816a0dc50106`, circuit market `0xd89f358c48a7B632c9845af2a02A32eB90DD75DB`. Also unknown: the X Layer miner voucher (RIG), rental and TapePool contract addresses.
+**Unconfirmed** (from other projects' READMEs, do not use until checked): X Layer TapeOut factory `0x1f09daefa827f02cbb40967cc91b259763760761` and account opener `0x536add8f30f03b69f6fbf29d425a816a0dc50106` (TapeKit/DeWEB per TapePool's config, implementations unverified), circuit market `0xd89f358c48a7B632c9845af2a02A32eB90DD75DB`. **Third party, not protocol:** TapePool (lending, another hackathon entry, 0.01 BEM liquidity on 19 Nov) and RIG orders on Seaport 1.6 via OwlGate's order book. No rental venue exists. See `docs/notes/2026-11-19-xlayer-market-findings.md`.
 
 **RPC notes:** `bsc-dataseed.bnbchain.org` refuses `eth_getLogs`; `bsc-rpc.publicnode.com` serves it in 200-block chunks. Several public nodes return 403 or reset the connection. Batch reads and cache by block.
 
@@ -256,7 +259,7 @@ Never abbreviate these. Never invent synonyms.
 The `grill-me` queue. Strike an item when an ADR settles it.
 
 - ~~Read a miner's current weight, status and pending rewards: confirm the mining contract's source is verified on BscScan and list its read functions.~~ Settled: `docs/decisions/2026-11-19-data-contract.md`.
-- X Layer: the miner voucher (RIG), rental and TapePool contract addresses, and sales, rentals and loans per week.
+- ~~X Layer: the miner voucher (RIG), rental and TapePool contract addresses~~ (found: `docs/notes/2026-11-19-xlayer-market-findings.md`). **New, and product-level:** the X Layer market is nearly empty (15 vouchers, no asks or offers, no rentals, a lending pool with 0.01 BEM). How Foreman's Rent, Lend and Sell options work with that is Furqaan's decision (options a–c in the note).
 - Can a smart wallet hold a bridged miner and still rent it or lend it through TapePool?
 - How many gates a realistic rules circuit needs.
 - Do copied or wrapper circuits earn mining rewards (decides the copy discount)?
