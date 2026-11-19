@@ -48,7 +48,7 @@ An AI manager for TapeOut miners. It values each miner as a range, compares **Ho
 | **Hold** | Expected BEM over 30 days and until the 2030 halving, as a range |
 | **Rent** | Best live rental offer, and what it is worth against holding. **No rental venue exists today** (`docs/decisions/2026-11-19-offer-venues.md`): shown as "no rental market yet" |
 | **Lend** | Best live TapePool terms (X Layer): BEM received now, how long repayment takes |
-| **Sell** | Best live bid against the estimated value range: the BNB Chain miner market, and RIG voucher offers on X Layer when there are any |
+| **Sell** | The best live bid against the estimated value range, if there is one. There are none today (`docs/decisions/2026-11-19-sell-without-bids.md`), so: "no bid right now", recent completed sales and asks of comparable miners on TapeOut's BNB market (labelled), and a listing the owner signs |
 
 A missing offer is shown as missing, never as zero. A missing venue is shown as missing too.
 

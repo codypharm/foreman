@@ -140,7 +140,7 @@ type Offer =
 - **No offer:** a missing offer is `state: "none"`, never an amount of zero.
 - **Hold:** Hold is not an offer. It comes from the `Valuation`.
 - **Unclaimed rewards:** they move with the NFT when it is sold. A Sell offer is always shown with "claim first".
-- **Waiting on X Layer addresses:** the RIG, rental and TapePool contract addresses must be in "On-chain facts" before these fields are final.
+- **Venues changed (19 Nov):** Sell comes from TapeOut's BNB circuit market (and RIG offers on X Layer when there are any), Lend from TapePool, and Rent has no venue (`docs/decisions/2026-11-19-offer-venues.md`). Sell gains `sales` and `asks` context beside a bid that can be `none` (`docs/decisions/2026-11-19-sell-without-bids.md`). This shape is rewritten when the market reader is built.
 - **Offer history:** saved from the day the reader starts.
 
 ### `Policy` (provisional)
