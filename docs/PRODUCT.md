@@ -46,11 +46,11 @@ An AI manager for TapeOut miners. It values each miner as a range, compares **Ho
 | Option | Shown as |
 | --- | --- |
 | **Hold** | Expected BEM over 30 days and until the 2030 halving, as a range |
-| **Rent** | Best live rental offer, and what it is worth against holding |
-| **Lend** | Best live TapePool terms: BEM received now, how long repayment takes |
-| **Sell** | Best live bid against the estimated value range |
+| **Rent** | Best live rental offer, and what it is worth against holding. **No rental venue exists today** (`docs/decisions/2026-11-19-offer-venues.md`): shown as "no rental market yet" |
+| **Lend** | Best live TapePool terms (X Layer): BEM received now, how long repayment takes |
+| **Sell** | Best live bid against the estimated value range: the BNB Chain miner market, and RIG voucher offers on X Layer when there are any |
 
-A missing offer is shown as missing, never as zero.
+A missing offer is shown as missing, never as zero. A missing venue is shown as missing too.
 
 ## MVP scope
 
@@ -112,7 +112,7 @@ Build so each step works end to end before the next. Dates are proposed; Furqaan
 ## Demo story (three minutes)
 
 1. Paste a real miner. Its estimated value range appears, with the inputs that produced it.
-2. The decision screen shows renting beats selling over 30 days, with the live offers side by side.
+2. The decision screen compares holding, borrowing against output and selling, with the live offers side by side (`docs/decisions/2026-11-19-offer-venues.md`).
 3. The owner types one sentence of rules. Foreman shows them back in plain words, with "allowed" and "refused" examples. The owner confirms.
 4. The rules circuit is taped out; its address is on screen.
 5. The paper run shows what the strategy would have earned.
