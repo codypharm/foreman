@@ -81,3 +81,5 @@ Read after `docs/decisions/2026-11-19-offer-venues.md` chose the BNB market for 
 **So there is no live bid for a miner anywhere, on either chain.** What exists is asks (other owners' listing prices) and the history of completed sales (`Sold` events). Prices are in BNB, so a comparison in BEM needs the BNB/BEM price, labelled as today's price (`2026-11-18-valuation-model.md`).
 
 This is the case `2026-11-19-offer-venues.md` set aside for its own decision: what Sell shows when there is no bid.
+
+**Event layout, confirmed the same day.** The topic hashes match `Listed(uint256,address,address,uint256,uint256)`, `Sold(uint256,address,address,uint256,uint256,uint256)` and `PriceChanged(uint256,uint256)` exactly (`Delisted` didn't match a simple guess). For three real sales, the two `Sold` amounts add up to the BNB the buyer sent (for example 0.37521 + 0.00379 = 0.379 BNB). The transaction went to the market, and the event's buyer is the sender. So the amounts are **seller proceeds and a 1% fee**. Volume is thin: **3 sales in the last 60,000 blocks** (about 7.5 hours).
