@@ -33,7 +33,7 @@ The miner voucher (RIG) is real and confirmed on chain. **The X Layer market aro
 | **Rent** | Nothing found. The protocol removed it; no third-party rental contract turned up | None |
 | **Lend** | **TapePool**, another entry in this hackathon ([TapePool/TapePool-Dapp](https://github.com/TapePool/TapePool-Dapp)). Borrowers move a RIG into their own agent contract and get a BEM advance for 7 or 14 days, repaid from harvests. The credit rule is a TapeOut circuit checked on chain | Live pool `0x68c1d5e6f193ce5a5060bf7540ae391cbc1939ca` (asset = bridged BEM, confirmed) holds **0.01 BEM**. Older stack `0xd54673e7…f3c3ec` holds 1e-8 BEM. Neither is verified on Sourcify; owned and upgradeable within bounds |
 
-**Not checked:** the BNB-side secondary market for miners themselves. Community analysis talks about real secondary volume, and OwlGate runs a router on BNB (`0x8cf6…814f`) into the "TapeOut circuit market". That is probably where real Sell bids are. The old "unconfirmed" X Layer addresses (factory `0x1f09…0761`, account opener `0x536a…0106`, circuit market `0xd89f…75db`) have code, but their implementations aren't verified. TapePool's config shows `0x1f09` and `0x536a` are TapeKit/DeWEB contracts (factory and opener), not a market.
+**Not checked:** the BNB-side secondary market for miners themselves. Community analysis talks about real secondary volume, and OwlGate runs a router on BNB (`0x8cf6…814f`) into the "TapeOut circuit market". That is probably where real Sell bids are. The old "unconfirmed" X Layer addresses (factory `0x1f09…0761`, account opener `0x536a…0106`, circuit market `0xd89f…75db`) have code, but their implementations aren't verified. **Correction (same day):** TapeOut's own TAP-02 and TAP-10 list `0x1f09…0761` as the **processor factory** on X Layer (`0x6822…e2` on BNB Chain), owned by `0xb3d8…3138`. That's the same owner as the RIG voucher, which is a second link between RIG and TapeOut.
 
 ## What this means for Foreman
 
@@ -61,3 +61,23 @@ Options, for Furqaan to choose (not decided here):
 - [kvzuobai/owlgate](https://github.com/kvzuobai/owlgate): Seaport, WOKB and order book; API `api.owlgate.xyz/xl/market`, read 19 Nov 2026
 - [TapeOutProtocol/TapeKit#10](https://github.com/TapeOutProtocol/TapeKit/pull/10): TapeKit's X Layer and Base addresses (DeWEB, not the market)
 - TapePool terms, second-hand: [KuCoin commentary](https://www.kucoin.com/news/insight/X/6adb93813f52a20007f3ee22)
+
+## Addendum, 19 Nov 2026: the BNB Chain miner market
+
+Read after `docs/decisions/2026-11-19-offer-venues.md` chose the BNB market for Sell.
+
+| What | Address (BNB Chain) | Finding |
+| --- | --- | --- |
+| TapeOut circuit market ("CMKT") | `0x6feebbebc07bcb90bd1ac8b0cf9baa4f0ff2b46f` (proxy; implementation `0x725771c3…3dfb`, not verified on Sourcify) | **Owned by `0xb3d8…3138`, TapeOut's owner address** (the same as the processor factory and the RIG voucher). Listings are on chain: `listings(id)` gives seller, processor, price in **BNB** (18 decimals) and token id, with `Listed`, `Sold`, `Delisted` and `PriceChanged` events. No escrow: approval is checked at purchase, so a listing whose seller revoked approval stays visible but reverts |
+| Second market ("MARKET" in OwlGate) | `0xa6a80c1919a8326022d7c601a488888c13aa16e4` | Owner renounced. OwlGate reads it for transistor listings, not miners. Not read further |
+| OwlGate bids | off chain, `api.owlgate.xyz/bids` | Signed Seaport 1.6 **WBNB** offers on single miners, kept in OwlGate's order book (third party) |
+
+**State, read on 19 Nov 2026:**
+
+- 28,083 listings created to date. Of the latest 1,500, **260 are active, and 91 of those are for miners that are mining** (from 23 sellers).
+- Asking prices for mining miners run from 0.025 to 888 BNB (median 0.2). Per unit of weight: median 0.042 BNB, range 0.015 to 222. The outliers are clearly not serious prices.
+- **Bids: 0.** None on chain (the market only takes listings), and none in OwlGate's offer book.
+
+**So there is no live bid for a miner anywhere, on either chain.** What exists is asks (other owners' listing prices) and the history of completed sales (`Sold` events). Prices are in BNB, so a comparison in BEM needs the BNB/BEM price, labelled as today's price (`2026-11-18-valuation-model.md`).
+
+This is the case `2026-11-19-offer-venues.md` set aside for its own decision: what Sell shows when there is no bid.
