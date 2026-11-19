@@ -34,7 +34,7 @@ An AI manager for TapeOut miners. It values each miner as a range, compares **Ho
 | --- | --- | --- |
 | 1. **Read** | Per-miner claim events, weight and status from the BNB mining contract; network weight and emission; X Layer offers | Chain readers |
 | 2. **Value** | Expected output = weight ÷ network weight × emission × 99%, under low / base / high scenarios for network growth and BEM price, with halving. Backtested against real claims | Valuation engine |
-| 3. **Compare** | Hold, Rent, Lend and Sell ranked on the same inputs, with what each pays over 30 days and over the miner's life | Option ranking |
+| 3. **Compare** | Hold, Rent, Lend and Sell ranked on the same inputs, with what each pays over 30 days and until the 2030 halving | Option ranking |
 | 4. **Draft rules** | The owner types rules in plain English. AI turns them into a policy and shows it back in plain words, with examples of what would be allowed and refused. The owner confirms | AI rules drafting |
 | 5. **Compile** | The confirmed policy becomes a NAND netlist, is tested on every input (small widths) or a fixed set, and is taped out as the owner's rules circuit | Rules compiler |
 | 6. **Paper run** | The strategy replays on history, then runs live for a period without real moves | Paper runs |
@@ -45,7 +45,7 @@ An AI manager for TapeOut miners. It values each miner as a range, compares **Ho
 
 | Option | Shown as |
 | --- | --- |
-| **Hold** | Expected BEM over 30 days and the miner's life, as a range |
+| **Hold** | Expected BEM over 30 days and until the 2030 halving, as a range |
 | **Rent** | Best live rental offer, and what it is worth against holding |
 | **Lend** | Best live TapePool terms: BEM received now, how long repayment takes |
 | **Sell** | Best live bid against the estimated value range |
@@ -124,7 +124,7 @@ Build so each step works end to end before the next. Dates are proposed; Furqaan
 
 Mirrors "Still open" in `CLAUDE.md`. Strike an item when an ADR settles it.
 
-- Mining contract read functions: weight, status, pending rewards.
+- ~~Mining contract read functions: weight, status, pending rewards.~~ Settled: `docs/decisions/2026-11-19-data-contract.md`.
 - X Layer RIG, rental and TapePool addresses, and weekly volume.
 - Can a smart wallet hold a bridged miner and still rent or lend it?
 - Gate count of a realistic rules circuit.

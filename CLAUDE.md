@@ -8,7 +8,7 @@
 - **Team:** Furqaan (lead · chain, circuits, wallet, AI agent) and William (valuation, API, app, demo). Full ownership table in `docs/PRODUCT.md`.
 - **This session works with William:** the valuation engine and backtests, option ranking and offer display, paper runs, the API and jobs, the web app (miner page, decision screen, rules screens, action log, OKX Wallet, DeWEB mirror), the Telegram bot, Chinese language, the strategy marketplace UI, and the demo video, README and pitch.
 - **Stay in your lane.** If William's work needs something from the chain readers, the rules compiler, the owner wallet module, AI rules drafting or the agent loop, write it up for Furqaan instead of building it. Do not edit another owner's area to unblock yourself.
-- **The data contract is the one signed artifact.** It will live in `docs/data-contract.md` with types in `contract/` once the layout is chosen: the shape of a miner, a valuation, an offer, a proposed action and an action log entry. Code against it; never widen it quietly. A field someone needs that the contract doesn't have is a note to the lead, not a local addition.
+- **The data contract is the one signed artifact.** It lives in `docs/data-contract.md` with types and parsers in `packages/contract` (`docs/decisions/2026-11-19-data-contract.md`): the shape of a miner, a valuation, an offer, a proposed action and an action log entry. Code against it; never widen it quietly. A field someone needs that the contract doesn't have is a note to the lead, not a local addition.
 - **No spec ceremony.** This is a hackathon. `docs/PRODUCT.md` is the plan; its day-by-day table is the build order.
 - **Grill before building against an unsettled requirement.** Invoke the `grill-me` skill: questions one at a time, each with a recommended answer. The queue is "Still open" at the end of this file. Not before every feature; before every guess. A grilling that settles something product-level becomes a dated ADR in `docs/decisions/`, and the item is struck from "Still open".
 - **Before debugging, invoke the `diagnose` skill.** Build the fixture-based feedback loop first (one miner key, a saved block range of events, seconds to run) before theorising about a wrong valuation, an event that won't decode or a circuit that evaluates differently on chain.
@@ -90,7 +90,7 @@ Built for **X Layer TapeOut Accelerate** (OKX Build X series). Judged on user va
 
 | Option | What the owner gets | Shown as |
 | --- | --- | --- |
-| **Hold** | Keeps mining and claiming | Expected BEM over 30 days and over the miner's life, as a range |
+| **Hold** | Keeps mining and claiming | Expected BEM over 30 days and until the 2030 halving, as a range |
 | **Rent** | A renter pays for the miner's output for a period | Best live rental offer and what it is worth against holding |
 | **Lend** | Borrows BEM against future output (TapePool) | Best live loan terms, what is received now, how long repayment takes |
 | **Sell** | A lump sum, and the future output is gone | Best live bid against the estimated value range |
@@ -105,10 +105,12 @@ Only facts confirmed on chain or on an official TapeOut page go here, each with 
 | --- | --- | --- |
 | Mining chain | BNB Smart Chain (chain id 56) | 18 Nov 2026 |
 | BEM token (BNB Chain) | `0x5ce033b2bfca3af30b3e8c8457deaf776a8b695a`, 8 decimals | 18 Nov 2026, script run |
-| PoD mining contract (BNB Chain) | `0x7e2e0dc66a3bd9103e69b766afa62d9f7b697b46` | 18 Nov 2026, script run: every BEM mint came from a call to it |
-| Per-miner claim event | topic0 `0x0508a8b4117d9a7b3d8f5895f6413e61b4f9a2df35afbfb41e78d0ecfff1843f`; topic1 = miner key (bytes32); topic2 = owner wallet; data = amount (8 decimals, equals the BEM minted). One event per miner, even when one transaction claims many. Event name unconfirmed until the ABI is read | 18 Nov 2026, script run |
+| PoD mining contract (BNB Chain) | `0x7e2e0dc66a3bd9103e69b766afa62d9f7b697b46` (ERC-1967 proxy) | 18 Nov 2026, script run: every BEM mint came from a call to it |
+| PoD mining logic contract (BNB Chain) | `0xa3dbe873da37cd4e4a13c7cef23a7db6ca60f898`, behind the proxy; `src/PodMining.sol` verified on Sourcify (full match) | 18 Nov 2026, proxy implementation slot and Sourcify |
+| Mining contract sealed | `isSealed = true`, owner renounced, not paused: no upgrades and nobody can pause | 18 Nov 2026, storage read at block 134,351,215 |
+| Per-miner claim event | `Claimed(bytes32 indexed key, address indexed to, uint256 amount)`; topic0 `0x0508a8b4117d9a7b3d8f5895f6413e61b4f9a2df35afbfb41e78d0ecfff1843f`; topic1 = miner key (bytes32); topic2 = owner wallet; data = amount (8 decimals, equals the BEM minted). One event per miner, even when one transaction claims many | 18 Nov 2026, script run; name and topic0 from the verified source, 19 Nov 2026 |
 | Batch claim function | selector `0x7ed51748` (name unconfirmed) | 18 Nov 2026, script run |
-| Emission | 7,200 BEM a day; 99% to the verified pool, 1% to unverified | 18 Nov 2026, official PoD page |
+| Emission | 8,333,333 base units a second (7,199.999712 BEM a day) in era 0; 99% to the verified pool, 1% to unverified. Halves every 126,000,000 s from 21 Aug 2026 13:15:32 UTC; first halving 18 Aug 2030 21:15:32 UTC | 18 Nov 2026, verified source and storage read |
 
 **Unconfirmed** (from other projects' READMEs, do not use until checked): X Layer TapeOut factory `0x1f09daefa827f02cbb40967cc91b259763760761`, account opener `0x536add8f30f03b69f6fbf29d425a816a0dc50106`, circuit market `0xd89f358c48a7B632c9845af2a02A32eB90DD75DB`. Also unknown: the X Layer miner voucher (RIG), rental and TapePool contract addresses.
 
@@ -142,7 +144,7 @@ pnpm workspaces (`docs/decisions/2026-11-18-package-layout.md`). Planned for Wil
 | --- | --- |
 | `apps/web` | Web app (Vite, React) |
 | `apps/api` | Hono API and jobs |
-| `packages/contract` | The data contract's types (shapes owned by Furqaan; location pending his confirmation) |
+| `packages/contract` | The data contract's types and parsers (shapes owned by Furqaan) |
 | `packages/valuation` | Valuation engine and backtests |
 
 Furqaan lays out his own areas. Today the repo holds:
@@ -246,7 +248,7 @@ Never abbreviate these. Never invent synonyms.
 
 The `grill-me` queue. Strike an item when an ADR settles it.
 
-- Read a miner's current weight, status and pending rewards: confirm the mining contract's source is verified on BscScan and list its read functions.
+- ~~Read a miner's current weight, status and pending rewards: confirm the mining contract's source is verified on BscScan and list its read functions.~~ Settled: `docs/decisions/2026-11-19-data-contract.md`.
 - X Layer: the miner voucher (RIG), rental and TapePool contract addresses, and sales, rentals and loans per week.
 - Can a smart wallet hold a bridged miner and still rent it or lend it through TapePool?
 - How many gates a realistic rules circuit needs.
