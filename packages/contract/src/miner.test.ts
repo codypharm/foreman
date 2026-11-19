@@ -45,6 +45,35 @@ describe("a miner written to the wire", () => {
 	});
 });
 
+describe("a miner that is not active", () => {
+	const stopped = {
+		weight: "0",
+		weightWithoutBonus: "0",
+		holdsBonus: false,
+	};
+
+	test.each(["cooling", "revoked", "not-mining"])(
+		"(%s) earns nothing: weight 0, no bonus",
+		(status) => {
+			const miner = parseMiner(wireMiner({ status, ...stopped }), "miner");
+			expect(miner.weight).toBe(0n);
+		},
+	);
+
+	test.each([
+		[{ ...stopped, weight: "412", weightWithoutBonus: "412" }, "miner.weight"],
+		[{ ...stopped, weightWithoutBonus: "96" }, "miner.weightWithoutBonus"],
+		[{ ...stopped, holdsBonus: true }, "miner.holdsBonus"],
+	])(
+		"is refused with %j: the contract zeroes a stopped miner's weights",
+		(overrides, field) => {
+			expect(() =>
+				parseMiner(wireMiner({ status: "cooling", ...overrides }), "miner"),
+			).toThrow(expect.objectContaining({ name: "ContractParseError", field }));
+		},
+	);
+});
+
 describe("an unverified miner", () => {
 	test("has no task and no bonus", () => {
 		const miner = parseMiner(

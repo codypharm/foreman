@@ -88,6 +88,31 @@ function parseTaskId(
 }
 
 /**
+ * A miner that is not active earns nothing: stop() and challenge() zero its weights,
+ * even though bstar, mult and (while cooling) the bonus fields are left as they were.
+ */
+function checkEarnsNothing(
+	field: string,
+	weight: bigint,
+	holdsBonus: boolean,
+): void {
+	if (weight !== 0n) {
+		throw new ContractParseError(
+			`${field}.weight`,
+			"0 for a miner that is not active",
+			weight,
+		);
+	}
+	if (holdsBonus) {
+		throw new ContractParseError(
+			`${field}.holdsBonus`,
+			"false for a miner that is not active",
+			holdsBonus,
+		);
+	}
+}
+
+/**
  * The valuation's low case uses weightWithoutBonus, so the bonus fields must agree:
  * weight = (bstar + bonus) × mult, and only a verified miner can hold a bonus.
  */
@@ -130,13 +155,15 @@ export function parseMiner(wire: unknown, field: string): Miner {
 		`${field}.weightWithoutBonus`,
 	);
 	const holdsBonus = parseBoolean(w.holdsBonus, `${field}.holdsBonus`);
+	const status = parseOneOf(w.status, `${field}.status`, STATUSES);
+	if (status !== "active") checkEarnsNothing(field, weight, holdsBonus);
 	checkBonus(field, pool, weight, weightWithoutBonus, holdsBonus);
 	return {
 		key: parseHex32(w.key, `${field}.key`),
 		processor: parseAddress(w.processor, `${field}.processor`),
 		tokenId: parseUint(w.tokenId, `${field}.tokenId`),
 		owner: parseAddress(w.owner, `${field}.owner`),
-		status: parseOneOf(w.status, `${field}.status`, STATUSES),
+		status,
 		pool,
 		taskId: parseTaskId(w.taskId, `${field}.taskId`, pool),
 		weight,

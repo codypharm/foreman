@@ -124,7 +124,7 @@ Each item gets 2–3 options, the human chooses, it gets an ADR in `docs/decisio
 
 | Job | Status |
 | --- | --- |
-| Reading BNB Chain and X Layer (indexer) | Open (Furqaan). TypeScript with viem proposed so readers share the contract types: `2026-11-18-language.md` |
+| Reading BNB Chain and X Layer (indexer) | TypeScript with viem 2.57.16; `packages/chain-bnb`, later `packages/chain-xlayer`; tests on saved RPC responses: `2026-11-19-chain-readers.md` |
 | Valuation engine language and hosting | TypeScript; token amounts as `bigint`, never `number`: `2026-11-18-language.md`. Hosting open |
 | API and job runner | Hono on Node, Postgres, pg-boss: `2026-11-18-api-and-jobs.md`. Hosting open |
 | Frontend | Vite, React, wagmi and viem; static build for DeWEB, OKX Wallet first: `2026-11-18-frontend.md` |
@@ -147,7 +147,14 @@ pnpm workspaces (`docs/decisions/2026-11-18-package-layout.md`). Planned for Wil
 | `packages/contract` | The data contract's types and parsers (shapes owned by Furqaan) |
 | `packages/valuation` | Valuation engine and backtests |
 
-Furqaan lays out his own areas. Today the repo holds:
+Furqaan's areas:
+
+| Path | What |
+| --- | --- |
+| `packages/chain-bnb` | BNB reader: `Miner` and `NetworkState` from the mining contract (`2026-11-19-chain-readers.md`) |
+| `packages/chain-xlayer` | X Layer reader: offers (once the addresses are confirmed) |
+
+Furqaan lays out the rest of his areas (rules compiler, owner wallet, agent loop) when they start. Today the repo holds:
 
 | Path | What |
 | --- | --- |
@@ -255,7 +262,7 @@ The `grill-me` queue. Strike an item when an ADR settles it.
 - Do copied or wrapper circuits earn mining rewards (decides the copy discount)?
 - Will TapePool and the market pay referral fees?
 - Does anyone already publish fair values or a sell-vs-rent comparison?
-- Every item still marked Open in "Tech stack": chain readers, rules compiler route, owner wallet, AI model, fee token, and hosting.
+- Every item still marked Open in "Tech stack": ~~chain readers~~ (settled: `2026-11-19-chain-readers.md`), rules compiler route, owner wallet, AI model, fee token, and hosting.
 
 ---
 

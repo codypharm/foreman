@@ -1,0 +1,22 @@
+{
+	"name": "@foreman/chain-bnb",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"typecheck": "tsc -p .",
+		"record": "node scripts/record-fixture.ts"
+	},
+	"dependencies": {
+		"@foreman/contract": "workspace:*",
+		"viem": "2.57.16"
+	},
+	"devDependencies": {
+		"@types/node": "24.19.2",
+		"vitest": "^5.1.0"
+	}
+}

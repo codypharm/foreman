@@ -67,6 +67,7 @@ interface Miner {
 
 - **Status mapping:** contract 0 → `not-mining`, 1 → `active`, 2 → `revoked`, 3 → `cooling`. A cooling miner has stopped but can still claim for 1,200 blocks.
 - **Bonus changes:** a miner can lose its bonus (`Demoted`) and win it back (`Reclaimed`). The reader follows both.
+- **Not active means earning nothing:** a `cooling`, `revoked` or `not-mining` miner has `weight` 0, `weightWithoutBonus` 0 and `holdsBonus` false. The contract zeroes a stopped or revoked miner's weights, even though other fields keep their old values (`docs/decisions/2026-11-19-chain-readers.md`).
 - **No image field:** sampled miners have an empty `tokenURI`. The app shows a two-letter badge.
 
 ### `NetworkState`
