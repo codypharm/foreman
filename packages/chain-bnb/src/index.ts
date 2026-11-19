@@ -3,5 +3,6 @@
 
 export { POD_MINING } from "./abi.ts";
 export { ChainReadError, UnknownMinerError } from "./errors.ts";
+export { blockAtOrAfter, readNetworkHistory } from "./history.ts";
 export { readMiner } from "./read-miner.ts";
 export { readNetworkState } from "./read-network.ts";

@@ -46,9 +46,12 @@ export function recordingClient(
 	calls: RpcCall[],
 ): PublicClient {
 	let id = 0;
+	// One recording sees one head, so the replay (which can only give one answer) matches
+	let head: unknown;
 	return createPublicClient({
 		transport: custom({
 			async request({ method, params }) {
+				if (method === "eth_blockNumber" && head !== undefined) return head;
 				const response = await fetch(rpcUrl, {
 					method: "POST",
 					headers: { "content-type": "application/json" },
@@ -64,6 +67,7 @@ export function recordingClient(
 					);
 				}
 				calls.push({ method, params: params ?? [], result: body.result });
+				if (method === "eth_blockNumber") head = body.result;
 				return body.result;
 			},
 		}),

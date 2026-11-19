@@ -9,7 +9,9 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"typecheck": "tsc -p .",
-		"record": "node scripts/record-fixture.ts"
+		"record": "node scripts/record-fixture.ts",
+		"record:history": "node scripts/record-history-fixture.ts",
+		"backfill": "node --env-file-if-exists=../../.env scripts/backfill-history.ts"
 	},
 	"dependencies": {
 		"@foreman/contract": "workspace:*",
