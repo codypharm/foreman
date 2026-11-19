@@ -11,7 +11,7 @@
 | `NetworkState` | Settled | BNB reader | Valuation, API, app |
 | `Valuation` | Settled | Valuation engine | API, app, agent loop |
 | `Price` | Settled | API job | App |
-| `Offer` | Provisional: venue fields wait for the X Layer addresses | X Layer reader | Option ranking, app, agent loop, paper run |
+| `Offer` | Settled (`2026-11-19-offer-shape.md`) | Readers (BNB market, TapePool) + option ranking (comparables) | Option ranking, app, agent loop, paper run |
 | `Policy` | Provisional: rule kinds may grow with the rules compiler | AI rules drafting, confirmed by the owner | Rules compiler, app, agent loop, paper run |
 | `TapeOutResult` | Settled | Rules compiler | App, action log |
 | `AgentKey` | Provisional: waits for the owner wallet route | Owner wallet module | App, agent loop |
@@ -121,27 +121,40 @@ interface Price {
 
 A price of zero is refused (a broken feed). Shown only as a dollar figure beside a BEM value, with its age. Stale after one hour (the app greys it out). Never an input to a valuation or a ranking.
 
-### `Offer` (provisional)
+### `Offer`
+
+*Decided in `docs/decisions/2026-11-19-offer-shape.md`, following the venue decisions (`2026-11-19-offer-venues.md`, `2026-11-19-sell-without-bids.md`).*
 
 ```ts
-type Venue = "xlayer-market" | "tapepool";
-type Read = { chainId: 196; block: bigint; time: bigint };
+type Currency = "BNB" | "OKB" | "BEM";            // BNB and OKB: 18 decimals; BEM: 8
+type Amount = { currency: Currency; value: bigint };
+type Venue = "bnb-market" | "xlayer-market" | "tapepool";
+type ChainRead = { chainId: 56 | 196; block: bigint; time: bigint };
+
+type Comparable = { price: Amount; weight: bigint; readAt: ChainRead; tx?: Hex32 }; // tx on sales only
+type Comparables = { venue: Venue; rule: string; items: Comparable[] };
+
+type SellBid =
+  | { state: "live"; venue: Venue; readAt: ChainRead; price: Amount; expiresAt: bigint | null }
+  | { state: "none"; checkedAt: bigint };
 
 type Offer =
-  | { option: "rent"; state: "live"; minerKey: Hex32; venue: "xlayer-market"; readAt: Read;
-      bemPerDay: bigint; days: number; expiresAt: bigint | null }
-  | { option: "lend"; state: "live"; minerKey: Hex32; venue: "tapepool"; readAt: Read;
-      receivedNow: bigint; repayment: "from-output-until-paid" }
-  | { option: "sell"; state: "live"; minerKey: Hex32; venue: "xlayer-market"; readAt: Read;
-      bid: bigint; expiresAt: bigint | null }
-  | { option: "rent" | "lend" | "sell"; state: "none"; minerKey: Hex32; checkedAt: bigint };
+  | { option: "sell"; minerKey: Hex32; bid: SellBid; sales: Comparables; asks: Comparables }
+  | { option: "rent"; minerKey: Hex32; state: "no-venue" }
+  | { option: "rent"; minerKey: Hex32; state: "none"; checkedAt: bigint }
+  | { option: "lend"; minerKey: Hex32; state: "live"; venue: "tapepool"; readAt: ChainRead;
+      receivedNow: Amount; fee: Amount; termDays: 7 | 14; repayment: "from-output-until-paid" }
+  | { option: "lend"; minerKey: Hex32; state: "none"; checkedAt: bigint };
 ```
 
-- **No offer:** a missing offer is `state: "none"`, never an amount of zero.
-- **Hold:** Hold is not an offer. It comes from the `Valuation`.
-- **Unclaimed rewards:** they move with the NFT when it is sold. A Sell offer is always shown with "claim first".
-- **Venues changed (19 Nov):** Sell comes from TapeOut's BNB circuit market (and RIG offers on X Layer when there are any), Lend from TapePool, and Rent has no venue (`docs/decisions/2026-11-19-offer-venues.md`). Sell gains `sales` and `asks` context beside a bid that can be `none` (`docs/decisions/2026-11-19-sell-without-bids.md`). This shape is rewritten when the market reader is built.
-- **Offer history:** saved from the day the reader starts.
+- **No offer is a state, never a zero.** A bid, sale, ask or advance of 0 is refused.
+- **Rent today is always `no-venue`:** no rental market exists. There is no live Rent shape until one does.
+- **Sell with no bid** still carries `sales` and `asks` of comparable miners. Each list has a `rule` saying how they were picked, shown on screen. The bid headline stays "no bid right now".
+- **Currencies:** every amount names its currency. Sell prices on the BNB market are BNB, on the X Layer market OKB. A Lend advance and its fee are BEM. Conversion to BEM for comparison happens on screen, at today's prices, labelled.
+- **Chains:** each venue is on one chain (BNB market 56; X Layer market and TapePool 196). A read from the wrong chain is refused.
+- **Weights:** comparables carry the comparable miner's weight (never 0), so the screen can show price per unit of weight.
+- **Hold is not an offer:** it comes from the `Valuation`.
+- **Unclaimed rewards move with the NFT when it's sold:** a Sell is always shown with "claim first".
 
 ### `Policy` (provisional)
 

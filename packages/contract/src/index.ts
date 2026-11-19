@@ -8,6 +8,18 @@ export {
 	parseNetworkState,
 	serialiseNetworkState,
 } from "./network.ts";
+export {
+	type Amount,
+	type ChainRead,
+	type Comparable,
+	type Comparables,
+	type Currency,
+	type Offer,
+	parseOffer,
+	type SellBid,
+	serialiseOffer,
+	type Venue,
+} from "./offer.ts";
 export { type Price, parsePrice, serialisePrice } from "./price.ts";
 export {
 	type ChainId,

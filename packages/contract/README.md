@@ -76,7 +76,8 @@ Addresses and keys must be **lowercase**. Checksummed (mixed case) addresses are
 | `parseValuation`, `serialiseValuation` | `Valuation`, with its ordering checks (below) | Built, tested |
 | `parsePrice`, `serialisePrice` | `Price`; a zero price is refused | Built, tested |
 | `Scenario<T>` | `{ low, base, high }` | Built |
-| `Offer`, `Policy`, `AgentKey` | — | After the X Layer addresses and the owner wallet decision (provisional in the contract) |
+| `parseOffer`, `serialiseOffer` | `Offer`: Sell (bid, sales, asks), Rent (`no-venue` or `none`), Lend (TapePool advance or `none`) | Built, tested |
+| `Policy`, `AgentKey` | — | After the owner wallet decision (provisional in the contract) |
 | `TapeOutResult`, `ActionLogEntry` | — | With the rules compiler and the agent loop |
 
 Each shape is added one at a time, test first, with a parse and serialise pair.
@@ -160,6 +161,19 @@ All three cases equal is fine: until the reader supplies network history, nothin
 
 US dollars per BEM at 8 decimals (`"2050000000"` is $20.50), with its source and when it was read. **A zero price is refused:** it is a broken feed, and every dollar figure would read $0.00. Showing the age and greying out after one hour is the app's job; the price is never an input to a valuation or a ranking.
 
+## `Offer`: no offer is a state, and every amount names its currency
+
+| Refused | Why |
+| --- | --- |
+| A bid, sale, ask or advance of 0 | A missing offer is `state: "none"` (or Rent's `no-venue`), never an amount of zero |
+| An amount without `currency` | BNB and OKB have 18 decimals, BEM 8: a bare number could be off by 10¹⁰ |
+| A Lend advance or fee not in BEM | TapePool lends BEM |
+| A read from the wrong chain for its venue | The BNB market is on 56; the X Layer market and TapePool are on 196 |
+| A comparable with weight 0 | There'd be no price per unit of weight |
+| Sales or asks without a `rule` | The screen has to say how comparables were picked |
+| A live Rent offer | No rental venue exists to read one from (`2026-11-19-offer-venues.md`) |
+| A Lend term other than 7 or 14 days | TapePool's two terms |
+
 ## Errors name the full path
 
 The `field` argument is a dotted path, and nested parsers extend it. A bad value deep inside a valuation reports exactly where it is:
@@ -214,6 +228,7 @@ src/
   network.ts         NetworkState, parseNetworkState, serialiseNetworkState
   valuation.ts       Valuation, Scenario, parseValuation, serialiseValuation
   price.ts           Price, parsePrice, serialisePrice
+  offer.ts           Offer, Amount, Comparables, parseOffer, serialiseOffer
   *.test.ts          one test file per module, through index.ts only
 ```
 
