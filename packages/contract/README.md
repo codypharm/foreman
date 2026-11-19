@@ -70,8 +70,10 @@ Addresses and keys must be **lowercase**. Checksummed (mixed case) addresses are
 | `parseSourced(wire, field, parseValue)` | A value with its source → `Sourced<T>` | Built, tested |
 | `serialiseSourced(sourced, field, serialiseValue)` | `Sourced<T>` → wire object | Built, tested |
 | `ContractParseError` | The one error every parser throws; `.field` names the bad field | Built |
-| `Miner`, `NetworkState` | — | Next |
-| `Valuation`, `Price` | — | After `Miner` |
+| `parseMiner`, `serialiseMiner` | `Miner`, with its consistency checks (below) | Built, tested |
+| `parseNetworkState`, `serialiseNetworkState` | `NetworkState`; verified miners never outnumber miners | Built, tested |
+| `BnbRead` | Where a BNB Chain read happened: chain 56, block, block time | Built, tested through `Miner` and `NetworkState` |
+| `Valuation`, `Price` | — | Next |
 | `Offer`, `Policy`, `AgentKey` | — | After the X Layer addresses and the owner wallet decision (provisional in the contract) |
 | `TapeOutResult`, `ActionLogEntry` | — | With the rules compiler and the agent loop |
 
@@ -122,6 +124,22 @@ On the wire:
 - A chain value has no block, or comes from a chain Foreman doesn't read.
 - A constant has no `ref`, or an assumption has no `basis` (empty or blank text counts as missing).
 
+## `Miner`: checks beyond the field types
+
+The reader sends what it read from `getMiner`. The parser also refuses a miner whose fields contradict each other. The valuation's low case uses `weightWithoutBonus`, so a mistake there would quietly give a wrong range.
+
+| Refused | Why |
+| --- | --- |
+| `pool: "verified"` with `taskId` `null` or `0` | The contract's task 0 means "no task", which is the unverified pool |
+| `pool: "unverified"` with a task | Same rule, the other way round |
+| `holdsBonus: false` with `weightWithoutBonus ≠ weight` | With no bonus, weight is `bstar × mult` either way |
+| `holdsBonus: true` with `weightWithoutBonus ≥ weight` | Holding the bonus means it adds weight |
+| `holdsBonus: true` on an unverified miner | Only the verified pool has a bonus |
+| `readAt.chainId` other than `56` | Mining runs on BNB Smart Chain. A miner "read" on X Layer is a reader bug |
+| A status other than `active`, `cooling`, `revoked`, `not-mining` | Those are the contract's four states (0 → `not-mining`, 1 active, 2 revoked, 3 cooling) |
+
+`serialiseMiner` and `serialiseNetworkState` parse their own output before returning it, so the API can never send a shape the app would refuse.
+
 ## Errors name the full path
 
 The `field` argument is a dotted path, and nested parsers extend it. A bad value deep inside a valuation reports exactly where it is:
@@ -168,10 +186,13 @@ pnpm biome check packages/contract         # lint and format
 src/
   index.ts           public exports; import only from here
   errors.ts          ContractParseError
-  wire.ts            parseUint, serialiseUint, parseAddress, parseHex32, parseObject
+  wire.ts            parseUint, serialiseUint, parseAddress, parseHex32,
+                     parseObject, parseOneOf, parseBoolean
   sourced.ts         Sourced<T>, parseSourced, serialiseSourced, parseChainId
-  wire.test.ts
-  sourced.test.ts
+  bnb.ts             BnbRead: chain 56, block, time
+  miner.ts           Miner, parseMiner, serialiseMiner
+  network.ts         NetworkState, parseNetworkState, serialiseNetworkState
+  *.test.ts          one test file per module, through index.ts only
 ```
 
-`parseObject` is used inside the package to build shape parsers. It isn't exported.
+`parseObject`, `parseOneOf` and `parseBoolean` are used inside the package to build shape parsers. They aren't exported.

@@ -64,5 +64,32 @@ export function parseObject(
 	return wire as Record<string, unknown>;
 }
 
+/** One of a fixed set of words, such as a status. */
+export function parseOneOf<const T extends string>(
+	wire: unknown,
+	field: string,
+	allowed: readonly T[],
+): T {
+	if (
+		typeof wire !== "string" ||
+		!(allowed as readonly string[]).includes(wire)
+	) {
+		throw new ContractParseError(
+			field,
+			`one of ${allowed.map((a) => `"${a}"`).join(", ")}`,
+			wire,
+		);
+	}
+	return wire as T;
+}
+
+/** true or false, never a truthy stand-in. */
+export function parseBoolean(wire: unknown, field: string): boolean {
+	if (typeof wire !== "boolean") {
+		throw new ContractParseError(field, "true or false", wire);
+	}
+	return wire;
+}
+
 /** Digits only, no sign, no padding, no leading zeros: one way to write each number. */
 const DECIMAL = /^(0|[1-9][0-9]*)$/;

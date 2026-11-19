@@ -1,6 +1,13 @@
 // The data contract's types and parsers. Shapes: docs/data-contract.md (owned by Furqaan).
 
+export type { BnbRead } from "./bnb.ts";
 export { ContractParseError } from "./errors.ts";
+export { type Miner, parseMiner, serialiseMiner } from "./miner.ts";
+export {
+	type NetworkState,
+	parseNetworkState,
+	serialiseNetworkState,
+} from "./network.ts";
 export {
 	type ChainId,
 	parseChainId,
