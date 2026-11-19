@@ -173,3 +173,48 @@ export const erc721OwnerOfAbi = [
 		stateMutability: "view",
 	},
 ] as const;
+
+/**
+ * TapeOut's circuit market on BNB Smart Chain. Its source is NOT verified, so this ABI is
+ * written by hand from what was confirmed on 19 Nov 2026: selectors and event hashes match
+ * these signatures exactly, and Sold amounts were matched to three sales' transaction values
+ * (CLAUDE.md "On-chain facts"; docs/notes/2026-11-19-xlayer-market-findings.md).
+ */
+export const CIRCUIT_MARKET =
+	"0x6feebbebc07bcb90bd1ac8b0cf9baa4f0ff2b46f" as const;
+
+export const circuitMarketAbi = [
+	{
+		name: "listings",
+		type: "function",
+		inputs: [{ name: "id", type: "uint256" }],
+		outputs: [
+			{ name: "seller", type: "address" },
+			{ name: "processor", type: "address" },
+			{ name: "price", type: "uint256" },
+			{ name: "feeBps", type: "uint256" },
+			{ name: "tokenId", type: "uint256" },
+		],
+		stateMutability: "view",
+	},
+	{
+		// Returns the latest listing id already used, not the next free one
+		name: "nextListingId",
+		type: "function",
+		inputs: [],
+		outputs: [{ name: "", type: "uint256" }],
+		stateMutability: "view",
+	},
+	{
+		name: "Sold",
+		type: "event",
+		inputs: [
+			{ name: "id", type: "uint256", indexed: true },
+			{ name: "buyer", type: "address", indexed: true },
+			{ name: "processor", type: "address", indexed: true },
+			{ name: "tokenId", type: "uint256", indexed: false },
+			{ name: "sellerProceeds", type: "uint256", indexed: false },
+			{ name: "fee", type: "uint256", indexed: false },
+		],
+	},
+] as const;

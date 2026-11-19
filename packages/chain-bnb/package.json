@@ -11,6 +11,7 @@
 		"typecheck": "tsc -p .",
 		"record": "node scripts/record-fixture.ts",
 		"record:history": "node scripts/record-history-fixture.ts",
+		"record:market": "node scripts/record-market-fixture.ts",
 		"backfill": "node --env-file-if-exists=../../.env scripts/backfill-history.ts"
 	},
 	"dependencies": {

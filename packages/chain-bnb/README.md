@@ -80,6 +80,7 @@ pnpm --filter @foreman/chain-bnb test       # vitest run, against the fixture
 pnpm --filter @foreman/chain-bnb typecheck  # tsc -p .
 pnpm --filter @foreman/chain-bnb record          # re-record the miner fixture from bsc-rpc.publicnode.com
 pnpm --filter @foreman/chain-bnb record:history  # re-record the history fixture (last hour)
+pnpm --filter @foreman/chain-bnb record:market   # re-record the market fixture (block 134,486,640)
 pnpm --filter @foreman/chain-bnb backfill        # daily history since 22 Aug; needs BNB_ARCHIVE_RPC_URL
 ```
 
@@ -89,6 +90,22 @@ pnpm --filter @foreman/chain-bnb backfill        # daily history since 22 Aug; n
 | --- | --- | --- |
 | `viem` 2.57.16, pinned | Decodes `getMiner` from the verified ABI; pins calls to a block | About 30 MB installed, server side only |
 | `@types/node` 24.19.2 (dev) | Types for `fetch`, `node:fs` and `console` in the recorder | Types only, no runtime code |
+
+## TapeOut's circuit market
+
+The market on BNB Chain where miners are listed and sold (`0x6fee…b46f`, owned by TapeOut's owner address). **It has asks and completed sales, but no bids.** What Sell shows without a bid is set out in `docs/decisions/2026-11-19-sell-without-bids.md`.
+
+| Function | What it does |
+| --- | --- |
+| `readListing(client, id, { blockNumber })` | One listing: seller, processor, token id, price in **BNB wei**, fee in bps. `null` once it's sold or withdrawn (the market zeroes it), never a zero-price ask |
+| `readActiveListings(client, { blockNumber, latest })` | The open asks among the latest `latest` listing ids, newest first |
+| `readSales(client, { fromBlock, toBlock })` | Completed sales, oldest first, in 200-block chunks. `priceWei` is what the buyer paid: seller proceeds + fee |
+
+**The market's source isn't verified**, so its ABI (`circuitMarketAbi` in `src/abi.ts`) is hand-written from what was confirmed on chain: selectors and event hashes match the signatures exactly, and `Sold` amounts were matched to three sales' transaction values. `nextListingId()` returns the **latest id already used**, not the next free one.
+
+These return the reader's own `MarketListing` and `MarketSale` types for now. They become the contract's Sell-side `Offer` context (bid, sales, asks) when `Offer` is rewritten.
+
+Prices are in BNB. Converting to BEM uses today's prices and says so (`2026-11-18-valuation-model.md`).
 
 ## Network history
 
