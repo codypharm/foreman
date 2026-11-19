@@ -37,7 +37,7 @@ Types use `bigint` for every amount, weight, time and block. JSON has no `bigint
 | Weight | `bigint` | Decimal string | `"1609667"` |
 | Time | `bigint`, Unix seconds | Decimal string | `"1787318132"` |
 | Block | `bigint` | Decimal string | `"134351215"` |
-| Rate in parts per million | `bigint` (10,000 = 1%) | Decimal string | `"4000"` is 0.4% |
+| Rate in parts per million | `bigint` (10,000 = 1%); may be negative | Decimal string | `"4000"` is 0.4%, `"-2000"` is −0.2% |
 | Address | `Address` | Lowercase `0x` hex, 20 bytes | `"0x7e2e…7b46"` |
 | Miner key, transaction hash | `Hex32` | Lowercase `0x` hex, 32 bytes | `"0x0508…843f"` |
 | Chain id | `ChainId` (`56` or `196`) | JSON number | `56` |
@@ -73,7 +73,9 @@ Addresses and keys must be **lowercase**. Checksummed (mixed case) addresses are
 | `parseMiner`, `serialiseMiner` | `Miner`, with its consistency checks (below) | Built, tested |
 | `parseNetworkState`, `serialiseNetworkState` | `NetworkState`; verified miners never outnumber miners | Built, tested |
 | `BnbRead` | Where a BNB Chain read happened: chain 56, block, block time | Built, tested through `Miner` and `NetworkState` |
-| `Valuation`, `Price` | — | Next |
+| `parseValuation`, `serialiseValuation` | `Valuation`, with its ordering checks (below) | Built, tested |
+| `parsePrice`, `serialisePrice` | `Price`; a zero price is refused | Built, tested |
+| `Scenario<T>` | `{ low, base, high }` | Built |
 | `Offer`, `Policy`, `AgentKey` | — | After the X Layer addresses and the owner wallet decision (provisional in the contract) |
 | `TapeOutResult`, `ActionLogEntry` | — | With the rules compiler and the agent loop |
 
@@ -140,6 +142,24 @@ The reader sends what it read from `getMiner`. The parser also refuses a miner w
 
 `serialiseMiner` and `serialiseNetworkState` parse their own output before returning it, so the API can never send a shape the app would refuse.
 
+## `Valuation`: the range has to mean something
+
+| Refused | Why |
+| --- | --- |
+| `range` not low ≤ base ≤ high | CLAUDE.md's valuation tests require it; a range out of order means nothing to an owner |
+| `minerWeight` not low ≤ base ≤ high | The low case can only drop the bonus, never add weight |
+| `growthPpm` not low ≥ base ≥ high | **Reversed on purpose:** the low case assumes the *fastest* network growth, because a bigger network means a smaller share |
+| `growthPpm` at or below −1,000,000 | −100% a day: the whole network gone. Negative growth above that is fine (miners stop and are revoked) |
+| `window.to` not after `window.from` | An empty window has no value |
+| `window.label` other than `30d` or `to-2030-halving` | The two horizons in `docs/decisions/2026-11-18-valuation-model.md`. Never "lifetime" |
+| `backtest` other than `"pending"` or `{ coverage, ref }` with both filled in | An owner should never see "backtested" without being able to check it |
+
+All three cases equal is fine: until the reader supplies network history, nothing separates them.
+
+## `Price`
+
+US dollars per BEM at 8 decimals (`"2050000000"` is $20.50), with its source and when it was read. **A zero price is refused:** it is a broken feed, and every dollar figure would read $0.00. Showing the age and greying out after one hour is the app's job; the price is never an input to a valuation or a ranking.
+
 ## Errors name the full path
 
 The `field` argument is a dotted path, and nested parsers extend it. A bad value deep inside a valuation reports exactly where it is:
@@ -186,13 +206,15 @@ pnpm biome check packages/contract         # lint and format
 src/
   index.ts           public exports; import only from here
   errors.ts          ContractParseError
-  wire.ts            parseUint, serialiseUint, parseAddress, parseHex32,
-                     parseObject, parseOneOf, parseBoolean
+  wire.ts            parseUint, serialiseUint, parseSignedInt, parseAddress,
+                     parseHex32, parseObject, parseOneOf, parseBoolean, parseText
   sourced.ts         Sourced<T>, parseSourced, serialiseSourced, parseChainId
   bnb.ts             BnbRead: chain 56, block, time
   miner.ts           Miner, parseMiner, serialiseMiner
   network.ts         NetworkState, parseNetworkState, serialiseNetworkState
+  valuation.ts       Valuation, Scenario, parseValuation, serialiseValuation
+  price.ts           Price, parsePrice, serialisePrice
   *.test.ts          one test file per module, through index.ts only
 ```
 
-`parseObject`, `parseOneOf` and `parseBoolean` are used inside the package to build shape parsers. They aren't exported.
+`parseObject`, `parseOneOf`, `parseBoolean`, `parseText` and `parseSignedInt` are used inside the package to build shape parsers. They aren't exported.

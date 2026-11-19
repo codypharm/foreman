@@ -8,6 +8,7 @@ export {
 	parseNetworkState,
 	serialiseNetworkState,
 } from "./network.ts";
+export { type Price, parsePrice, serialisePrice } from "./price.ts";
 export {
 	type ChainId,
 	parseChainId,
@@ -15,6 +16,12 @@ export {
 	type Sourced,
 	serialiseSourced,
 } from "./sourced.ts";
+export {
+	parseValuation,
+	type Scenario,
+	serialiseValuation,
+	type Valuation,
+} from "./valuation.ts";
 export {
 	type Address,
 	type Hex32,

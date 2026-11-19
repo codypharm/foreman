@@ -104,7 +104,8 @@ interface Valuation {
 }
 ```
 
-- **Ordering:** the parser refuses a range that is not ordered low ≤ base ≤ high.
+- **Ordering:** the parser refuses a range that is not ordered low ≤ base ≤ high, and miner weight the same. Growth is ordered the other way (low ≥ base ≥ high): the low case assumes the fastest growth.
+- **Negative growth:** `growthPpm` may be negative (the network shrinks), but must be above −1,000,000 ppm (−100% a day). On the wire it is a decimal string with an optional minus sign.
 - **Window labels on screen:** "30 days" and "until the 2030 halving". Never "lifetime".
 
 ### `Price`
@@ -117,7 +118,7 @@ interface Price {
 }
 ```
 
-Shown only as a dollar figure beside a BEM value, with its age. Stale after one hour (the app greys it out). Never an input to a valuation or a ranking.
+A price of zero is refused (a broken feed). Shown only as a dollar figure beside a BEM value, with its age. Stale after one hour (the app greys it out). Never an input to a valuation or a ranking.
 
 ### `Offer` (provisional)
 

@@ -11,6 +11,23 @@ export function parseUint(wire: unknown, field: string): bigint {
 	return BigInt(wire);
 }
 
+/** A whole number that may be negative, such as a growth rate. Same one-spelling rule. */
+export function parseSignedInt(wire: unknown, field: string): bigint {
+	if (typeof wire !== "string" || !SIGNED_DECIMAL.test(wire)) {
+		throw new ContractParseError(
+			field,
+			"a decimal string, optionally negative",
+			wire,
+		);
+	}
+	return BigInt(wire);
+}
+
+/** A whole number that may be negative, as its decimal string for the wire. */
+export function serialiseSignedInt(value: bigint, _field: string): string {
+	return value.toString(10);
+}
+
 /** A whole number as its decimal string for the wire. Refuses what no reader would accept. */
 export function serialiseUint(value: bigint, field: string): string {
 	if (value < 0n) {
@@ -83,6 +100,14 @@ export function parseOneOf<const T extends string>(
 	return wire as T;
 }
 
+/** Text that says something: empty or blank text is refused. */
+export function parseText(wire: unknown, field: string): string {
+	if (typeof wire !== "string" || wire.trim() === "") {
+		throw new ContractParseError(field, "non-empty text", wire);
+	}
+	return wire;
+}
+
 /** true or false, never a truthy stand-in. */
 export function parseBoolean(wire: unknown, field: string): boolean {
 	if (typeof wire !== "boolean") {
@@ -93,3 +118,6 @@ export function parseBoolean(wire: unknown, field: string): boolean {
 
 /** Digits only, no sign, no padding, no leading zeros: one way to write each number. */
 const DECIMAL = /^(0|[1-9][0-9]*)$/;
+
+/** As DECIMAL, with an optional minus sign; "-0" is refused because 0 is written "0". */
+const SIGNED_DECIMAL = /^(0|-?[1-9][0-9]*)$/;

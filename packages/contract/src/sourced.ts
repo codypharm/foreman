@@ -2,7 +2,7 @@
 // "No chain data, no number"). A value without a source does not parse.
 
 import { ContractParseError } from "./errors.ts";
-import { parseObject, parseUint, serialiseUint } from "./wire.ts";
+import { parseObject, parseText, parseUint, serialiseUint } from "./wire.ts";
 
 export type ChainId = 56 | 196;
 
@@ -79,13 +79,6 @@ export function parseChainId(wire: unknown, field: string): ChainId {
 			"56 (BNB Smart Chain) or 196 (X Layer)",
 			wire,
 		);
-	}
-	return wire;
-}
-
-function parseText(wire: unknown, field: string): string {
-	if (typeof wire !== "string" || wire.trim() === "") {
-		throw new ContractParseError(field, "non-empty text", wire);
 	}
 	return wire;
 }
