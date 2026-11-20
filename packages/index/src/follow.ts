@@ -13,6 +13,7 @@ import {
 import type pg from "pg";
 import type { Address, PublicClient } from "viem";
 import { type BackfillResult, backfillNetlists } from "./backfill.ts";
+import { followMarket, type MarketFollowResult } from "./market.ts";
 import {
 	backfillCommitments,
 	type CommitmentBackfillResult,
@@ -33,6 +34,11 @@ export type FollowResult =
 			revokes: number;
 			commitments: CommitmentBackfillResult;
 			netlists: BackfillResult;
+			/**
+			 * The market, last and on its own: a market read that stops leaves the rest followed
+			 * (docs/decisions/2026-11-20-market-index.md).
+			 */
+			market: MarketFollowResult;
 	  }
 	/** A scan that stopped: nothing from that part on is saved. */
 	| {
@@ -123,6 +129,19 @@ export async function followIndex(
 	// Commitments of new and restarted miners, then new netlists, read at the index's block
 	const commitments = await backfillCommitments(pool, client);
 	const netlists = await backfillNetlists(pool, client);
+
+	// The market follows from its own last block; its first fill is a long run of its own
+	const marketState = await pool.query<{ market_up_to_block: string | null }>(
+		"select market_up_to_block from index_state",
+	);
+	onProgress?.("market");
+	const market: MarketFollowResult =
+		marketState.rows[0]?.market_up_to_block == null
+			? {
+					followed: false,
+					detail: "not filled yet: run the market's first fill",
+				}
+			: await followMarket(pool, client, { toBlock });
 	return {
 		followed: true,
 		toBlock,
@@ -131,5 +150,6 @@ export async function followIndex(
 		revokes,
 		commitments,
 		netlists,
+		market,
 	};
 }

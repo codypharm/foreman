@@ -39,12 +39,18 @@ importers:
 
   packages/index:
     dependencies:
+      '@foreman/chain-bnb':
+        specifier: workspace:*
+        version: link:../chain-bnb
       '@foreman/contract':
         specifier: workspace:*
         version: link:../contract
       '@foreman/originality':
         specifier: workspace:*
         version: link:../originality
+      '@foreman/valuation':
+        specifier: workspace:*
+        version: link:../valuation
       pg:
         specifier: ^8.23.1
         version: 8.23.1
@@ -52,9 +58,6 @@ importers:
         specifier: 2.57.16
         version: 2.57.16(typescript@7.0.2)
     devDependencies:
-      '@foreman/chain-bnb':
-        specifier: workspace:*
-        version: link:../chain-bnb
       '@types/node':
         specifier: 24.19.2
         version: 24.19.2

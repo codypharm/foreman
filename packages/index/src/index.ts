@@ -18,6 +18,12 @@ export {
 	loadCircuitIndex,
 	readCircuitRef,
 } from "./load-index.ts";
+export {
+	followMarket,
+	type MarketBook,
+	type MarketFollowResult,
+	readMarketBook,
+} from "./market.ts";
 export { migrate } from "./migrate.ts";
 export {
 	backfillCommitments,

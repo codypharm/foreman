@@ -15,16 +15,18 @@
 		"measure-floor": "node --env-file-if-exists=../../.env scripts/measure-size-floor.ts",
 		"fill-times": "node --env-file-if-exists=../../.env scripts/fill-times.ts",
 		"revokes": "node --env-file-if-exists=../../.env scripts/index-revokes.ts",
-		"follow": "node --env-file-if-exists=../../.env scripts/follow-index.ts"
+		"follow": "node --env-file-if-exists=../../.env scripts/follow-index.ts",
+		"fill-market": "node --env-file-if-exists=../../.env scripts/fill-market.ts"
 	},
 	"dependencies": {
+		"@foreman/chain-bnb": "workspace:*",
 		"@foreman/contract": "workspace:*",
 		"@foreman/originality": "workspace:*",
+		"@foreman/valuation": "workspace:*",
 		"pg": "^8.23.1",
 		"viem": "2.57.16"
 	},
 	"devDependencies": {
-		"@foreman/chain-bnb": "workspace:*",
 		"@types/node": "24.19.2",
 		"@types/pg": "^8.23.1",
 		"vitest": "^5.1.0"

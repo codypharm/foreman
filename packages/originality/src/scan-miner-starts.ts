@@ -8,11 +8,9 @@ import { POD_MINING, podMiningAbi } from "@foreman/chain-bnb";
 import { type Hex32, parseHex32 } from "@foreman/contract";
 import {
 	type Address,
-	encodePacked,
 	type Hex,
 	hexToBigInt,
 	hexToNumber,
-	keccak256,
 	numberToHex,
 	type PublicClient,
 } from "viem";
@@ -103,15 +101,8 @@ export async function scanMinerStarts(
 	return { complete: true, upToBlock: range.toBlock, starts };
 }
 
-/** The mining contract's key for a circuit: keccak256(abi.encodePacked(circuits, circuitId)). */
-export function minerKey(circuit: CircuitId): Hex32 {
-	return parseHex32(
-		keccak256(
-			encodePacked(["address", "uint256"], [circuit.processor, circuit.id]),
-		),
-		"minerKey",
-	);
-}
+/** The mining contract's key for a circuit, now in chain-bnb; re-exported for existing callers. */
+export { minerKey } from "@foreman/chain-bnb";
 
 export type CommitmentRead =
 	/**

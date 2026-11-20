@@ -8,7 +8,15 @@ import {
 	parseAddress,
 	parseHex32,
 } from "@foreman/contract";
-import { type PublicClient, zeroAddress } from "viem";
+import {
+	decodeEventLog,
+	type Hex,
+	hexToBigInt,
+	hexToNumber,
+	numberToHex,
+	type PublicClient,
+	zeroAddress,
+} from "viem";
 import { CIRCUIT_MARKET, circuitMarketAbi } from "./abi.ts";
 import { ChainReadError } from "./errors.ts";
 
@@ -136,3 +144,183 @@ export async function readSales(
 }
 
 const CHUNK = 200n;
+
+/** Where an event sits in the chain, and its block's time. */
+export interface MarketEventAt {
+	block: bigint;
+	time: bigint;
+	tx: Hex32;
+	logIndex: number;
+}
+
+/** Every event the market emits (2026-11-20-market-index.md, decision 1; 2026-11-20-market-admin-events.md). */
+export type MarketEvent =
+	| {
+			event: "listed";
+			listingId: bigint;
+			seller: Address;
+			processor: Address;
+			tokenId: bigint;
+			priceWei: bigint;
+			at: MarketEventAt;
+	  }
+	| {
+			event: "price-changed";
+			listingId: bigint;
+			priceWei: bigint;
+			at: MarketEventAt;
+	  }
+	| { event: "delisted"; listingId: bigint; at: MarketEventAt }
+	| {
+			event: "sold";
+			listingId: bigint;
+			buyer: Address;
+			processor: Address;
+			tokenId: bigint;
+			/** What the buyer paid, BNB wei: seller proceeds + fee. */
+			priceWei: bigint;
+			feeWei: bigint;
+			at: MarketEventAt;
+	  }
+	/** The owner taking out the market's fees; about no listing. */
+	| { event: "withdrawn"; at: MarketEventAt }
+	/** Admin events: deployment and a change of owner change no listing. */
+	| { event: "initialized"; at: MarketEventAt }
+	| { event: "ownership-transferred"; at: MarketEventAt }
+	/** The market's code was swapped: only the known upgrades are accepted (market scan). */
+	| { event: "upgraded"; implementation: Address; at: MarketEventAt };
+
+/** Blocks per log read on the archive node (CLAUDE.md, "Tape-out scan"). */
+const EVENT_SPAN = 50_000n;
+
+interface RawLog {
+	topics: [Hex, ...Hex[]];
+	data: Hex;
+	blockNumber: Hex;
+	transactionHash: Hex;
+	logIndex: Hex;
+	/** Not every node returns it: a log without one stops the read. */
+	blockTimestamp?: Hex;
+}
+
+/**
+ * Every log from the market in [fromBlock, toBlock], oldest first. Needs the archive node: a
+ * node without history returns an empty list, not an error. An event with any other topic, or
+ * a log without its block time, throws: an event nobody decoded could open or close a listing.
+ */
+export async function readMarketEvents(
+	client: PublicClient,
+	range: { fromBlock: bigint; toBlock: bigint },
+): Promise<MarketEvent[]> {
+	const { fromBlock, toBlock } = range;
+	if (toBlock < fromBlock) {
+		throw new RangeError(
+			`toBlock (${toBlock}) is before fromBlock (${fromBlock})`,
+		);
+	}
+	const events: MarketEvent[] = [];
+	for (let from = fromBlock; from <= toBlock; from += EVENT_SPAN) {
+		const to =
+			from + EVENT_SPAN - 1n < toBlock ? from + EVENT_SPAN - 1n : toBlock;
+		const logs = (await client.request({
+			method: "eth_getLogs",
+			params: [
+				{
+					address: CIRCUIT_MARKET,
+					fromBlock: numberToHex(from),
+					toBlock: numberToHex(to),
+				},
+			],
+		})) as RawLog[];
+		for (const log of logs) events.push(decodeMarketLog(log));
+	}
+	return events.sort((a, b) =>
+		a.at.block !== b.at.block
+			? a.at.block < b.at.block
+				? -1
+				: 1
+			: a.at.logIndex - b.at.logIndex,
+	);
+}
+
+function decodeMarketLog(log: RawLog): MarketEvent {
+	const block = hexToBigInt(log.blockNumber);
+	if (!log.blockTimestamp) {
+		throw new ChainReadError(
+			`A market log in block ${block} came without its block time`,
+		);
+	}
+	const at: MarketEventAt = {
+		block,
+		time: hexToBigInt(log.blockTimestamp),
+		tx: parseHex32(log.transactionHash, "log.transactionHash"),
+		logIndex: hexToNumber(log.logIndex),
+	};
+	let decoded: ReturnType<typeof decodeEventLog<typeof circuitMarketAbi>>;
+	try {
+		decoded = decodeEventLog({
+			abi: circuitMarketAbi,
+			data: log.data,
+			topics: log.topics,
+			strict: true,
+		});
+	} catch {
+		throw new ChainReadError(
+			`A market log in block ${block} (log ${at.logIndex}) has topic ${log.topics[0]}, which is not one of the market's eight events`,
+		);
+	}
+	const address = (a: string, field: string) =>
+		parseAddress(a.toLowerCase(), field);
+	switch (decoded.eventName) {
+		case "Listed": {
+			const { id, seller, processor, tokenId, price } = decoded.args;
+			return {
+				event: "listed",
+				listingId: id,
+				seller: address(seller, "Listed.seller"),
+				processor: address(processor, "Listed.processor"),
+				tokenId,
+				priceWei: price,
+				at,
+			};
+		}
+		case "PriceChanged":
+			return {
+				event: "price-changed",
+				listingId: decoded.args.id,
+				priceWei: decoded.args.price,
+				at,
+			};
+		case "Delisted":
+			return { event: "delisted", listingId: decoded.args.id, at };
+		case "Sold": {
+			const { id, buyer, processor, tokenId, sellerProceeds, fee } =
+				decoded.args;
+			return {
+				event: "sold",
+				listingId: id,
+				buyer: address(buyer, "Sold.buyer"),
+				processor: address(processor, "Sold.processor"),
+				tokenId,
+				priceWei: sellerProceeds + fee,
+				feeWei: fee,
+				at,
+			};
+		}
+		case "Withdrawn":
+			return { event: "withdrawn", at };
+		case "Initialized":
+			return { event: "initialized", at };
+		case "OwnershipTransferred":
+			return { event: "ownership-transferred", at };
+		case "Upgraded":
+			return {
+				event: "upgraded",
+				implementation: address(
+					decoded.args.implementation,
+					"Upgraded.implementation",
+				),
+				at,
+			};
+	}
+}

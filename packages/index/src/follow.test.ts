@@ -187,4 +187,34 @@ describe.skipIf(!TEST_DATABASE_URL)("following the index", () => {
 		).toMatchObject({ followed: true, tapeOuts: 0, starts: 0, revokes: 0 });
 		expect((await readIndex(pool)).upToBlock).toBe(SPLIT);
 	});
+
+	test("leaves the market alone until its first fill, and says so", async () => {
+		pool = await indexToSplit();
+		const result = await followIndex(pool, replayClient(tapeOuts), {
+			toBlock: HEAD,
+		});
+		expect(result).toMatchObject({
+			followed: true,
+			market: {
+				followed: false,
+				detail: "not filled yet: run the market's first fill",
+			},
+		});
+	});
+
+	test("follows the market from its own last block", async () => {
+		pool = await indexToSplit();
+		// A market already read to HEAD: nothing to read, so no call is made
+		await pool.query(
+			"update index_state set market_up_to_block = $1, market_up_to_time = 1",
+			[HEAD.toString()],
+		);
+		const result = await followIndex(pool, replayClient(tapeOuts), {
+			toBlock: HEAD,
+		});
+		expect(result).toMatchObject({
+			followed: true,
+			market: { followed: true, toBlock: HEAD, sales: 0, listings: 0 },
+		});
+	});
 });

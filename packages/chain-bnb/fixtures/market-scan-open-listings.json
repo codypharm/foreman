@@ -1,0 +1,282 @@
+[
+	{
+		"listingId": "28111",
+		"seller": "0xfa7524e6751bff29240ed6632d063c2369f33ec6",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "13931",
+		"priceWei": "2360000000000000000"
+	},
+	{
+		"listingId": "28110",
+		"seller": "0xfa7524e6751bff29240ed6632d063c2369f33ec6",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "13338",
+		"priceWei": "2360000000000000000"
+	},
+	{
+		"listingId": "28109",
+		"seller": "0xfa7524e6751bff29240ed6632d063c2369f33ec6",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "18313",
+		"priceWei": "2360000000000000000"
+	},
+	{
+		"listingId": "28104",
+		"seller": "0xb8cf1ea679aaaba9635ecc26e3b1e80da5c94b15",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "14566",
+		"priceWei": "2800000000000000000"
+	},
+	{
+		"listingId": "28103",
+		"seller": "0xb8cf1ea679aaaba9635ecc26e3b1e80da5c94b15",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "14550",
+		"priceWei": "2800000000000000000"
+	},
+	{
+		"listingId": "28102",
+		"seller": "0xb8cf1ea679aaaba9635ecc26e3b1e80da5c94b15",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "14549",
+		"priceWei": "2800000000000000000"
+	},
+	{
+		"listingId": "28101",
+		"seller": "0xb8cf1ea679aaaba9635ecc26e3b1e80da5c94b15",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "14548",
+		"priceWei": "2800000000000000000"
+	},
+	{
+		"listingId": "28096",
+		"seller": "0xbaa8eb82d808cee1245d7f15ad736c4d96c08c33",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "12099",
+		"priceWei": "145000000000000000"
+	},
+	{
+		"listingId": "28095",
+		"seller": "0xbaa8eb82d808cee1245d7f15ad736c4d96c08c33",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "12098",
+		"priceWei": "140999999999999984"
+	},
+	{
+		"listingId": "28088",
+		"seller": "0xc1c59c6ec5d37ef390282cbf2ae2908df3dbdf98",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "15453",
+		"priceWei": "380000000000000000"
+	},
+	{
+		"listingId": "28087",
+		"seller": "0xc1c59c6ec5d37ef390282cbf2ae2908df3dbdf98",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "12814",
+		"priceWei": "40000000000000000"
+	},
+	{
+		"listingId": "28081",
+		"seller": "0xfa7524e6751bff29240ed6632d063c2369f33ec6",
+		"processor": "0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c",
+		"tokenId": "2369",
+		"priceWei": "2331000000000000000"
+	},
+	{
+		"listingId": "28080",
+		"seller": "0xfa7524e6751bff29240ed6632d063c2369f33ec6",
+		"processor": "0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c",
+		"tokenId": "2150",
+		"priceWei": "2330000000000000000"
+	},
+	{
+		"listingId": "28079",
+		"seller": "0xfa7524e6751bff29240ed6632d063c2369f33ec6",
+		"processor": "0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c",
+		"tokenId": "2395",
+		"priceWei": "2330000000000000000"
+	},
+	{
+		"listingId": "28078",
+		"seller": "0x853157e7861bf831963313714a3bc6e96fc3b597",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "18342",
+		"priceWei": "5000000000000000000"
+	},
+	{
+		"listingId": "28077",
+		"seller": "0xc1c59c6ec5d37ef390282cbf2ae2908df3dbdf98",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "5062",
+		"priceWei": "480000000000000000"
+	},
+	{
+		"listingId": "28074",
+		"seller": "0xfdfa5a855ebffd0db7ea7804d9f87065b2f44268",
+		"processor": "0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c",
+		"tokenId": "2421",
+		"priceWei": "53800000000000000000"
+	},
+	{
+		"listingId": "28064",
+		"seller": "0xfd462cf1263299f6d9a73028cbfaaf3478d0578f",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "7299",
+		"priceWei": "123747000000000000"
+	},
+	{
+		"listingId": "28063",
+		"seller": "0xbaa8eb82d808cee1245d7f15ad736c4d96c08c33",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "12097",
+		"priceWei": "142999999999999984"
+	},
+	{
+		"listingId": "28062",
+		"seller": "0xbaa8eb82d808cee1245d7f15ad736c4d96c08c33",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "7964",
+		"priceWei": "141999999999999984"
+	},
+	{
+		"listingId": "28054",
+		"seller": "0xfd462cf1263299f6d9a73028cbfaaf3478d0578f",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "7298",
+		"priceWei": "123748000000000000"
+	},
+	{
+		"listingId": "28052",
+		"seller": "0xfd462cf1263299f6d9a73028cbfaaf3478d0578f",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "7297",
+		"priceWei": "123749000000000000"
+	},
+	{
+		"listingId": "28051",
+		"seller": "0xc1c59c6ec5d37ef390282cbf2ae2908df3dbdf98",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "14019",
+		"priceWei": "45000000000000000"
+	},
+	{
+		"listingId": "28049",
+		"seller": "0xc1c59c6ec5d37ef390282cbf2ae2908df3dbdf98",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "795",
+		"priceWei": "200000000000000000"
+	},
+	{
+		"listingId": "28048",
+		"seller": "0xc1c59c6ec5d37ef390282cbf2ae2908df3dbdf98",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "15408",
+		"priceWei": "300000000000000000"
+	},
+	{
+		"listingId": "28099",
+		"seller": "0xf020fe1b44acfce114e114899de53dbd7014b42c",
+		"processor": "0xcc6b5acac871bcb1f60cce29d5917266d8fb956d",
+		"tokenId": "1509",
+		"priceWei": "59900000000000000"
+	},
+	{
+		"listingId": "28098",
+		"seller": "0xf020fe1b44acfce114e114899de53dbd7014b42c",
+		"processor": "0xcc6b5acac871bcb1f60cce29d5917266d8fb956d",
+		"tokenId": "1569",
+		"priceWei": "59900000000000000"
+	},
+	{
+		"listingId": "28072",
+		"seller": "0xc62bdf99ec7cee12e18196f03b5752c9b1167e4a",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "18045",
+		"priceWei": "8999999999999999"
+	},
+	{
+		"listingId": "28071",
+		"seller": "0xc62bdf99ec7cee12e18196f03b5752c9b1167e4a",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "18036",
+		"priceWei": "8000000000000000"
+	},
+	{
+		"listingId": "28070",
+		"seller": "0xc62bdf99ec7cee12e18196f03b5752c9b1167e4a",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "18043",
+		"priceWei": "7000000000000000"
+	},
+	{
+		"listingId": "28069",
+		"seller": "0xc62bdf99ec7cee12e18196f03b5752c9b1167e4a",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "18042",
+		"priceWei": "6000000000000000"
+	},
+	{
+		"listingId": "28068",
+		"seller": "0xc62bdf99ec7cee12e18196f03b5752c9b1167e4a",
+		"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+		"tokenId": "18044",
+		"priceWei": "5000000000000000"
+	},
+	{
+		"listingId": "28066",
+		"seller": "0xc62bdf99ec7cee12e18196f03b5752c9b1167e4a",
+		"processor": "0xcc6b5acac871bcb1f60cce29d5917266d8fb956d",
+		"tokenId": "8379",
+		"priceWei": "470000000000000"
+	},
+	{
+		"listingId": "28065",
+		"seller": "0xc62bdf99ec7cee12e18196f03b5752c9b1167e4a",
+		"processor": "0xcc6b5acac871bcb1f60cce29d5917266d8fb956d",
+		"tokenId": "8359",
+		"priceWei": "470000000000000"
+	},
+	{
+		"listingId": "28060",
+		"seller": "0xebae577653637723625fe98011621cedf3f9e295",
+		"processor": "0xbdc8952b9ad04b93fe5575ba66e52270ebfb4ba7",
+		"tokenId": "47",
+		"priceWei": "49800000000000000"
+	},
+	{
+		"listingId": "28059",
+		"seller": "0xc1c59c6ec5d37ef390282cbf2ae2908df3dbdf98",
+		"processor": "0x967155af1d946b78aac00c8e0ded77c6628a0c20",
+		"tokenId": "5",
+		"priceWei": "200000000000000000"
+	},
+	{
+		"listingId": "28002",
+		"seller": "0x8744b45db68147b1340faec8f9f2c906b083a56c",
+		"processor": "0x77c26e63134a02c98b4306e2d8969e26ac2d3498",
+		"tokenId": "26",
+		"priceWei": "30000000000000000"
+	},
+	{
+		"listingId": "28001",
+		"seller": "0x8744b45db68147b1340faec8f9f2c906b083a56c",
+		"processor": "0x77c26e63134a02c98b4306e2d8969e26ac2d3498",
+		"tokenId": "15",
+		"priceWei": "32000000000000000"
+	},
+	{
+		"listingId": "28000",
+		"seller": "0x516adc8cac15cd10557eef5f90ea3465ef2fba03",
+		"processor": "0xc38c95899cd21522ef5db37cd6be4cb422cef58a",
+		"tokenId": "2283",
+		"priceWei": "380000000000000000"
+	},
+	{
+		"listingId": "27993",
+		"seller": "0x6709dd61cd924f18297eaac199e2f837d5d4ec37",
+		"processor": "0xcc6b5acac871bcb1f60cce29d5917266d8fb956d",
+		"tokenId": "2176",
+		"priceWei": "57000000000000000"
+	}
+]

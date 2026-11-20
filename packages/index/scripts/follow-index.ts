@@ -1,6 +1,6 @@
 // Brings the index up to the latest finalized block: new tape-outs and their netlists, new miner
 // starts and their commitments, new revokes (docs/decisions/2026-11-20-circuit-index.md,
-// decision 5). Read only on chain; safe to stop and run again. The job runner calls the same
+// decision 5), then the market (docs/decisions/2026-11-20-market-index.md). Read only on chain; safe to stop and run again. The job runner calls the same
 // function every 5 minutes once hosting is chosen. Needs BNB_ARCHIVE_RPC_URL and DATABASE_URL.
 //
 //   pnpm --filter @foreman/index follow
@@ -22,7 +22,12 @@ try {
 	if (applied.length) console.log(`migrations applied: ${applied.join(", ")}`);
 	const client = createPublicClient({
 		chain: bsc,
-		transport: http(RPC, { retryCount: 5, timeout: 30_000 }),
+		// Batched, so the market's per-listing reads go as one request per group
+		transport: http(RPC, {
+			retryCount: 5,
+			timeout: 30_000,
+			batch: { batchSize: 50 },
+		}),
 	});
 	const { number: toBlock } = await client.getBlock({ blockTag: "finalized" });
 	const started = Date.now();
@@ -41,7 +46,16 @@ try {
 				`commitments read ${r.commitments.read} (failed ${r.commitments.failed.length}); ` +
 				`netlists read ${r.netlists.read}, unreadable ${r.netlists.unreadable}, failed ${r.netlists.failed.length}, still unread ${r.netlists.remaining}`,
 		);
-		if (r.commitments.failed.length || r.netlists.failed.length)
+		console.log(
+			r.market.followed
+				? `market to block ${r.market.toBlock}: ${r.market.sales} sales, ${r.market.listings} listings touched, ${r.market.open} open`
+				: `market not followed: ${r.market.detail}`,
+		);
+		if (
+			r.commitments.failed.length ||
+			r.netlists.failed.length ||
+			!r.market.followed
+		)
 			process.exitCode = 1;
 	}
 } finally {

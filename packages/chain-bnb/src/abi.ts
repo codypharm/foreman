@@ -176,12 +176,38 @@ export const erc721OwnerOfAbi = [
 
 /**
  * TapeOut's circuit market on BNB Smart Chain. Its source is NOT verified, so this ABI is
- * written by hand from what was confirmed on 19 Nov 2026: selectors and event hashes match
- * these signatures exactly, and Sold amounts were matched to three sales' transaction values
- * (CLAUDE.md "On-chain facts"; docs/notes/2026-11-19-xlayer-market-findings.md).
+ * written by hand from what was confirmed on 19 and 20 Nov 2026: selectors and event hashes
+ * match these signatures exactly, Sold amounts were matched to three sales' transaction values,
+ * and every log the market emitted since its first block has one of these eight events
+ * (CLAUDE.md "On-chain facts"; docs/notes/2026-11-19-xlayer-market-findings.md;
+ * docs/decisions/2026-11-20-market-index.md).
  */
 export const CIRCUIT_MARKET =
 	"0x6feebbebc07bcb90bd1ac8b0cf9baa4f0ff2b46f" as const;
+
+/** The market's first block with code, found by binary search on eth_getCode, 20 Nov 2026. */
+export const CIRCUIT_MARKET_FIRST_BLOCK = 116_708_167n;
+
+/**
+ * The market's code: the implementation in its ERC-1967 slot since block 116,709,020, the code
+ * every event meaning and `listings(id)` was confirmed against. Any other stops the market follow
+ * (CLAUDE.md "On-chain facts"; docs/decisions/2026-11-20-market-admin-events.md).
+ */
+export const CIRCUIT_MARKET_IMPLEMENTATION =
+	"0x725771c38361abef7b844729b978c775f7a83dfb" as const;
+
+/** The market's two upgrades, both before its first listing: the only ones accepted. */
+export const CIRCUIT_MARKET_UPGRADES = [
+	{
+		block: 116_708_167n,
+		implementation: "0x437d0a6141079554bbaf0d507ac3070c06576647",
+	},
+	{ block: 116_709_020n, implementation: CIRCUIT_MARKET_IMPLEMENTATION },
+] as const;
+
+/** ERC-1967's implementation slot: keccak256("eip1967.proxy.implementation") − 1. */
+export const ERC1967_IMPLEMENTATION_SLOT =
+	"0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc" as const;
 
 export const circuitMarketAbi = [
 	{
@@ -215,6 +241,63 @@ export const circuitMarketAbi = [
 			{ name: "tokenId", type: "uint256", indexed: false },
 			{ name: "sellerProceeds", type: "uint256", indexed: false },
 			{ name: "fee", type: "uint256", indexed: false },
+		],
+	},
+	{
+		name: "Listed",
+		type: "event",
+		inputs: [
+			{ name: "id", type: "uint256", indexed: true },
+			{ name: "seller", type: "address", indexed: true },
+			{ name: "processor", type: "address", indexed: true },
+			{ name: "tokenId", type: "uint256", indexed: false },
+			{ name: "price", type: "uint256", indexed: false },
+		],
+	},
+	{
+		name: "PriceChanged",
+		type: "event",
+		inputs: [
+			{ name: "id", type: "uint256", indexed: true },
+			{ name: "price", type: "uint256", indexed: false },
+		],
+	},
+	{
+		// The address and the bool are not interpreted: the listing itself is read again
+		name: "Delisted",
+		type: "event",
+		inputs: [
+			{ name: "id", type: "uint256", indexed: true },
+			{ name: "by", type: "address", indexed: true },
+			{ name: "flag", type: "bool", indexed: false },
+		],
+	},
+	// Admin events of the upgradeable proxy (docs/decisions/2026-11-20-market-admin-events.md)
+	{
+		name: "Initialized",
+		type: "event",
+		inputs: [{ name: "version", type: "uint64", indexed: false }],
+	},
+	{
+		name: "OwnershipTransferred",
+		type: "event",
+		inputs: [
+			{ name: "previousOwner", type: "address", indexed: true },
+			{ name: "newOwner", type: "address", indexed: true },
+		],
+	},
+	{
+		name: "Upgraded",
+		type: "event",
+		inputs: [{ name: "implementation", type: "address", indexed: true }],
+	},
+	{
+		// The owner taking out the market's fees; not about any listing
+		name: "Withdrawn",
+		type: "event",
+		inputs: [
+			{ name: "to", type: "address", indexed: true },
+			{ name: "amount", type: "uint256", indexed: false },
 		],
 	},
 ] as const;

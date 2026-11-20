@@ -4,7 +4,8 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./fixture": "./src/fixture.ts"
+		"./fixture": "./src/fixture.ts",
+		"./fixtures/*": "./fixtures/*"
 	},
 	"scripts": {
 		"test": "vitest run",
@@ -13,7 +14,9 @@
 		"record": "node scripts/record-fixture.ts",
 		"record:history": "node scripts/record-history-fixture.ts",
 		"record:market": "node scripts/record-market-fixture.ts",
-		"backfill": "node --env-file-if-exists=../../.env scripts/backfill-history.ts"
+		"backfill": "node --env-file-if-exists=../../.env scripts/backfill-history.ts",
+		"record:market-events": "node --env-file-if-exists=../../.env scripts/record-market-events-fixture.ts",
+		"record:market-scan": "node --env-file-if-exists=../../.env scripts/record-market-scan-fixture.ts"
 	},
 	"dependencies": {
 		"@foreman/contract": "workspace:*",

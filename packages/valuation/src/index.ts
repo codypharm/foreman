@@ -3,10 +3,12 @@
 // Token amounts are bigint base units (BEM has 8 decimals), never number.
 
 export {
+	ASK_CEILING,
 	type MarketAsk,
 	type MarketMinerState,
 	type MarketSale,
 	type Pool,
+	SALES_WINDOW_SECONDS,
 	sellComparables,
 } from "./comparables.ts";
 export { emissionBetween } from "./emission.ts";
