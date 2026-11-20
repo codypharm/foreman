@@ -13,7 +13,7 @@
 | `Price` | Settled; a currency pair is still open (BNB and OKB against BEM) | API job | App |
 | `Offer` | Settled (`2026-11-19-offer-shape.md`) | Readers (BNB market, TapePool) + comparables rule | API, app |
 | `CircuitRef` | Provisional: storage known (`docs/notes/2026-11-20-netlist-storage.md`); waits for the netlist reader | Circuit index | Originality, API, app |
-| `Originality` | Provisional: rules decided (`2026-11-20-copy-and-wrapper-rules.md`); waits for the netlist reader and the size floor | Originality check | API, app, publish job |
+| `Originality` | Provisional: rules decided (`2026-11-20-copy-and-wrapper-rules.md`, `2026-11-20-verdict-scope-and-earliest-design.md`); waits for the netlist reader and the size floor | Originality check | API, app, publish job |
 | `PublishedResult` | Provisional: waits for the results contract design | Publish job | App, markets, lenders |
 | ~~`Policy`, `TapeOutResult`, `AgentKey`, `ActionLogEntry`~~ | **Withdrawn** 20 Nov 2026 with autopilot (`2026-11-20-scope-and-team.md`). Parsers removed in a later commit | — | — |
 
@@ -165,19 +165,21 @@ interface CircuitRef {
   tokenId: bigint;           // the circuit's id on that processor
   tapedOutAt: { block: bigint; txIndex: number; logIndex: number; time: bigint };
   tapedOutBy: Address;       // the owner in the processor's TapedOut event
+  designCommittedAt: bigint | null; // block of the design commitment the mining contract accepted for this circuit (the miner's commitBlock); null when there is none. Only miners can have one
 }
 ```
 
-- **Order:** a circuit is earlier than another when its `tapedOutAt` is earlier: block, then transaction index, then log index. The earliest tape-out of a netlist is the original.
+- **Design time:** `designCommittedAt` when it is set and before `tapedOutAt.block`, otherwise `tapedOutAt.block`.
+- **Order:** a circuit is earlier than another when its design time is earlier. Same block: the lower `tapedOutAt` (block, then transaction index, then log index) is earlier. The earliest proven design is the original (`2026-11-20-verdict-scope-and-earliest-design.md`, decision 4).
 - **Miner link:** a miner's key is `keccak256(abi.encodePacked(processor, tokenId))` (`docs/notes/2026-11-18-mining-contract-findings.md`).
-- **Where it comes from:** `tapedOutAt` and `tapedOutBy` come from the processor's `TapedOut(uint256 indexed id, address indexed owner, uint32, uint32)` event (`docs/notes/2026-11-20-netlist-storage.md`).
+- **Where it comes from:** `tapedOutAt` and `tapedOutBy` come from the processor's `TapedOut(uint256 indexed id, address indexed owner, uint32, uint32)` event (`docs/notes/2026-11-20-netlist-storage.md`). `designCommittedAt` comes from `getMiner(key).commitBlock` on the mining contract, re-checkable against the `DesignCommitted` event in that block (`docs/notes/2026-11-20-what-can-mine.md`).
 
 ### `Originality` (provisional)
 
 ```ts
 type OriginalityVerdict =
   | { verdict: "wrapper"; pointsTo: CircuitRef[]; finalTarget: CircuitRef; chainSteps: number } // netlist is only REF records; finalTarget is the first circuit in the chain with gates of its own
-  | { verdict: "copy"; of: CircuitRef; netlistHash: Hex32 }             // identical netlist hash to an earlier circuit, at or above the size floor
+  | { verdict: "copy"; of: CircuitRef; netlistHash: Hex32; bytesIdentical: boolean; earlierBy: "tape-out" | "commitment" } // same netlist hash as a circuit with an earlier design time, at or above the size floor; bytesIdentical is false when they match only once NAND inputs are sorted; earlierBy says what made "of" earlier
   | { verdict: "too-small-to-tell"; sameAs: number; earliest: CircuitRef; netlistHash: Hex32; gateCount: number; floor: number } // identical, below the size floor
   | { verdict: "no-earlier-copy"; netlistHash: Hex32 }
   | { verdict: "cant-check"; reason: "netlist-unreadable" | "outside-index" | "read-failed" | "ref-chain-too-long" };
@@ -185,10 +187,15 @@ type OriginalityVerdict =
 type OriginalityFact =
   | { fact: "tape-out-address"; same: boolean }                      // beside "copy": the earlier circuit was taped out by the same address, or not
   | { fact: "uses-ref"; refRecords: number; targets: CircuitRef[]; borrowedGates: number; totalGates: number } // REF records mixed with real gates
-  | { fact: "also-identical"; to: CircuitRef; netlistHash: Hex32 };  // beside "wrapper": also identical to an earlier circuit
+  | { fact: "also-identical"; to: CircuitRef; netlistHash: Hex32 }   // beside "wrapper": also identical to an earlier circuit
+  | { fact: "can-mine"; state: "mining" }                            // every result carries exactly one can-mine fact
+  | { fact: "can-mine"; state: "cant-mine"; reason: "processor-not-eligible" | "uses-ref" }
+  | { fact: "can-mine"; state: "not-started" }                       // nothing rules it out; never a promise that it passes a task
+  | { fact: "design-bonus"; holds: boolean; bonus: bigint };         // miners only, from getMiner (optimal, bonus); shown before the verdict
 
 interface Originality {
-  circuit: CircuitRef;       // always a miner (decision 2); other circuits are in the index but get no verdict
+  circuit: CircuitRef;
+  scope: "miner" | "listed" | "pasted"; // why it was checked; only "miner" and "listed" are published
   result: OriginalityVerdict;
   facts: OriginalityFact[];
   occc: { status: "official"; collection: Address } | { status: "not-listed" } | { status: "not-checked" };
@@ -197,11 +204,14 @@ interface Originality {
 }
 ```
 
-- **Rules:** `docs/decisions/2026-11-20-copy-and-wrapper-rules.md`, run in this order: can't check → wrapper → copy or too small to tell → no earlier copy found.
-- **Netlist hash:** covers `nIn`, `nOut` and the netlist bytes, because the same bytes with a different `nOut` are a different circuit. The exact encoding is fixed in the rule version when the netlist reader is built.
+- **Rules:** `docs/decisions/2026-11-20-copy-and-wrapper-rules.md` as amended by `docs/decisions/2026-11-20-verdict-scope-and-earliest-design.md`, run in this order: can't check → wrapper → copy or too small to tell → no earlier copy found.
+- **Who gets a result:** every miner and every circuit listed on TapeOut's circuit market; anything else pasted into the app is checked on screen with `scope: "pasted"` and never published.
+- **Netlist hash:** covers `nIn`, `nOut` and the netlist bytes with each NAND record's two inputs in ascending order, so a copy with swapped inputs matches. The same bytes with a different `nOut` are a different circuit. The raw byte hash is kept as evidence (`bytesIdentical`). The exact encoding is fixed in the rule version when the netlist reader is built.
+- **Stated limit:** "Checks identical netlists, including swapped gate inputs. A copy with its gates reordered isn't detected." Shown with every `copy` and `no-earlier-copy`.
+- **Contract first for miners:** a miner's `design-bonus` fact is shown before Foreman's verdict, each labelled with its source. Neither overrides the other.
 - **Never "original":** `no-earlier-copy` is shown as "No earlier copy found among N circuits checked, up to block B", using `index`. A circuit outside the index is `cant-check`.
 - **Too small to tell:** shown as "Identical to N earlier circuits; too small to tell", with the floor stated. The floor is measured from the index, not chosen; until it is, no `copy` verdict is issued.
-- **Evidence travels with the verdict:** a `copy` names the earlier circuit and the shared hash; a `wrapper` names what its REF records point to and where the chain ends. Nothing else is needed to re-check it from chain data.
+- **Evidence travels with the verdict:** a `copy` names the earlier circuit, both design times (tape-out or commitment block) and the shared hash; a `wrapper` names what its REF records point to and where the chain ends. Nothing else is needed to re-check it from chain data.
 - **Facts are not verdicts:** an `OriginalityFact` adds context ("taped out by the same address", "1,204 of its 1,209 gates come from other circuits") and never changes the verdict.
 - **Value is separate:** an `Originality` never changes a `Valuation`. There is no copy discount.
 
@@ -215,5 +225,6 @@ interface PublishedResult {
 }
 ```
 
+- **Only miners and listed circuits:** a result with `scope: "pasted"` is never published.
 - **Reproducible:** what is written on chain includes the verdict, its evidence, `ruleVersion` and `index.upToBlock`, so anyone can recompute it.
 - **The on-chain encoding** is decided with the results contract.

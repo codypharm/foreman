@@ -41,7 +41,7 @@
 
 **Foreman: know what you're buying before you trade a TapeOut miner.** For any miner or RIG voucher, Foreman answers three questions and publishes the answers on X Layer:
 
-1. **Is it original?** Exact copies (byte-identical netlist; the earliest tape-out is the original) and wrappers (netlists made only of REF records, with the circuit they point to), per TAPs issue #102. OCCC status where a circuit is in an OCCC collection.
+1. **Is it original?** Exact copies (identical netlist, counting swapped gate inputs as the same; the earliest proven design is the original) and wrappers (netlists made only of REF records, with the circuit they point to), per TAPs issue #102. OCCC status where a circuit is in an OCCC collection.
 2. **What's it worth?** An estimated value range and payback, from chain data.
 3. **What can I do with it?** Hold, Sell, Lend and Rent, each shown as it really is today.
 
@@ -76,8 +76,8 @@ Built for **X Layer TapeOut Accelerate** (OKX Build X series). Judged on user va
 | Rule | Detail |
 | --- | --- |
 | **Say only what was checked** | "No earlier copy found among 41,203 circuits checked, up to block 134,600,000", never "original" or "authentic" on its own. A circuit outside the index is "can't check", never "original" |
-| **Every verdict carries its evidence** | A copy names the earlier circuit, both tape-out blocks and the shared netlist hash. A wrapper names the circuit its REF records point to. Anyone can re-check it from chain data |
-| **The earliest tape-out is the original** | Stated on screen as the rule. Same block: the lower transaction index, then log index, is earlier |
+| **Every verdict carries its evidence** | A copy names the earlier circuit, both design times (tape-out or design commitment block) and the shared netlist hash. A wrapper names the circuit its REF records point to. Anyone can re-check it from chain data |
+| **The earliest proven design is the original** | Stated on screen as the rule. A circuit's design time is its design commitment block when the mining contract accepted one before its tape-out, otherwise its tape-out block. Same block: the lower tape-out (transaction index, then log index) is earlier. Reworded 20 Nov 2026 from "the earliest tape-out", because tape-outs can be front-run (`docs/decisions/2026-11-20-verdict-scope-and-earliest-design.md`) |
 | **Facts, never accusations** | "Byte-identical to circuit #X, taped out 3 days earlier", never "fake", "stolen" or "scam" |
 | **Code decides, never a model** | No verdict, value or comparison comes from a model call. A model may write explanatory text only, from the fixed result |
 | **No invented copy discount** | A miner's value comes from its own on-chain weight, copy or not. Originality is shown beside the value, never folded into it as a guessed percentage |
@@ -101,6 +101,10 @@ Only facts confirmed on chain or on an official TapeOut page go here, each with 
 | Per-miner claim event | `Claimed(bytes32 indexed key, address indexed to, uint256 amount)`; topic0 `0x0508a8b4117d9a7b3d8f5895f6413e61b4f9a2df35afbfb41e78d0ecfff1843f`; topic1 = miner key (bytes32); topic2 = owner wallet; data = amount (8 decimals, equals the BEM minted). One event per miner, even when one transaction claims many | 18 Nov 2026, script run; name and topic0 from the verified source, 19 Nov 2026 |
 | Batch claim function | selector `0x7ed51748` (name unconfirmed) | 18 Nov 2026, script run |
 | Emission | 8,333,333 base units a second (7,199.999712 BEM a day) in era 0; 99% to the verified pool, 1% to unverified. Halves every 126,000,000 s from 21 Aug 2026 13:15:32 UTC; first halving 18 Aug 2030 21:15:32 UTC | 18 Nov 2026, verified source and storage read |
+| Mining eligibility | `start` reverts `Nref` if the netlist has any REF record, and `Cpu` if the processor's `processorMultiplier` is 0. Weight H = (b* + design bonus) × multiplier, b* = own burned NANDs + 6 × own burned LATCHes. One design bonus per task per processor: lowest design cost, then the earlier valid design commitment, then the lower circuit id. A copy keeps mining without the bonus | 20 Nov 2026, verified source (`docs/notes/2026-11-20-what-can-mine.md`) |
+| Design commitment | `commitDesign(address circuits, bytes32 commitment)`, commitment = `keccak256(abi.encode(designer, circuits, keccak256(netlist), salt))`; event `DesignCommitted(bytes32 indexed commitment, address indexed designer, address indexed circuits, uint256 blockNumber, uint64 firstUnusedId)`. `start` checks the salt and stores the block in the miner's `commitBlock` (`getMiner`) | 20 Nov 2026, verified source |
+| Eligible processors (BNB Chain) | `0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c` multiplier 6; `0xb1024b89886b9a34aa4ff5f31c411d708b20a14c` multiplier 1. Every other processor has multiplier 0, and the sealed contract can't add any | 20 Nov 2026, `ProcessorSet` events since the proxy's creation at block 117,234,441 and `processorMultiplier` reads |
+| Processor factory (BNB Chain) | `0x68224f668083c29e9800be2a646d42d18cedf7e2`, UUPS proxy, owner `0xb3d8…3138` (TapeOut's owner), not sealed. `cpuCount()` (1,496 on 20 Nov), `cpuAt(i)`. Processors are beacon proxies; each stores its netlists (`netlist(id)`, `circuitInfo(id)`) and emits `TapedOut(uint256 indexed id, address indexed owner, uint32, uint32)` | 20 Nov 2026, eth_call and logs (`docs/notes/2026-11-20-netlist-storage.md`) |
 | RIG voucher (X Layer) | `0x9cfc959cd42b2e1d39a0d850c528210e818ae520`, ERC-721 "TapeOut Rig" (RIG), UUPS proxy upgradeable by TapeOut. One voucher = one miner held in the BNB rig vault; its BEM goes to the voucher holder. No protocol rental (removed in v2) | 19 Nov 2026: verified source; three live vouchers matched to active PodMining miners whose NFTs the vault holds (`docs/notes/2026-11-19-xlayer-market-findings.md`) |
 | Rig vault (BNB Chain) | `0x48d43345656f0f9510dc3c06cba99dff597617c2`; `voucher()` = the RIG address | 19 Nov 2026, eth_call |
 | BEM (X Layer) | `0x60e62efa9405d6873c5deabd4e6cc91c25363952`, 8 decimals, LayerZero OFT; the RIG voucher's `bem()` | 19 Nov 2026, eth_call |
@@ -170,7 +174,8 @@ Write a test wherever being wrong would be invisible. For anything below, invoke
 | Area | Must prove |
 | --- | --- |
 | Netlist reading | A real circuit's netlist from a saved fixture decodes to the expected records; an unreadable netlist is "can't check", never "no earlier copy found" |
-| Copy check | A byte-identical netlist taped out later is a copy of the earlier one; the earliest is never called a copy; same-block ties follow the stated order; a one-byte difference is not a copy |
+| Copy check | An identical netlist with a later design time is a copy of the earlier one; a netlist that differs only by swapped NAND inputs is a copy; a miner whose accepted design commitment is earlier than an identical circuit's tape-out is not the copy; the earliest is never called a copy; same-block ties follow the stated order; any other one-byte difference is not a copy |
+| Can mine | Every result carries one: mining now, can't mine (processor not eligible, uses REF records) or not started; a miner's design bonus answer comes from the mining contract |
 | Wrapper check | A netlist made only of REF records is a wrapper and names its target; a netlist with REF records and real gates is not a pure wrapper |
 | Coverage | "No earlier copy found" always states how many circuits and up to which block; a circuit outside the index is "can't check" |
 | Valuation | Expected output = miner weight ÷ verified network weight × daily emission × 99%. Halving applied on schedule. Low / base / high ordered correctly. Backtest numbers match the saved fixtures |
@@ -199,6 +204,7 @@ The build order table in `docs/PRODUCT.md` is the order. Build so each step work
 - Use the product's words exactly (see "Domain language").
 - Plain language. No ABI, RPC or contract jargon in the UI.
 - Say "estimated value", never "price", for Foreman's own numbers. Never "guaranteed", never "you should".
+- Every copy result and every "No earlier copy found" states the limit: "Checks identical netlists, including swapped gate inputs. A copy with its gates reordered isn't detected."
 - Originality copy states facts: "Copy of circuit #X", "Wrapper of circuit #X", "Identical to N earlier circuits; too small to tell", "No earlier copy found among N circuits", "Can't check". Facts beside a verdict stay facts: "taped out by the same address", "1,204 of its 1,209 gates come from other circuits". Never "fake", "stolen", "scam" or "authentic".
 - Mobile first, OKX Wallet first.
 
@@ -212,11 +218,12 @@ The build order table in `docs/PRODUCT.md` is the order. Build so each step work
 | **Owner** | Holds one or more miners |
 | **Circuit** | A taped-out TapeOut netlist, held as an NFT on a processor |
 | **Miner** | A circuit registered for Proof of Design mining that earns BEM |
+| **Can mine** | The fact every result carries: "Mining now", "Can't mine" (processor isn't eligible, or uses REF records) or "Could mine: not started". Never a promise that a circuit passes a task |
 | **RIG voucher** | An X Layer NFT standing for one miner held in the BNB rig vault |
 | **Netlist** | A circuit's list of records (gates, latches, REF records) as stored on chain |
-| **Netlist hash** | The hash of a netlist's bytes, used to find exact copies |
+| **Netlist hash** | The hash of a netlist's input count, output count and bytes, with each NAND's two inputs put in order first, used to find exact copies |
 | **REF record** | A netlist record that points to another circuit instead of containing gates |
-| **Copy** | A miner whose netlist (with its input and output counts) is byte-identical to a circuit taped out earlier, at or above the size floor |
+| **Copy** | A miner or listed circuit whose netlist hash (input and output counts, bytes, NAND inputs in order) matches a circuit with an earlier design time, at or above the size floor. Design time is the design commitment block if the mining contract accepted one before the tape-out, otherwise the tape-out block |
 | **Too small to tell** | The verdict when a miner is identical to earlier circuits but below the stated size floor, where honest circuits match by nature |
 | **Wrapper** | A circuit whose netlist is only REF records pointing to another circuit. Named with its direct target and the circuit at the end of the chain that holds the gates |
 | **No earlier copy found** | The verdict when no earlier circuit in the index shares the netlist hash and the netlist is not a wrapper. Never shortened to "original" |
@@ -245,7 +252,7 @@ The `grill-me` queue. Strike an item when an ADR settles it.
 
 - ~~Where netlists are stored on chain, and the exact REF record format (TAP-02 §4, §6).~~ Settled: `docs/notes/2026-11-20-netlist-storage.md` and `docs/decisions/2026-11-20-copy-and-wrapper-rules.md`.
 - The size floor below which an identical miner is "too small to tell": measure it from the index (`2026-11-20-copy-and-wrapper-rules.md`, decision 3).
-- Can a REF-only wrapper or an exact copy mine, and with what weight?
+- ~~Can a REF-only wrapper or an exact copy mine, and with what weight?~~ Settled: `docs/notes/2026-11-20-what-can-mine.md` and `docs/decisions/2026-11-20-verdict-scope-and-earliest-design.md`.
 - How to index every circuit since launch: tape-out events, archive node limits, and X Layer circuits.
 - Is OCCC deployed anywhere, and how is its status read?
 - The results contract on X Layer: its shape, tooling, and who holds the publisher key.

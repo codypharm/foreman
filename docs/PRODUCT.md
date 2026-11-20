@@ -37,18 +37,18 @@ For any miner or RIG voucher, Foreman answers three questions, and publishes the
 
 | Step | What happens |
 | --- | --- |
-| 1. **Index** | Read every taped-out circuit's netlist and tape-out block from chain; hash each netlist |
-| 2. **Check** | For each miner: wrapper if the netlist is only REF records (follow the chain to the gates); copy if an earlier circuit has the same netlist hash (input count, output count and bytes), or "too small to tell" below the size floor; otherwise "no earlier copy found among N circuits checked". OCCC status where available |
+| 1. **Index** | Read every taped-out circuit's netlist and tape-out block from chain, and each miner's design commitment block; hash each netlist (input and output counts and bytes, each NAND's inputs put in order) |
+| 2. **Check** | For each miner and each listed circuit (and anything pasted, on screen only): wrapper if the netlist is only REF records (follow the chain to the gates); copy if a circuit with an earlier design time (design commitment, else tape-out) has the same netlist hash, or "too small to tell" below the size floor; otherwise "no earlier copy found among N circuits checked". Every result says whether the circuit can mine and why; a miner's shows the mining contract's design bonus answer first. OCCC status where available |
 | 3. **Value** | Valuation range and payback from the miner's weight, network weight and emission (`packages/valuation`) |
 | 4. **Market** | Sell context from TapeOut's BNB market (recent sales and asks of comparable miners), TapePool's offer on X Layer, and Rent's "no market yet" |
-| 5. **Publish** | Write each result to Foreman's results contract on X Layer, with the rule version and the block it was read at |
+| 5. **Publish** | Write each miner's and each listed circuit's result to Foreman's results contract on X Layer, with the rule version and the block it was read at |
 | 6. **Show and alert** | The app shows the three answers with their evidence. An owner who connects a wallet gets "a copy of your miner was just listed" |
 
 ## The three answers on screen
 
 | Answer | Shows |
 | --- | --- |
-| **Original?** | For miners only, one of: **Wrapper** (REF records only; points to which circuit, and which circuit at the end of the chain holds the gates) · **Copy** (of which circuit, taped out when, same netlist hash; by the same address or a different one) · **Too small to tell** (identical to N earlier circuits, below the stated size floor) · **No earlier copy found** (among how many circuits checked, up to which block) · **Can't check** (and why). Plus facts where they apply ("1,204 of its 1,209 gates come from other circuits") and "Official (OCCC)". Rules: `docs/decisions/2026-11-20-copy-and-wrapper-rules.md` |
+| **Original?** | For miners and listed circuits (and anything pasted): for a miner, first the mining contract's answer ("Holds the design bonus" or not); then Foreman's verdict, one of: **Wrapper** (REF records only; points to which circuit, and which circuit at the end of the chain holds the gates) · **Copy** (of which circuit, designed or taped out when, same netlist hash, bytes identical or identical once gate inputs are sorted; by the same address or a different one) · **Too small to tell** (identical to N earlier circuits, below the stated size floor) · **No earlier copy found** (among how many circuits checked, up to which block) · **Can't check** (and why). Plus facts where they apply ("1,204 of its 1,209 gates come from other circuits") and "Official (OCCC)", and always "Can mine" with the reason. The limit is stated: a copy with its gates reordered isn't detected. Rules: `docs/decisions/2026-11-20-copy-and-wrapper-rules.md`, `docs/decisions/2026-11-20-verdict-scope-and-earliest-design.md` |
 | **Worth?** | Estimated value range over 30 days and until the 2030 halving, its inputs, and payback for the asking price |
 | **Options?** | **Hold**: the value range · **Sell**: "no bid right now", recent sales and asks of comparable miners (labelled, with the rule that picked them), and a listing the owner signs · **Lend**: TapePool's advance, or "no offer" · **Rent**: "no rental market yet" |
 
@@ -107,7 +107,7 @@ Mirrors "Still open" in `CLAUDE.md`. Strike an item when a decision settles it.
 
 - ~~Where netlists are stored on chain, and the exact REF record format (TAP-02 §4, §6).~~ Settled: `docs/notes/2026-11-20-netlist-storage.md`, `docs/decisions/2026-11-20-copy-and-wrapper-rules.md`.
 - The size floor for "too small to tell": measured from the index.
-- Can a REF-only wrapper or an exact copy mine, and with what weight?
+- ~~Can a REF-only wrapper or an exact copy mine, and with what weight?~~ Settled: `docs/notes/2026-11-20-what-can-mine.md`, `docs/decisions/2026-11-20-verdict-scope-and-earliest-design.md`.
 - How to index every circuit since launch: tape-out events, archive node limits.
 - Is OCCC deployed anywhere, and how is its status read?
 - Results contract on X Layer: its shape, and who holds the publisher key.
