@@ -3,6 +3,12 @@
 // 2026-11-20-verdict-scope-and-earliest-design.md).
 
 export {
+	type CircuitIndex,
+	type CopyCheck,
+	checkCopy,
+	type IndexEntry,
+} from "./check-copy.ts";
+export {
 	type CircuitId,
 	checkWrapper,
 	MAX_CHAIN_STEPS,
