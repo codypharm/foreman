@@ -43,6 +43,7 @@ describe.skipIf(!TEST_DATABASE_URL)("saving miners", () => {
 			lastStartedBlock: 117_270_988n,
 			starts: 2,
 			commitment: { status: "not-read" },
+			revoked: null,
 		});
 	});
 

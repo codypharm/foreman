@@ -13,7 +13,8 @@
 		"backfill": "node --env-file-if-exists=../../.env scripts/backfill-netlists.ts",
 		"miners": "node --env-file-if-exists=../../.env scripts/index-miners.ts",
 		"measure-floor": "node --env-file-if-exists=../../.env scripts/measure-size-floor.ts",
-		"fill-times": "node --env-file-if-exists=../../.env scripts/fill-times.ts"
+		"fill-times": "node --env-file-if-exists=../../.env scripts/fill-times.ts",
+		"revokes": "node --env-file-if-exists=../../.env scripts/index-revokes.ts"
 	},
 	"dependencies": {
 		"@foreman/contract": "workspace:*",

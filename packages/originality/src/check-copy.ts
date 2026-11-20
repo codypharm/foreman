@@ -21,6 +21,8 @@ export interface IndexEntry {
 		time: bigint;
 	};
 	tapedOutBy: Address;
+	/** Whether the mining contract has a miner for this circuit. */
+	miner: boolean;
 	/** The design commitment the mining contract accepted (its block and that block's time), or null. */
 	designCommittedAt: { block: bigint; time: bigint } | null;
 }

@@ -99,10 +99,11 @@ export async function loadCircuitIndex(pool: pg.Pool): Promise<LoadedIndex> {
 		taped_out_by: string;
 		design_committed_at: string | null;
 		design_committed_time: string | null;
+		miner: boolean;
 	}>(
 		`select c.processor, c.id, c.netlist_hash, c.byte_hash, c.gate_count, c.taped_out_block,
 		   c.taped_out_tx, c.taped_out_log, c.taped_out_time, c.taped_out_by,
-		   m.design_committed_at, m.design_committed_time
+		   m.design_committed_at, m.design_committed_time, m.key is not null as miner
 		 from circuits c left join miners m on m.processor = c.processor and m.id = c.id
 		 where c.netlist_status = 'read'
 		 order by c.taped_out_block, c.taped_out_tx, c.taped_out_log`,
@@ -122,6 +123,7 @@ export async function loadCircuitIndex(pool: pg.Pool): Promise<LoadedIndex> {
 			time: BigInt(r.taped_out_time),
 		},
 		tapedOutBy: r.taped_out_by as Address,
+		miner: r.miner,
 		designCommittedAt:
 			r.design_committed_at === null
 				? null

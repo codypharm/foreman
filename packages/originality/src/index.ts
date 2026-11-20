@@ -2,6 +2,7 @@
 // fixtures/ (docs/decisions/2026-11-20-copy-and-wrapper-rules.md and
 // 2026-11-20-verdict-scope-and-earliest-design.md).
 
+export { type CanMineRead, readCanMine, STOP_COOLDOWN } from "./can-mine.ts";
 export {
 	type CircuitIndex,
 	type CopyCheck,
@@ -20,12 +21,25 @@ export {
 	type NetlistHashes,
 } from "./hash.ts";
 export {
+	circuitRef,
+	ORIGINALITY_RULES,
+	type OriginalityVerdictResult,
+	originalityVerdict,
+	RULE_VERSION,
+} from "./originality.ts";
+export {
 	decodeNetlist,
 	type Netlist,
 	type NetlistRead,
 	type NetlistRecord,
 	readNetlist,
 } from "./read-netlist.ts";
+export {
+	type MinerRevoke,
+	type MinerRevokeScan,
+	REVOKED,
+	scanMinerRevokes,
+} from "./scan-miner-revokes.ts";
 export {
 	type CommitmentRead,
 	MINING_FIRST_BLOCK,

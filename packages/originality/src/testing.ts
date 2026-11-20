@@ -1,7 +1,13 @@
 // Test helpers: changed copies of a saved fixture, for cases the chain never produces.
 
 import { type Fixture, replayClient } from "@foreman/chain-bnb/fixture";
-import { type Address, decodeFunctionResult, type Hex, parseAbi } from "viem";
+import {
+	type Address,
+	decodeFunctionResult,
+	type Hex,
+	parseAbi,
+	zeroAddress,
+} from "viem";
 import fixture from "../fixtures/bnb-circuits-134673279.json" with {
 	type: "json",
 };
@@ -61,6 +67,7 @@ export async function fixtureIndex(): Promise<CircuitIndex> {
 		}
 	>();
 	const commits = new Map<string, bigint>();
+	const miners = new Set<string>();
 	const blockTimes = new Map<bigint, bigint>();
 	for (const c of calls) {
 		const p = c.params[0] as {
@@ -100,6 +107,8 @@ export async function fixtureIndex(): Promise<CircuitIndex> {
 				functionName: "getMiner",
 				data: c.result as Hex,
 			});
+			if (m.circuits !== zeroAddress)
+				miners.add(`${m.circuits.toLowerCase()}/${m.circuitId}`);
 			if (m.commitBlock > 0n)
 				commits.set(
 					`${m.circuits.toLowerCase()}/${m.circuitId}`,
@@ -131,6 +140,7 @@ export async function fixtureIndex(): Promise<CircuitIndex> {
 				time: t.time,
 			},
 			tapedOutBy: t.by,
+			miner: miners.has(k),
 			designCommittedAt:
 				committed === undefined
 					? null

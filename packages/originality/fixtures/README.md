@@ -40,6 +40,17 @@ Recorded on 20 November 2026 by `scripts/record-miners-fixture.ts` (`pnpm --filt
 
 `Started` is emitted on every start, a restart after a stop included. A miner's commitment stays with the circuit across restarts, and a restart that brings a commitment replaces it (verified PodMining source, `start`).
 
+## Revoked miners: `bnb-miner-revokes-118590000-118600000.json`
+
+Recorded on 20 November 2026 from the archive node, for `scanMinerRevokes` (`docs/decisions/2026-11-20-can-mine-revoked-and-stopped.md`, decision 1): one `eth_getLogs` read for `Revoked` on the mining contract, blocks 118,590,000 to 118,600,000, in the shape the scan sends.
+
+| Revoke | Values |
+| --- | --- |
+| `0x62cd…99d7` | block 118,590,677, transaction 1, log 2; test vector 140; not among the circuits below (it is `0xb102…/11931` in the full index) |
+| `MINE6/1965` (`0x8981…2ce9`) | block 118,590,677, transaction 2, log 5; test vector 140; task 260 from `getMiner` |
+
+The full scan on 20 November found 12 revoked miners in all, every one already in the index.
+
 ## What is recorded, per circuit
 
 | Call | Pinned to |

@@ -17,9 +17,11 @@ export { migrate } from "./migrate.ts";
 export {
 	backfillCommitments,
 	type CommitmentBackfillResult,
+	type CompleteMinerRevokeScan,
 	type CompleteMinerStartScan,
 	readMiners,
 	type StoredMiner,
+	saveMinerRevokes,
 	saveMinerStarts,
 } from "./miners.ts";
 export {

@@ -20,6 +20,13 @@ export {
 	serialiseOffer,
 	type Venue,
 } from "./offer.ts";
+export type {
+	CantMineReason,
+	CircuitRef,
+	Originality,
+	OriginalityFact,
+	OriginalityVerdict,
+} from "./originality.ts";
 export { type Price, parsePrice, serialisePrice } from "./price.ts";
 export {
 	type ChainId,

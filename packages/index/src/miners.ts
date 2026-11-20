@@ -5,6 +5,8 @@
 import type { Hex32 } from "@foreman/contract";
 import {
 	type CircuitId,
+	type MinerRevoke,
+	type MinerRevokeScan,
 	type MinerStartScan,
 	readDesignCommitment,
 } from "@foreman/originality";
@@ -13,6 +15,11 @@ import type { Address, PublicClient } from "viem";
 
 export type CompleteMinerStartScan = Extract<
 	MinerStartScan,
+	{ complete: true }
+>;
+
+export type CompleteMinerRevokeScan = Extract<
+	MinerRevokeScan,
 	{ complete: true }
 >;
 
@@ -33,6 +40,49 @@ export interface StoredMiner {
 				committedAt: { block: bigint; time: bigint | null } | null;
 				readAtBlock: bigint;
 		  };
+	/** From its Revoked event; null when the revoke scan found none. */
+	revoked: Omit<MinerRevoke, "key"> | null;
+}
+
+/**
+ * Saves a revoke scan in one transaction. A revoke for a miner the index doesn't have means the
+ * miner starts are behind or wrong: the whole scan is refused, never dropped in part.
+ */
+export async function saveMinerRevokes(
+	pool: pg.Pool,
+	scan: CompleteMinerRevokeScan,
+): Promise<void> {
+	const client = await pool.connect();
+	try {
+		await client.query("begin");
+		for (const r of scan.revokes) {
+			const updated = await client.query(
+				`update miners set revoked_block = $2, revoked_tx = $3, revoked_log = $4, revoked_vector = $5
+				 where key = $1`,
+				[
+					Buffer.from(r.key.slice(2), "hex"),
+					r.revokedAt.block.toString(),
+					r.revokedAt.txIndex,
+					r.revokedAt.logIndex,
+					r.vectorIndex,
+				],
+			);
+			if (updated.rowCount !== 1) {
+				throw new Error(
+					`Revoked event for miner ${r.key} in block ${r.revokedAt.block}, which the index doesn't have`,
+				);
+			}
+		}
+		await client.query("update index_state set revokes_up_to_block = $1", [
+			scan.upToBlock.toString(),
+		]);
+		await client.query("commit");
+	} catch (error) {
+		await client.query("rollback");
+		throw error;
+	} finally {
+		client.release();
+	}
 }
 
 export async function saveMinerStarts(
@@ -82,12 +132,16 @@ export async function saveMinerStarts(
 	}
 }
 
-export async function readMiners(
-	pool: pg.Pool,
-): Promise<{ upToBlock: bigint | null; miners: StoredMiner[] }> {
-	const state = await pool.query<{ miners_up_to_block: string | null }>(
-		"select miners_up_to_block from index_state",
-	);
+export async function readMiners(pool: pg.Pool): Promise<{
+	upToBlock: bigint | null;
+	/** null before the first revoke scan is saved. */
+	revokesUpToBlock: bigint | null;
+	miners: StoredMiner[];
+}> {
+	const state = await pool.query<{
+		miners_up_to_block: string | null;
+		revokes_up_to_block: string | null;
+	}>("select miners_up_to_block, revokes_up_to_block from index_state");
 	const rows = await pool.query<{
 		key: Buffer;
 		processor: string;
@@ -99,14 +153,21 @@ export async function readMiners(
 		commitment_read_at_block: string | null;
 		design_committed_at: string | null;
 		design_committed_time: string | null;
+		revoked_block: string | null;
+		revoked_tx: number | null;
+		revoked_log: number | null;
+		revoked_vector: number | null;
 	}>(
 		`select key, processor, id, first_started_block, last_started_block, starts,
-		   commitment_status, commitment_read_at_block, design_committed_at, design_committed_time
+		   commitment_status, commitment_read_at_block, design_committed_at, design_committed_time,
+		   revoked_block, revoked_tx, revoked_log, revoked_vector
 		 from miners order by first_started_block, processor, id`,
 	);
 	const up = state.rows[0]?.miners_up_to_block;
+	const revokesUp = state.rows[0]?.revokes_up_to_block;
 	return {
 		upToBlock: up == null ? null : BigInt(up),
+		revokesUpToBlock: revokesUp == null ? null : BigInt(revokesUp),
 		miners: rows.rows.map((r) => ({
 			key: `0x${r.key.toString("hex")}` as Hex32,
 			circuit: { processor: r.processor as Address, id: BigInt(r.id) },
@@ -129,6 +190,17 @@ export async function readMiners(
 													: BigInt(r.design_committed_time),
 										},
 							readAtBlock: BigInt(r.commitment_read_at_block as string),
+						},
+			revoked:
+				r.revoked_block === null
+					? null
+					: {
+							vectorIndex: r.revoked_vector as number,
+							revokedAt: {
+								block: BigInt(r.revoked_block),
+								txIndex: r.revoked_tx as number,
+								logIndex: r.revoked_log as number,
+							},
 						},
 		})),
 	};
