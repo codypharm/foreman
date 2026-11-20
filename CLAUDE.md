@@ -227,7 +227,7 @@ The build order table in `docs/PRODUCT.md` is the order. Build so each step work
 | **Netlist hash** | The hash of a netlist's input count, output count and bytes, with each NAND's two inputs put in order first, used to find exact copies |
 | **REF record** | A netlist record that points to another circuit instead of containing gates |
 | **Copy** | A miner or listed circuit whose netlist hash (input and output counts, bytes, NAND inputs in order) matches a circuit with an earlier design time, at or above the size floor. Design time is the design commitment block if the mining contract accepted one before the tape-out, otherwise the tape-out block |
-| **Too small to tell** | The verdict when a miner is identical to earlier circuits but below the stated size floor, where honest circuits match by nature |
+| **Too small to tell** | The verdict when a miner is identical to earlier circuits but below the stated size floor (4 gates, `2026-11-20-size-floor.md`), where honest circuits match by nature |
 | **Wrapper** | A circuit whose netlist is only REF records pointing to another circuit. Named with its direct target and the circuit at the end of the chain that holds the gates |
 | **No earlier copy found** | The verdict when no earlier circuit in the index shares the netlist hash and the netlist is not a wrapper. Never shortened to "original" |
 | **Can't check** | The verdict when the netlist can't be read or the circuit is outside the index |
@@ -254,7 +254,7 @@ Never abbreviate these. Never invent synonyms.
 The `grill-me` queue. Strike an item when an ADR settles it.
 
 - ~~Where netlists are stored on chain, and the exact REF record format (TAP-02 §4, §6).~~ Settled: `docs/notes/2026-11-20-netlist-storage.md` and `docs/decisions/2026-11-20-copy-and-wrapper-rules.md`.
-- The size floor below which an identical miner is "too small to tell": measure it from the index (`2026-11-20-copy-and-wrapper-rules.md`, decision 3).
+- ~~The size floor below which an identical miner is "too small to tell": measure it from the index (`2026-11-20-copy-and-wrapper-rules.md`, decision 3).~~ Settled: 4 gates, `docs/decisions/2026-11-20-size-floor.md`.
 - ~~Can a REF-only wrapper or an exact copy mine, and with what weight?~~ Settled: `docs/notes/2026-11-20-what-can-mine.md` and `docs/decisions/2026-11-20-verdict-scope-and-earliest-design.md`.
 - ~~How to index every circuit since launch: tape-out events, archive node limits, and X Layer circuits.~~ Settled: `docs/decisions/2026-11-20-circuit-index.md` (BNB Chain only for the MVP).
 - Is OCCC deployed anywhere, and how is its status read?

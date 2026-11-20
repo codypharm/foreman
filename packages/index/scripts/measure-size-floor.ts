@@ -103,6 +103,7 @@ try {
 	interface Bucket {
 		gateCount: number;
 		circuits: number;
+		miners: number;
 		laterIdentical: number;
 		laterIdenticalOtherAddress: number;
 		minersLaterIdentical: number;
@@ -117,6 +118,7 @@ try {
 			b = {
 				gateCount: g,
 				circuits: 0,
+				miners: 0,
 				laterIdentical: 0,
 				laterIdenticalOtherAddress: 0,
 				minersLaterIdentical: 0,
@@ -141,6 +143,7 @@ try {
 		for (const m of members) {
 			compared++;
 			bucket(m.gate_count).circuits++;
+			if (m.is_miner) bucket(m.gate_count).miners++;
 		}
 		if (members.length < 2) continue;
 		const b0 = bucket(earliest.gate_count);
@@ -196,16 +199,19 @@ try {
 	console.log(
 		`${result.ordering}; ${compared} circuits compared, ${pureWrappers.size} pure wrappers left out, ${result.notRead} not read, ${result.unreadable} unreadable`,
 	);
-	console.log("gates        circuits  later-identical  of-which-other-address");
+	console.log(
+		"gates        circuits  later-identical  other-address |   miners  later-identical  other-address",
+	);
 	for (const [lo, hi] of ranges) {
 		const bs = result.byGateCount.filter(
 			(b) => b.gateCount >= lo && b.gateCount <= hi,
 		);
 		const sum = (k: keyof Bucket) =>
 			bs.reduce((n, b) => n + (b[k] as number), 0);
+		const col = (k: keyof Bucket, w: number) => String(sum(k)).padStart(w);
 		const label = lo === hi ? `${lo}` : hi > 1e8 ? `${lo}+` : `${lo}-${hi}`;
 		console.log(
-			`${label.padEnd(12)} ${String(sum("circuits")).padStart(8)}  ${String(sum("laterIdentical")).padStart(15)}  ${String(sum("laterIdenticalOtherAddress")).padStart(22)}`,
+			`${label.padEnd(12)} ${col("circuits", 8)}  ${col("laterIdentical", 15)}  ${col("laterIdenticalOtherAddress", 13)} | ${col("miners", 8)}  ${col("minersLaterIdentical", 15)}  ${col("minersLaterIdenticalOtherAddress", 13)}`,
 		);
 	}
 	console.log(`→ ${out.pathname}`);

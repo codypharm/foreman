@@ -106,7 +106,7 @@ Build so each step works end to end before the next.
 Mirrors "Still open" in `CLAUDE.md`. Strike an item when a decision settles it.
 
 - ~~Where netlists are stored on chain, and the exact REF record format (TAP-02 §4, §6).~~ Settled: `docs/notes/2026-11-20-netlist-storage.md`, `docs/decisions/2026-11-20-copy-and-wrapper-rules.md`.
-- The size floor for "too small to tell": measured from the index.
+- ~~The size floor for "too small to tell": measured from the index.~~ Settled: 4 gates, `docs/decisions/2026-11-20-size-floor.md`.
 - ~~Can a REF-only wrapper or an exact copy mine, and with what weight?~~ Settled: `docs/notes/2026-11-20-what-can-mine.md`, `docs/decisions/2026-11-20-verdict-scope-and-earliest-design.md`.
 - ~~How to index every circuit since launch: tape-out events, archive node limits.~~ Settled: `docs/decisions/2026-11-20-circuit-index.md`.
 - Is OCCC deployed anywhere, and how is its status read?
