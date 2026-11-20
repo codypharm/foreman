@@ -9,6 +9,14 @@ export {
 } from "./backfill.ts";
 export { migrate } from "./migrate.ts";
 export {
+	backfillCommitments,
+	type CommitmentBackfillResult,
+	type CompleteMinerStartScan,
+	readMiners,
+	type StoredMiner,
+	saveMinerStarts,
+} from "./miners.ts";
+export {
 	type CompleteScan,
 	readIndex,
 	type StoredIndex,

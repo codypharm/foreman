@@ -39,6 +39,9 @@ importers:
 
   packages/index:
     dependencies:
+      '@foreman/contract':
+        specifier: workspace:*
+        version: link:../contract
       '@foreman/originality':
         specifier: workspace:*
         version: link:../originality

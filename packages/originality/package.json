@@ -12,7 +12,8 @@
 		"test:watch": "vitest",
 		"typecheck": "tsc -p .",
 		"record": "node --env-file-if-exists=../../.env scripts/record-fixture.ts",
-		"record:scan": "node --env-file-if-exists=../../.env scripts/record-scan-fixture.ts"
+		"record:scan": "node --env-file-if-exists=../../.env scripts/record-scan-fixture.ts",
+		"record:miners": "node --env-file-if-exists=../../.env scripts/record-miners-fixture.ts"
 	},
 	"dependencies": {
 		"@foreman/chain-bnb": "workspace:*",

@@ -22,6 +22,23 @@ Recorded on 20 November 2026 by `scripts/record-scan-fixture.ts` (`pnpm --filter
 
 There is no look-alike event in this range; the test adds one (`withTapeOutLog` in `src/testing.ts`). The count-check tests remove events (`withoutTapeOutLog`).
 
+## Miner starts: `bnb-miner-starts-117268000-117271000.json`
+
+Recorded on 20 November 2026 by `scripts/record-miners-fixture.ts` (`pnpm --filter @foreman/originality record:miners`), for `scanMinerStarts` and `readDesignCommitment`:
+
+| Call | What it gives |
+| --- | --- |
+| `eth_getLogs` for `Started` on the mining contract, blocks 117,268,000 to 117,271,000 | 112 starts by 111 miners, all on `MINE6` or `0xb102…` |
+| `getMiner(key)` for each of the 111, at block 134,690,552 (the index's block) | 110 active, 1 cooling; 7 with a design commitment |
+
+| Case | Values |
+| --- | --- |
+| First start | `0xb102…/1150`, block 117,268,030, transaction 42, log 170; no commitment |
+| A restart | `0xb102…/647` started at block 117,268,905 (transaction 49, log 153) and again at 117,270,988 (transaction 61, log 390) |
+| A commitment | `0xb102…/1363`: committed at block 117,250,955 |
+
+`Started` is emitted on every start, a restart after a stop included. A miner's commitment stays with the circuit across restarts, and a restart that brings a commitment replaces it (verified PodMining source, `start`).
+
 ## What is recorded, per circuit
 
 | Call | Pinned to |

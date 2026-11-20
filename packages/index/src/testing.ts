@@ -60,3 +60,12 @@ export async function fixtureCircuitsScan(): Promise<CompleteScan> {
 		dropped: [],
 	};
 }
+
+/** An index whose tape-out scan is saved up to `block`, with no tape-outs: enough for miner tests. */
+export async function emptyIndexAt(block: bigint): Promise<pg.Pool> {
+	const pool = await freshDatabase();
+	await pool.query("insert into index_state (up_to_block) values ($1)", [
+		block.toString(),
+	]);
+	return pool;
+}

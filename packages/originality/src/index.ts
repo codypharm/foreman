@@ -26,6 +26,15 @@ export {
 	readNetlist,
 } from "./read-netlist.ts";
 export {
+	type CommitmentRead,
+	MINING_FIRST_BLOCK,
+	type MinerStart,
+	type MinerStartScan,
+	minerKey,
+	readDesignCommitment,
+	scanMinerStarts,
+} from "./scan-miner-starts.ts";
+export {
 	type CountMismatch,
 	type DroppedEvent,
 	FACTORY_FIRST_BLOCK,
