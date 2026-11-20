@@ -5,4 +5,5 @@ try {
 	process.loadEnvFile(new URL("../../.env", import.meta.url));
 } catch {}
 
-export default defineConfig({ test: {} });
+// Every storage test file wipes the same test database, so files run one at a time.
+export default defineConfig({ test: { fileParallelism: false } });

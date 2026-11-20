@@ -19,6 +19,10 @@ export const TAPED_OUT =
 	"0xc11215e417669c143c8a07aeb778034c0a0a85ebdf305d64a629b19a7a9ce031" as const;
 /** The archive endpoint refuses log reads over 50,000 blocks (CLAUDE.md, "RPC notes"). */
 export const LOG_SPAN = 50_000n;
+/** The factory's first block with code; no tape-out can be earlier. */
+export const FACTORY_FIRST_BLOCK = 116_042_002n;
+/** Processors read at once when listing them. */
+const PROCESSOR_BATCH = 25n;
 
 export const factoryAbi = [
 	{
@@ -106,11 +110,14 @@ interface RawLog {
 export async function scanTapeOuts(
 	client: PublicClient,
 	range: { fromBlock: bigint; toBlock: bigint },
+	/** Called before each read, with what is being read. */
+	onProgress?: (stage: string) => void,
 ): Promise<TapeOutScan> {
 	let stage = `processor list at block ${range.toBlock}`;
 	try {
 		return await scan(client, range, (s) => {
 			stage = s;
+			onProgress?.(s);
 		});
 	} catch (error) {
 		// viem's full message names the RPC URL, which can carry a key: keep only its short message
@@ -137,21 +144,35 @@ async function scan(
 		...at,
 	});
 	const processors: ListedProcessor[] = [];
-	for (let i = 0n; i < count; i++) {
-		const p = await client.readContract({
-			address: FACTORY,
-			abi: factoryAbi,
-			functionName: "cpuAt",
-			args: [i],
-			...at,
-		});
-		const last = await client.readContract({
-			address: p,
-			abi: processorAbi,
-			functionName: "nextId",
-			...at,
-		});
-		processors.push({ address: p.toLowerCase() as Address, issued: last });
+	for (let start = 0n; start < count; start += PROCESSOR_BATCH) {
+		const end =
+			start + PROCESSOR_BATCH < count ? start + PROCESSOR_BATCH : count;
+		reading(
+			`processors ${start + 1n} to ${end} of ${count} at block ${range.toBlock}`,
+		);
+		const indexes = Array.from(
+			{ length: Number(end - start) },
+			(_, k) => start + BigInt(k),
+		);
+		const batch = await Promise.all(
+			indexes.map(async (i) => {
+				const p = await client.readContract({
+					address: FACTORY,
+					abi: factoryAbi,
+					functionName: "cpuAt",
+					args: [i],
+					...at,
+				});
+				const last = await client.readContract({
+					address: p,
+					abi: processorAbi,
+					functionName: "nextId",
+					...at,
+				});
+				return { address: p.toLowerCase() as Address, issued: last };
+			}),
+		);
+		processors.push(...batch);
 	}
 
 	const listed = new Set(processors.map((p) => p.address));

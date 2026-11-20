@@ -14,6 +14,7 @@ import { type RpcCall, recordingClient } from "@foreman/chain-bnb/fixture";
 import { numberToHex } from "viem";
 import {
 	FACTORY,
+	FACTORY_FIRST_BLOCK,
 	factoryAbi,
 	LOG_SPAN,
 	processorAbi,
@@ -23,7 +24,7 @@ import {
 const RPC = process.env.BNB_ARCHIVE_RPC_URL;
 if (!RPC) throw new Error("BNB_ARCHIVE_RPC_URL is not set (see .env.example)");
 
-const FROM = 116_042_002n; // the factory's first block with code
+const FROM = FACTORY_FIRST_BLOCK;
 const TO = 116_150_000n;
 
 const calls: RpcCall[] = [];

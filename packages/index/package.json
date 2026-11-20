@@ -8,7 +8,9 @@
 	"scripts": {
 		"test": "vitest run --passWithNoTests",
 		"test:watch": "vitest",
-		"typecheck": "tsc -p ."
+		"typecheck": "tsc -p .",
+		"scan": "node --env-file-if-exists=../../.env scripts/scan-history.ts",
+		"backfill": "node --env-file-if-exists=../../.env scripts/backfill-netlists.ts"
 	},
 	"dependencies": {
 		"@foreman/originality": "workspace:*",

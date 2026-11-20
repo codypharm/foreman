@@ -1,6 +1,12 @@
 // The circuit index's storage: migrations, saving a scan, reading the index back
 // (docs/decisions/2026-11-20-database-access.md).
 
+export {
+	type BackfillResult,
+	backfillNetlists,
+	readStoredNetlist,
+	type StoredNetlist,
+} from "./backfill.ts";
 export { migrate } from "./migrate.ts";
 export {
 	type CompleteScan,

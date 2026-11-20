@@ -11,6 +11,12 @@ import { type Hex32, parseHex32 } from "@foreman/contract";
 import { encodePacked, keccak256 } from "viem";
 import type { Netlist } from "./read-netlist.ts";
 
+/**
+ * Names the hash rule above, stored with every hash in the index. A new rule gets a new version,
+ * and the index re-hashes its stored bytes (docs/decisions/2026-11-20-circuit-index.md, decision 4).
+ */
+export const HASH_RULE_VERSION = "2026-11-20";
+
 export interface NetlistHashes {
 	/** Same for netlists that differ only by swapped NAND inputs. Finds copies. */
 	netlistHash: Hex32;

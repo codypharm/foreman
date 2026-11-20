@@ -14,7 +14,11 @@ export {
 	MAX_CHAIN_STEPS,
 	type WrapperCheck,
 } from "./check-wrapper.ts";
-export { hashNetlist, type NetlistHashes } from "./hash.ts";
+export {
+	HASH_RULE_VERSION,
+	hashNetlist,
+	type NetlistHashes,
+} from "./hash.ts";
 export {
 	type Netlist,
 	type NetlistRead,
@@ -24,6 +28,7 @@ export {
 export {
 	type CountMismatch,
 	type DroppedEvent,
+	FACTORY_FIRST_BLOCK,
 	type ListedProcessor,
 	scanTapeOuts,
 	type TapeOut,
