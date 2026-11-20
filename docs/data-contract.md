@@ -1,21 +1,21 @@
 # Foreman data contract
 
-*The shapes every part of Foreman shares. Owned by Furqaan; decided in `docs/decisions/2026-11-19-data-contract.md`. Types and parsers live in `packages/contract`. Code against this; a field you need that is not here is a note to Furqaan, not a local addition.*
+*The shapes every part of Foreman shares. Owned by William since 20 November 2026 (`docs/decisions/2026-11-20-scope-and-team.md`); first decided by Furqaan in `docs/decisions/2026-11-19-data-contract.md`. Types and parsers live in `packages/contract`. Code against this; a field you need that is not here is a proposal to William, not a local addition.*
 
 **Status of each shape:** **Settled** means build against it. **Provisional** means the shape holds but fields may change when a named fact is confirmed.
 
 | Shape | Status | Written by | Read by |
 | --- | --- | --- | --- |
 | `Sourced<T>` | Settled | Everyone | Everyone |
-| `Miner` | Settled | BNB reader | Valuation, API, app |
+| `Miner` | Settled | BNB reader | Valuation, originality, API, app |
 | `NetworkState` | Settled | BNB reader | Valuation, API, app |
-| `Valuation` | Settled | Valuation engine | API, app, agent loop |
-| `Price` | Settled | API job | App |
-| `Offer` | Settled (`2026-11-19-offer-shape.md`) | Readers (BNB market, TapePool) + option ranking (comparables) | Option ranking, app, agent loop, paper run |
-| `Policy` | Provisional: rule kinds may grow with the rules compiler | AI rules drafting, confirmed by the owner | Rules compiler, app, agent loop, paper run |
-| `TapeOutResult` | Settled | Rules compiler | App, action log |
-| `AgentKey` | Provisional: waits for the owner wallet route | Owner wallet module | App, agent loop |
-| `ActionLogEntry` | Settled | Agent loop, owner wallet module | App, Telegram bot |
+| `Valuation` | Settled | Valuation engine | API, app |
+| `Price` | Settled; a currency pair is still open (BNB and OKB against BEM) | API job | App |
+| `Offer` | Settled (`2026-11-19-offer-shape.md`) | Readers (BNB market, TapePool) + comparables rule | API, app |
+| `CircuitRef` | Provisional: waits for where netlists live on chain | Circuit index | Originality, API, app |
+| `Originality` | Provisional: waits for the netlist and REF record format | Originality check | API, app, publish job |
+| `PublishedResult` | Provisional: waits for the results contract design | Publish job | App, markets, lenders |
+| ~~`Policy`, `TapeOutResult`, `AgentKey`, `ActionLogEntry`~~ | **Withdrawn** 20 Nov 2026 with autopilot (`2026-11-20-scope-and-team.md`). Parsers removed in a later commit | — | — |
 
 ---
 
@@ -156,74 +156,52 @@ type Offer =
 - **Hold is not an offer:** it comes from the `Valuation`.
 - **Unclaimed rewards move with the NFT when it's sold:** a Sell is always shown with "claim first".
 
-### `Policy` (provisional)
+### `CircuitRef` (provisional)
 
 ```ts
-type Rule =
-  | { id: number; kind: "rent"; maxDays: number; minBemPerDay: bigint | null; mustBeatHold: boolean }
-  | { id: number; kind: "lend"; maxReceived: bigint }
-  | { id: number; kind: "sell-floor"; floor: bigint }; // alerts only, see below
-
-interface Policy {
-  rules: Rule[];          // ordered; ids are what the owner sees ("Rule 1")
-  confirmedAt: bigint | null;  // null until the owner confirms; never taped out while null
+interface CircuitRef {
+  chainId: 56 | 196;
+  processor: Address;        // the processor contract (the circuit's NFT collection)
+  tokenId: bigint;           // the circuit's id on that processor
+  tapedOutAt: { block: bigint; txIndex: number; logIndex: number; time: bigint };
 }
 ```
 
-- **Who writes what:** the AI model only drafts a `Policy`. The plain-words read-back comes from fixed templates over the typed rules. The allowed and refused examples come from running live offers through the policy in code.
-- **What the rules circuit covers:** Rent and Lend rules only. **An agent key can never sell.** `sell-floor` triggers an alert, and the owner signs any sale.
+- **Order:** a circuit is earlier than another when its `tapedOutAt` is earlier: block, then transaction index, then log index. The earliest tape-out of a netlist is the original.
+- **Miner link:** a miner's key is `keccak256(abi.encodePacked(processor, tokenId))` (`docs/notes/2026-11-18-mining-contract-findings.md`).
 
-### `TapeOutResult`
+### `Originality` (provisional)
 
 ```ts
-interface TapeOutResult {
-  circuit: Address;            // the rules circuit
-  chainId: 196;
-  gateCount: number;
-  inputsTested: bigint;
-  coverage: "exhaustive" | "fixed-set";
-  tx: Hex32;
+type OriginalityVerdict =
+  | { verdict: "copy"; of: CircuitRef; netlistHash: Hex32 }             // byte-identical to an earlier circuit
+  | { verdict: "wrapper"; pointsTo: CircuitRef[]; refRecords: number }  // netlist is only REF records
+  | { verdict: "no-earlier-copy"; netlistHash: Hex32 }
+  | { verdict: "cant-check"; reason: "netlist-unreadable" | "outside-index" | "read-failed" };
+
+interface Originality {
+  circuit: CircuitRef;
+  result: OriginalityVerdict;
+  occc: { status: "official"; collection: Address } | { status: "not-listed" } | { status: "not-checked" };
+  index: { circuitsChecked: bigint; upToBlock: { chainId: 56 | 196; block: bigint } };
+  ruleVersion: string;       // which version of the copy and wrapper rules produced this
 }
 ```
 
-### `AgentKey` (provisional)
+- **Never "original":** `no-earlier-copy` is shown as "No earlier copy found among N circuits checked, up to block B", using `index`. A circuit outside the index is `cant-check`.
+- **Evidence travels with the verdict:** a `copy` names the earlier circuit and the shared hash; a `wrapper` names what its REF records point to. Nothing else is needed to re-check it from chain data.
+- **A wrapper with real gates as well as REF records** is not a pure wrapper. How it is shown is open until the REF record format is known.
+- **Value is separate:** an `Originality` never changes a `Valuation`. There is no copy discount.
+
+### `PublishedResult` (provisional)
 
 ```ts
-interface AgentKey {
-  id: Hex32;
-  ownerWallet: Address;
-  rulesCircuit: Address;
-  allowed: ("rent" | "lend")[];  // never "sell"
-  movesPerDay: number;
-  expiresAt: bigint;
-  state: "active" | "expired" | "revoked";
-  movesToday: number;            // refused moves count
+interface PublishedResult {
+  originality: Originality;
+  publishedAt: { chainId: 196; block: bigint; tx: Hex32 };
+  contract: Address;         // Foreman's results contract on X Layer, once deployed and listed in "On-chain facts"
 }
 ```
 
-- **Revoke:** the key stops working as soon as the revoke transaction is confirmed.
-- **Waiting on the owner wallet route:** our own module, or TapeOut's account system.
-
-### `ActionLogEntry`
-
-```ts
-type ActionLogEntry = {
-  minerKey: Hex32;
-  at: bigint;                  // Unix seconds
-  decidedAtBlock: { chainId: 196; block: bigint };
-} & (
-  | { kind: "done" | "refused";
-      what: string;            // "Rent 3F for 30 days at 1.98 BEM a day"
-      offer: Offer;            // the live offer it acted on
-      rule: { id: number; text: string } | null;
-      circuit: { address: Address; answer: "yes" | "no" };
-      tx: Hex32;               // refused moves have one too: the wallet emits Refused and moves nothing
-      alternatives: { option: "hold" | "rent" | "lend" | "sell"; bem30d: bigint | null }[] }
-  | { kind: "alert"; what: string; offer: Offer; rule: { id: number; text: string } }
-  | { kind: "key"; event: "issued" | "expired" | "revoked"; keyId: Hex32; tx: Hex32 | null }
-  | { kind: "setup"; event: "tape-out" | "paper-run"; ref: string }
-);
-```
-
-- **Alternatives:** `alternatives` is the option ranking at the moment of the move, recorded by the agent loop. It never changes afterwards. An option with no offer has `bem30d: null`.
-- **Refused moves:** a refused move counts toward the daily limit and is never retried, so there is no "retried" field.
+- **Reproducible:** what is written on chain includes the verdict, its evidence, `ruleVersion` and `index.upToBlock`, so anyone can recompute it.
+- **The on-chain encoding** is decided with the results contract.

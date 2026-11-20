@@ -4,21 +4,18 @@
 
 **Human is architect. Agent is senior engineer.**
 
-- **Furqaan is the team lead.** He owns the data contract, the trust rules and the final go/no-go, and reviews every merge. A change to the data contract, the trust rules, the rules compiler or the owner wallet module is his call, not the agent's and not an app session's.
-- **Team:** Furqaan (lead · chain, circuits, wallet, AI agent) and William (valuation, API, app, demo). Full ownership table in `docs/PRODUCT.md`.
-- **This session works with William:** the valuation engine and backtests, option ranking and offer display, paper runs, the API and jobs, the web app (miner page, decision screen, rules screens, action log, OKX Wallet, DeWEB mirror), the Telegram bot, Chinese language, the strategy marketplace UI, and the demo video, README and pitch.
-- **Stay in your lane.** If William's work needs something from the chain readers, the rules compiler, the owner wallet module, AI rules drafting or the agent loop, write it up for Furqaan instead of building it. Do not edit another owner's area to unblock yourself.
-- **The data contract is the one signed artifact.** It lives in `docs/data-contract.md` with types and parsers in `packages/contract` (`docs/decisions/2026-11-19-data-contract.md`): the shape of a miner, a valuation, an offer, a proposed action and an action log entry. Code against it; never widen it quietly. A field someone needs that the contract doesn't have is a note to the lead, not a local addition.
-- **No spec ceremony.** This is a hackathon. `docs/PRODUCT.md` is the plan; its day-by-day table is the build order.
+- **William is the lead and the only builder** (since 20 November 2026, `docs/decisions/2026-11-20-scope-and-team.md`). He owns the scope, the data contract, the trust rules and every decision. Furqaan built `packages/contract`, `packages/chain-bnb` and the archive backfill before he left; that code is reused and credited to him in the README.
+- **The data contract is the one signed artifact.** It lives in `docs/data-contract.md` with types and parsers in `packages/contract`. Code against it; never widen it quietly. A field the code needs that the contract doesn't have is a proposal to William, not a local addition.
+- **No spec ceremony.** This is a hackathon. `docs/PRODUCT.md` is the plan; its build order table is the order.
 - **Grill before building against an unsettled requirement.** Invoke the `grill-me` skill: questions one at a time, each with a recommended answer. The queue is "Still open" at the end of this file. Not before every feature; before every guess. A grilling that settles something product-level becomes a dated ADR in `docs/decisions/`, and the item is struck from "Still open".
-- **Before debugging, invoke the `diagnose` skill.** Build the fixture-based feedback loop first (one miner key, a saved block range of events, seconds to run) before theorising about a wrong valuation, an event that won't decode or a circuit that evaluates differently on chain.
+- **Before debugging, invoke the `diagnose` skill.** Build the fixture-based feedback loop first (a handful of real circuits including a known copy and a known wrapper, saved RPC responses, seconds to run) before theorising about a wrong verdict, a netlist that won't decode or a value that looks off.
 - **Tests where wrongness is invisible** (see "Tests that are not optional"). Everywhere else, working code and a manual check are enough.
-- Never make architecture decisions autonomously. Present 2–3 options with trade-offs; the human chooses. Record a real decision as a dated ADR in `docs/decisions/` (`YYYY-MM-DD-title.md`). Never edit a record after the fact; write a new one that supersedes it.
-- Never bulk-generate code. One reader, one endpoint, one contract function, one circuit at a time.
+- Never make architecture decisions autonomously. Present 2–3 options with trade-offs; William chooses. Record a real decision as a dated ADR in `docs/decisions/` (`YYYY-MM-DD-title.md`). Never edit a record after the fact; write a new one that supersedes it.
+- Never bulk-generate code. One reader, one check, one endpoint, one contract function at a time.
 - **Before writing more than one document, show the list of files and what each will contain, and wait for a yes.**
 - **Every commit and every push needs its own explicit ask.** "Commit and push" once does not carry forward.
 - If stuck or ambiguous: ask. Never guess on product behaviour.
-- Flag risks immediately: a valuation that could be wrong in a way nobody would notice, an action the rules circuit did not check, a key or seed phrase anywhere near the repo, a mainnet transaction from a dev session, and anything that lets Foreman move a miner the owner did not allow. **The owner's control of their miner is the product.**
+- Flag risks immediately: a verdict that could be wrong in a way nobody would notice, a value without its inputs, a key or seed phrase anywhere near the repo, a mainnet transaction from a dev session, and anything that could call an honest circuit a copy. **Being right about originality is the product.**
 
 ### Skills
 
@@ -35,67 +32,60 @@
 
 - **Every page is mocked before it is built.** Use the `impeccable` skill to produce the mock: a static page with realistic sample data, no wiring to the API or the chain.
 - **Show options, not one answer.** Mock 2–3 directions for each new page and present them side by side.
-- **William chooses.** No page is built until William has picked a mock (or asked for changes and approved the revision). Record the chosen mock in `docs/mocks/` with the date.
+- **William chooses.** No page is built until William has picked a mock (or asked for changes and approved the revision). Record the chosen mock in `docs/mocks/` with the date. The mocks from 18 November were for the old scope; they are reference only.
 - **Build to the chosen mock.** A change to layout or flow after the choice is a new mock and a new choice, not an edit made while building.
 
 ---
 
 ## Project
 
-Foreman is an AI manager for TapeOut miners. It values each miner, compares **Hold, Rent, Lend and Sell** with live offers, and can run the miner on **autopilot** within rules the owner writes in plain English. Those rules are compiled into a **TapeOut circuit**, and the owner's wallet checks every action against that circuit on chain before it can happen.
+**Foreman: know what you're buying before you trade a TapeOut miner.** For any miner or RIG voucher, Foreman answers three questions and publishes the answers on X Layer:
 
-A TapeOut miner is a circuit NFT that passed the official test vectors and earns BEM under Proof of Design. Mining runs on BNB Chain; since October an owner can also sell a miner, rent it out or borrow against it on X Layer. Owners still work out by hand which option pays best, and the answer keeps changing as network weight grows and the BEM price moves.
+1. **Is it original?** Exact copies (byte-identical netlist; the earliest tape-out is the original) and wrappers (netlists made only of REF records, with the circuit they point to), per TAPs issue #102. OCCC status where a circuit is in an OCCC collection.
+2. **What's it worth?** An estimated value range and payback, from chain data.
+3. **What can I do with it?** Hold, Sell, Lend and Rent, each shown as it really is today.
 
-**What Foreman is not:** it never holds a miner, and it never lends or rents anything itself. It routes each miner to whoever pays best (TapePool for loans, the X Layer market for sales and rentals) and earns a fee for doing so.
+A TapeOut miner is a circuit NFT that passed the official test vectors and earns BEM under Proof of Design. Mining runs on BNB Chain; miners trade on TapeOut's circuit market there, and since October they can be bridged to X Layer as RIG vouchers.
 
-**Positioning, in the UI and in the README:** Foreman shows estimated values as ranges and the outcome of each option under stated assumptions. It is not financial advice and it does not promise earnings. Never overstate this.
+**What Foreman is not:** it never holds a miner, never lends, rents or trades, and never calls anything fake or stolen. It states what the chain shows.
 
-**Pitch line:** full autopilot for your miner. It never leaves your wallet, and your rules are enforced on chain.
+**Positioning, in the UI and in the README:** originality results say exactly what was checked and against how many circuits. Values are estimates, shown as ranges with their inputs. Not financial advice. Never overstate either.
 
 Built for **X Layer TapeOut Accelerate** (OKX Build X series). Judged on user value and commercial potential, innovation, ecosystem integration, product readiness and a demo video of three minutes or less. Hard requirement: use TapeOut circuits, contracts or X Layer on-chain data, or run on DeWEB, and give the addresses.
 
 | Milestone | When |
 | --- | --- |
-| Per-miner output check on BNB Chain | **Passed**, 18 November 2026 |
-| Remaining go/no-go checks | See "Still open" |
-| Feature freeze | 5 December 2026 (proposed) |
-| Submit | 6 December 2026 (proposed); deadline 7 December 2026, 23:59 UTC, provisional |
+| Scope and team decision | 20 November 2026 |
+| Feature freeze | 5 December 2026 |
+| Submit | 6 December 2026; deadline 7 December 2026, 23:59 UTC, provisional |
 
 ### Key docs
 
 | Doc | Path | Purpose |
 | --- | --- | --- |
-| Product | `docs/PRODUCT.md` | The problem, users, the eight-step pipeline, the four options, MVP scope, owners, build order, demo story. Source of truth |
-| Brief | [Google Doc](https://docs.google.com/document/d/1PA3ftj2tFWzcKyj02hxZelqzRayx-DF3gd0w3vSYUjM/edit) | The research behind the product: revenue, competition, checks, risks |
-| Data contract | `docs/data-contract.md` (not written yet) | Shared shapes and API paths |
-| Decisions | `docs/decisions/` | Dated ADRs, never edited after the fact |
-| Chain check | `scripts/check_pod_mining.py` | Reads recent BEM claims and the mining contract's per-miner events from BNB Chain |
+| Product | `docs/PRODUCT.md` | The problem, users, the three answers, MVP scope, build order, demo story. Source of truth |
+| Data contract | `docs/data-contract.md` | Shared shapes, types and parsers in `packages/contract` |
+| Decisions | `docs/decisions/` | Dated ADRs, never edited after the fact. Start with `2026-11-20-scope-and-team.md` |
+| Notes | `docs/notes/` | Research behind the decisions: the mining contract, the X Layer and BNB markets |
+| Brief | [Google Doc](https://docs.google.com/document/d/1PA3ftj2tFWzcKyj02hxZelqzRayx-DF3gd0w3vSYUjM/edit) | The original autopilot brief, now historical |
 
 ---
 
-## Trust rules (proposed: the team confirms, then they are locked)
+## Trust rules (locked)
 
 | Rule | Detail |
 | --- | --- |
-| **Foreman never holds a miner** | Miners stay in a wallet the owner controls. The agent key can never transfer a miner out of that wallet, and selling is off unless the owner turns it on |
-| **Models suggest, the circuit and code decide** | An AI model may propose an action or draft rules. No action executes unless deterministic code accepts it **and** the owner's rules circuit returns yes through eval() on chain. A refused action is logged and never retried in a different shape to get it through |
-| **The owner confirms the rules before they exist** | Plain-English rules are compiled to a policy, shown back to the owner in plain words with worked examples ("this would be allowed, this would be refused"), and only taped out after the owner confirms. Never tape out unconfirmed rules |
-| **No chain data, no number** | Every valuation shows its inputs (miner weight, network weight, emission, pool split, BEM price, block number) and the model version. No number shown to an owner comes from a model call |
-| **Ranges, not prices** | A value is always low / base / high under stated assumptions, with published backtests. Never a single "price" |
-| **Paper first** | No agent key is issued for a strategy until the owner has seen its paper run |
-| **Keys are narrow and short-lived** | Every agent key has allowed actions, a daily action limit and an expiry date, and the owner can revoke it in one tap |
+| **Say only what was checked** | "No earlier copy found among 41,203 circuits checked, up to block 134,600,000", never "original" or "authentic" on its own. A circuit outside the index is "can't check", never "original" |
+| **Every verdict carries its evidence** | A copy names the earlier circuit, both tape-out blocks and the shared netlist hash. A wrapper names the circuit its REF records point to. Anyone can re-check it from chain data |
+| **The earliest tape-out is the original** | Stated on screen as the rule. Same block: the lower transaction index, then log index, is earlier |
+| **Facts, never accusations** | "Byte-identical to circuit #X, taped out 3 days earlier", never "fake", "stolen" or "scam" |
+| **Code decides, never a model** | No verdict, value or comparison comes from a model call. A model may write explanatory text only, from the fixed result |
+| **No invented copy discount** | A miner's value comes from its own on-chain weight, copy or not. Originality is shown beside the value, never folded into it as a guessed percentage |
+| **No chain data, no number** | Every value shows its inputs (miner weight, network weight, emission, pool split, block number) and the model version |
+| **Ranges, not prices** | A value is always low / base / high under stated assumptions. Never a single "price" |
+| **Missing is missing** | A missing offer, venue or result is shown as missing, never as zero |
+| **Published results are reproducible** | Each result written to X Layer carries the rule version and the block it was read at, so anyone can recompute it |
 | **Unconfirmed addresses are never used** | A contract address is used only after it is confirmed on chain and listed in "On-chain facts" with the date |
-
-### The four options
-
-| Option | What the owner gets | Shown as |
-| --- | --- | --- |
-| **Hold** | Keeps mining and claiming | Expected BEM over 30 days and until the 2030 halving, as a range |
-| **Rent** | A renter pays for the miner's output for a period | Best live rental offer and what it is worth against holding |
-| **Lend** | Borrows BEM against future output (TapePool) | Best live loan terms, what is received now, how long repayment takes |
-| **Sell** | A lump sum, and the future output is gone | Best live bid against the estimated value range |
-
----
 
 ## On-chain facts
 
@@ -120,52 +110,42 @@ Only facts confirmed on chain or on an official TapeOut page go here, each with 
 
 **RPC notes:** `bsc-dataseed.bnbchain.org` refuses `eth_getLogs`; `bsc-rpc.publicnode.com` serves it in 200-block chunks. Several public nodes return 403 or reset the connection. Batch reads and cache by block.
 
+**RPC correction, 19 Nov 2026:** `bsc-rpc.publicnode.com` returns an **empty list, not an error,** for event logs older than a few hours. A read that needs history uses an archive node (`BNB_ARCHIVE_RPC_URL` in `.env`) and checks a known event is present before trusting an empty result.
+
 ---
 
 ## Tech stack
 
-Each item gets 2–3 options, the human chooses, it gets an ADR in `docs/decisions/`, then it is filled in here. Items still marked Open are not decided.
+Each item gets 2–3 options, William chooses, it gets an ADR in `docs/decisions/`, then it is filled in here. Items still marked Open are not decided.
 
 | Job | Status |
 | --- | --- |
-| Reading BNB Chain and X Layer (indexer) | TypeScript with viem 2.57.16; `packages/chain-bnb`, later `packages/chain-xlayer`; tests on saved RPC responses: `2026-11-19-chain-readers.md` |
-| Valuation engine language and hosting | TypeScript; token amounts as `bigint`, never `number`: `2026-11-18-language.md`. Hosting open |
+| Reading BNB Chain and X Layer | TypeScript with viem 2.57.16; `packages/chain-bnb`, later `packages/chain-xlayer`; tests on saved RPC responses: `2026-11-19-chain-readers.md` |
+| Circuit index and originality check | Open: where netlists live on chain decides it (see "Still open") |
+| Valuation | TypeScript; token amounts as `bigint`, never `number`: `2026-11-18-language.md`, `2026-11-18-valuation-model.md` |
 | API and job runner | Hono on Node, Postgres, pg-boss: `2026-11-18-api-and-jobs.md`. Hosting open |
+| Results contract on X Layer | Open: shape, tooling, and who holds the publisher key |
 | Frontend | Vite, React, wagmi and viem; static build for DeWEB, OKX Wallet first: `2026-11-18-frontend.md` |
-| Rules compiler route | Open: plain English → policy → Verilog → existing netlist tooling (such as TapeSynth), or our own netlist generator |
-| Owner wallet | Open: our own smart wallet or module, or TapeOut's own account system on X Layer if it supports restricted keys |
-| AI model for rules drafting and explanations | Open |
-| Fee token | Open: BEM, USDT or both |
 | Package manager and layout | pnpm workspaces: `2026-11-18-package-layout.md` |
 
 ---
 
 ## Repository layout
 
-pnpm workspaces (`docs/decisions/2026-11-18-package-layout.md`). Planned for William's areas, created at scaffold time:
+pnpm workspaces (`docs/decisions/2026-11-18-package-layout.md`). Everything is William's.
 
 | Path | What |
 | --- | --- |
-| `apps/web` | Web app (Vite, React) |
-| `apps/api` | Hono API and jobs |
-| `packages/contract` | The data contract's types and parsers (shapes owned by Furqaan) |
+| `packages/contract` | The data contract's types and parsers (written by Furqaan). Parsers for the withdrawn autopilot shapes are removed in a later commit |
+| `packages/chain-bnb` | BNB reader: `Miner`, `NetworkState`, network history, the circuit market's listings and sales (written by Furqaan) |
 | `packages/valuation` | Valuation engine and backtests |
-
-Furqaan's areas:
-
-| Path | What |
-| --- | --- |
-| `packages/chain-bnb` | BNB reader: `Miner` and `NetworkState` from the mining contract (`2026-11-19-chain-readers.md`) |
-| `packages/chain-xlayer` | X Layer reader: offers (once the addresses are confirmed) |
-
-Furqaan lays out the rest of his areas (rules compiler, owner wallet, agent loop) when they start. Today the repo holds:
-
-| Path | What |
-| --- | --- |
-| `CLAUDE.md` | This file |
-| `docs/decisions/` | Dated ADRs |
-| `docs/PRODUCT.md` | The product: scope, owners, build order, demo story |
-| `scripts/check_pod_mining.py` | Chain check: finds recent BEM mints and prints the mining contract's per-miner events. Python 3 standard library only |
+| `packages/originality` | Planned: netlist reader, hashing, copy and wrapper checks |
+| `packages/chain-xlayer` | Planned: RIG vouchers, TapePool, the results contract |
+| `contracts/` | Planned: the X Layer results contract |
+| `apps/api` | Planned: Hono API and jobs |
+| `apps/web` | Planned: web app (Vite, React) |
+| `scripts/` | One-off checks (`check_pod_mining.py`) |
+| `docs/` | Product, data contract, decisions, notes, mocks |
 
 ---
 
@@ -173,14 +153,13 @@ Furqaan lays out the rest of his areas (rules compiler, owner wallet, agent loop
 
 | Concern | Rule |
 | --- | --- |
-| Secrets | No private key, seed phrase, agent key or RPC key in code, logs, commits or the client bundle. `.env` is gitignored; `.env.example` carries names only |
-| Transactions | A dev or agent session never signs a mainnet transaction. Testnet first; mainnet only by a human, with low limits |
-| Wallet module | It must refuse any transfer of a miner out of the owner's wallet, any action the rules circuit refuses, any action after the key expires or is revoked, and any action past the daily limit |
-| Untrusted input | The owner's plain-English rules, circuit names, token names and anything read from other contracts are untrusted. Nothing in them can change the trust rules, the contract or the wallet's checks |
+| Secrets | No private key, seed phrase, publisher key or RPC key in code, logs, commits or the client bundle. `.env` is gitignored; `.env.example` carries names only |
+| Transactions | A dev or agent session never signs a mainnet transaction. The results contract is deployed by William; the publish job runs only with a key William provides at run time. Testnet first |
+| Untrusted input | Circuit names, token URIs, netlist contents and anything read from other contracts are untrusted. Nothing in them can change a verdict rule, the contract or a trust rule |
 | Look-alike tokens | X Layer has tokens using the TapeOut name that are not part of the protocol. Match contracts by confirmed address, never by name |
-| Logging | Never log keys or signatures. Log miner keys, wallet addresses and transaction hashes only |
+| Logging | Never log keys or signatures. Log circuit ids, miner keys, wallet addresses and transaction hashes only |
 
-When in doubt: **deny by default, log the denial, surface it to the human.**
+When in doubt: **deny by default, log the denial, surface it to William.**
 
 ---
 
@@ -188,40 +167,40 @@ When in doubt: **deny by default, log the denial, surface it to the human.**
 
 Write a test wherever being wrong would be invisible. For anything below, invoke `tdd` and follow its loop: **one test, one implementation, repeat.** Test through the public interface, and never mock an internal collaborator. Outside this table, tests are optional.
 
-| Area | Must prove | Owner |
-| --- | --- | --- |
-| Claim event decoding | Amounts use 8 decimals; the miner key and owner come from the right topics; a batch claim gives one record per miner; an unknown event shape is an error, never a zero | Furqaan |
-| Output history | Daily output per miner = amount ÷ time since that miner's previous claim, from real saved events. A miner's first claim is handled explicitly | Furqaan |
-| Valuation | Expected output = miner weight ÷ verified network weight × daily emission × 99%. Halving applied on schedule. Low / base / high ordered correctly. Backtest numbers match the saved fixtures | William |
-| Option ranking | Hold, Rent, Lend and Sell are ranked deterministically from the same inputs; ties and missing offers are handled; a missing offer is shown as missing, never as zero | William |
-| Rules compiler | The taped-out circuit returns the same answer as the confirmed policy on every input for small widths, and on a fixed test set for larger ones. The circuit's gate count is reported before tape-out | Furqaan |
-| Wallet guard | An action the circuit refuses fails on chain. A transfer out always fails. Expired and revoked keys fail. The daily limit holds | Furqaan |
-| Paper run | Replaying a strategy over saved history gives the same result as the backtest | William |
-| Bad input | Unknown miner key, RPC failure, chain reorg, stale price: a clear error, never a crash and never a silent zero | Both |
+| Area | Must prove |
+| --- | --- |
+| Netlist reading | A real circuit's netlist from a saved fixture decodes to the expected records; an unreadable netlist is "can't check", never "no earlier copy found" |
+| Copy check | A byte-identical netlist taped out later is a copy of the earlier one; the earliest is never called a copy; same-block ties follow the stated order; a one-byte difference is not a copy |
+| Wrapper check | A netlist made only of REF records is a wrapper and names its target; a netlist with REF records and real gates is not a pure wrapper |
+| Coverage | "No earlier copy found" always states how many circuits and up to which block; a circuit outside the index is "can't check" |
+| Valuation | Expected output = miner weight ÷ verified network weight × daily emission × 99%. Halving applied on schedule. Low / base / high ordered correctly. Backtest numbers match the saved fixtures |
+| Sell comparables | The rule that picks comparables is code and is stated on screen; junk asks are filtered by the stated rule; no bid is "no bid right now", never a sale price |
+| Published result | A result written to X Layer decodes back to the same verdict, evidence, rule version and block |
+| Bad input | Unknown miner, unknown circuit, RPC failure, empty log read on a node without history: a clear error, never a crash and never a silent zero or a silent "no copy" |
 
-A number shown to an owner, or an action taken for one, that no test covers is a bug waiting to be found on demo day.
+A verdict or a number shown to a user that no test covers is a bug waiting to be found on demo day.
 
 ---
 
 ## Build order
 
-The day-by-day table in `docs/PRODUCT.md` is the order, with an owner for each row. Build so each step works end to end before the next.
+The build order table in `docs/PRODUCT.md` is the order. Build so each step works end to end before the next.
 
 **Feature freeze is 5 December 2026.** After that: bug fixes, the demo video and the submission only.
 
-**Cut list, in this order, if behind on 1 December:** price feed and API → strategy marketplace → Chinese → Telegram bot → autopilot on mainnet (keep it on testnet for the demo).
+**Cut list, in this order, if behind on 1 December:** OCCC status → copy alert → Lend read (show "not checked") → X Layer mainnet (publish on testnet for the demo).
 
-**Never cut:** value ranges with their inputs, the rules circuit check on every autopilot action, and one-tap revoke. Without them the product asks owners to trust us, which is exactly what it exists to avoid.
+**Never cut:** the evidence behind every originality result, the inputs behind every value, and publishing results on X Layer.
 
 ---
 
 ## Copy
 
 - Use the product's words exactly (see "Domain language").
-- Plain language for owners. No ABI, RPC or contract jargon in the UI.
-- Say "estimated value", never "price", for Foreman's own numbers. Never "guaranteed", never "you should": show outcomes and let the owner choose.
-- Every autopilot move is explained in one line: what it did, why, and what the alternative paid.
-- English and Chinese. Mobile first, OKX Wallet first.
+- Plain language. No ABI, RPC or contract jargon in the UI.
+- Say "estimated value", never "price", for Foreman's own numbers. Never "guaranteed", never "you should".
+- Originality copy states facts: "Copy of circuit #X", "Wrapper of circuit #X", "No earlier copy found among N circuits", "Can't check". Never "fake", "stolen", "scam" or "authentic".
+- Mobile first, OKX Wallet first.
 
 ---
 
@@ -229,27 +208,31 @@ The day-by-day table in `docs/PRODUCT.md` is the order, with an owner for each r
 
 | Term | Meaning |
 | --- | --- |
-| **Owner** | Primary user. Holds one or more miners and chooses what to do with them |
-| **Buyer** | Someone considering buying a miner on the X Layer market |
-| **Miner** | A taped-out circuit NFT registered for Proof of Design mining that earns BEM |
-| **Miner key** | The 32-byte id the mining contract uses for a miner in its events |
+| **Buyer** | Primary user. Someone considering buying a miner or a RIG voucher |
+| **Owner** | Holds one or more miners |
+| **Circuit** | A taped-out TapeOut netlist, held as an NFT on a processor |
+| **Miner** | A circuit registered for Proof of Design mining that earns BEM |
+| **RIG voucher** | An X Layer NFT standing for one miner held in the BNB rig vault |
+| **Netlist** | A circuit's list of records (gates, latches, REF records) as stored on chain |
+| **Netlist hash** | The hash of a netlist's bytes, used to find exact copies |
+| **REF record** | A netlist record that points to another circuit instead of containing gates |
+| **Copy** | A circuit whose netlist is byte-identical to a circuit taped out earlier |
+| **Wrapper** | A circuit whose netlist is only REF records pointing to another circuit |
+| **No earlier copy found** | The verdict when no earlier circuit in the index shares the netlist hash and the netlist is not a wrapper. Never shortened to "original" |
+| **Can't check** | The verdict when the netlist can't be read or the circuit is outside the index |
+| **OCCC** | Official Curated Circuit Collections: a TAP proposal certifying new collections by their issuer |
+| **Index** | Every circuit Foreman has read, up to a stated block |
+| **Result** | One circuit's verdict with its evidence, rule version and block |
+| **Published result** | A result written to Foreman's results contract on X Layer |
+| **Miner key** | The 32-byte id the mining contract uses for a miner |
 | **Weight** | A miner's share-determining figure in the mining contract |
 | **Network weight** | Total verified weight across all miners |
 | **Emission** | BEM produced per day by the mining contract (7,200 today, halving about every four years) |
-| **Claim** | Withdrawing a miner's earned BEM; one event per miner |
-| **Hold / Rent / Lend / Sell** | The four options for a miner. Never invent others in copy |
-| **Offer** | A live rental rate, loan term or sale bid for a miner |
 | **Estimated value** | Foreman's low / base / high value for a miner under stated assumptions |
 | **Payback** | Days until a buyer's price is earned back, as a range |
-| **Rules** | The owner's limits in plain English |
-| **Policy** | The structured form of the rules, confirmed by the owner |
-| **Rules circuit** | The taped-out TapeOut circuit that encodes the policy and is checked with eval() before every autopilot action |
-| **Owner wallet** | The wallet the owner controls that holds the miner and runs the check |
-| **Agent key** | The restricted, expiring, revocable key the autopilot acts with |
-| **Autopilot** | Foreman acting for the owner with an agent key, within the rules circuit |
-| **Paper run** | A strategy replayed on history or run live without real moves |
-| **Strategy** | A rules circuit others can copy; its author earns a share |
-| **Action log** | Every move, its reason and its transaction, sent to the owner |
+| **Hold / Sell / Lend / Rent** | The four options for a miner. Never invent others in copy |
+| **Offer** | A live bid, loan term or rental rate. Today only TapePool can supply one |
+| **Copy alert** | "A copy of your miner was just listed", for owners who connect a wallet |
 
 Never abbreviate these. Never invent synonyms.
 
@@ -259,24 +242,24 @@ Never abbreviate these. Never invent synonyms.
 
 The `grill-me` queue. Strike an item when an ADR settles it.
 
-- ~~Read a miner's current weight, status and pending rewards: confirm the mining contract's source is verified on BscScan and list its read functions.~~ Settled: `docs/decisions/2026-11-19-data-contract.md`.
-- ~~X Layer: the miner voucher (RIG), rental and TapePool contract addresses~~ (found: `docs/notes/2026-11-19-xlayer-market-findings.md`). **New, and product-level:** the X Layer market is nearly empty (15 vouchers, no asks or offers, no rentals, a lending pool with 0.01 BEM). How Foreman's Rent, Lend and Sell options work with that is Furqaan's decision (options a–c in the note).
-- Can a smart wallet hold a bridged miner and still rent it or lend it through TapePool?
-- How many gates a realistic rules circuit needs.
-- Do copied or wrapper circuits earn mining rewards (decides the copy discount)?
-- Will TapePool and the market pay referral fees?
-- Does anyone already publish fair values or a sell-vs-rent comparison?
-- Every item still marked Open in "Tech stack": ~~chain readers~~ (settled: `2026-11-19-chain-readers.md`), rules compiler route, owner wallet, AI model, fee token, and hosting.
+- Where netlists are stored on chain, and the exact REF record format (TAP-02 §4, §6).
+- Can a REF-only wrapper or an exact copy mine, and with what weight?
+- How to index every circuit since launch: tape-out events, archive node limits, and X Layer circuits.
+- Is OCCC deployed anywhere, and how is its status read?
+- The results contract on X Layer: its shape, tooling, and who holds the publisher key.
+- Price conversion: `Price` is USD per BEM only; a BNB ask next to a BEM value needs BNB and OKB prices.
+- Hosting for the API, the jobs and Postgres.
+- Furqaan's agreement to reuse his code in the submission, and how he's credited.
 
 ---
 
 ## What the agent cannot do
 
-- Change the trust rules, the four options or the data contract without the team.
-- Let a model call produce a valuation, an offer, an action or a citation that code has not checked.
-- Execute an autopilot action that the rules circuit has not approved.
-- Write code that can move a miner out of an owner's wallet.
-- Sign or send a mainnet transaction, or handle a real private key or seed phrase.
+- Change the trust rules, the verdict rules or the data contract without William.
+- Let a model call produce a verdict, a value or a comparison.
+- Call a circuit original, fake or stolen.
+- Show a verdict without its evidence, or a value without its inputs.
+- Sign or send a mainnet transaction, or handle a real private key, seed phrase or publisher key.
 - Use a contract address that is not in "On-chain facts".
 - Deploy anything.
 - Add a dependency without saying what it replaces and what it costs.
