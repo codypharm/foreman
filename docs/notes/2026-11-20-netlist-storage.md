@@ -25,7 +25,7 @@
 | --- | --- | --- |
 | Processor factory (BNB) | `0x68224f668083c29e9800be2a646d42d18cedf7e2`, UUPS proxy, owner `0xb3d8…3138` (TapeOut's owner), **not sealed** | TAP-02; `cpuCount()` called today |
 | Processors | `cpuCount()` = **1,496** today (1,169 on 29 Sep). `cpuAt(i)` lists them in creation order, append-only. `cpuAt(0)` = `0x50a994e7…9dd9` | Called today |
-| One processor | An ERC-721 beacon proxy (beacon `0xf8d6…8156`). Circuit ids start at 1; `nextId()` is the next one. `0x50a9…` has 12,938 circuits | Called today |
+| One processor | An ERC-721 beacon proxy (beacon `0xf8d6…8156`). Circuit ids start at 1; `nextId()` is the next one. `0x50a9…` has 12,938 circuits. **Correction, 20 Nov (later):** `nextId()` returns the *last* id issued, so `0x50a9…` had 12,939; see `packages/originality/fixtures/README.md` | Called today |
 | Netlist bytes | `netlist(uint256 id)` (`0x3fc4be56`) returns the records exactly. Stored in 24,000-byte SSTORE2 chunks at tape-out; there is no setter | TAP-02 §6; called today |
 | Shape | `circuitInfo(uint256 id)` (`0x084d60f1`) → `(nIn, nOut, nState, gateCount)`. `gateCount` includes gates reached through REF | TAP-02 §6; called today |
 | X Layer | A different factory (`0x1f09…0761`) per TAP-10. TAP-02 has not been checked against it, and neither has this note | Unconfirmed |

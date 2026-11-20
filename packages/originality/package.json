@@ -1,0 +1,23 @@
+{
+	"name": "@foreman/originality",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"test": "vitest run --passWithNoTests",
+		"test:watch": "vitest",
+		"typecheck": "tsc -p .",
+		"record": "node --env-file-if-exists=../../.env scripts/record-fixture.ts"
+	},
+	"dependencies": {
+		"@foreman/chain-bnb": "workspace:*",
+		"@foreman/contract": "workspace:*",
+		"viem": "2.57.16"
+	},
+	"devDependencies": {
+		"@types/node": "24.19.2",
+		"vitest": "^5.1.0"
+	}
+}

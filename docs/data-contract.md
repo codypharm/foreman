@@ -189,9 +189,15 @@ type OriginalityFact =
   | { fact: "uses-ref"; refRecords: number; targets: CircuitRef[]; borrowedGates: number; totalGates: number } // REF records mixed with real gates
   | { fact: "also-identical"; to: CircuitRef; netlistHash: Hex32 }   // beside "wrapper": also identical to an earlier circuit
   | { fact: "can-mine"; state: "mining" }                            // every result carries exactly one can-mine fact
-  | { fact: "can-mine"; state: "cant-mine"; reason: "processor-not-eligible" | "uses-ref" }
+  | { fact: "can-mine"; state: "cant-mine"; reasons: CantMineReason[] } // every reason that applies, at least one
+  | { fact: "can-mine"; state: "stopped"; stoppedAt: bigint; canStartFrom: bigint } // cooling: stopBlock, and stopBlock + 1,200
   | { fact: "can-mine"; state: "not-started" }                       // nothing rules it out; never a promise that it passes a task
   | { fact: "design-bonus"; holds: boolean; bonus: bigint };         // miners only, from getMiner (optimal, bonus); shown before the verdict
+
+type CantMineReason =
+  | { reason: "processor-not-eligible" }                             // processorMultiplier is 0
+  | { reason: "uses-ref" }                                           // the netlist has a REF record
+  | { reason: "failed-test-vector"; taskId: number; vectorIndex: number; block: bigint }; // revoked, from the Revoked event; it can never start again
 
 interface Originality {
   circuit: CircuitRef;
@@ -208,6 +214,7 @@ interface Originality {
 - **Who gets a result:** every miner and every circuit listed on TapeOut's circuit market; anything else pasted into the app is checked on screen with `scope: "pasted"` and never published.
 - **Netlist hash:** covers `nIn`, `nOut` and the netlist bytes with each NAND record's two inputs in ascending order, so a copy with swapped inputs matches. The same bytes with a different `nOut` are a different circuit. The raw byte hash is kept as evidence (`bytesIdentical`). The exact encoding is fixed in the rule version when the netlist reader is built.
 - **Stated limit:** "Checks identical netlists, including swapped gate inputs. A copy with its gates reordered isn't detected." Shown with every `copy` and `no-earlier-copy`.
+- **Can mine:** the states and their wording are in `docs/decisions/2026-11-20-can-mine-revoked-and-stopped.md`. A revoked miner's evidence is its `Revoked` event; a stopped miner's is `getMiner`'s `stopBlock` and its `Stopped` event.
 - **Contract first for miners:** a miner's `design-bonus` fact is shown before Foreman's verdict, each labelled with its source. Neither overrides the other.
 - **Never "original":** `no-earlier-copy` is shown as "No earlier copy found among N circuits checked, up to block B", using `index`. A circuit outside the index is `cant-check`.
 - **Too small to tell:** shown as "Identical to N earlier circuits; too small to tell", with the floor stated. The floor is measured from the index, not chosen; until it is, no `copy` verdict is issued.

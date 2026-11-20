@@ -175,7 +175,7 @@ Write a test wherever being wrong would be invisible. For anything below, invoke
 | --- | --- |
 | Netlist reading | A real circuit's netlist from a saved fixture decodes to the expected records; an unreadable netlist is "can't check", never "no earlier copy found" |
 | Copy check | An identical netlist with a later design time is a copy of the earlier one; a netlist that differs only by swapped NAND inputs is a copy; a miner whose accepted design commitment is earlier than an identical circuit's tape-out is not the copy; the earliest is never called a copy; same-block ties follow the stated order; any other one-byte difference is not a copy |
-| Can mine | Every result carries one: mining now, can't mine (processor not eligible, uses REF records) or not started; a miner's design bonus answer comes from the mining contract |
+| Can mine | Every result carries one: mining now; can't mine (processor not eligible, uses REF records, failed a test vector, every reason that applies); stopped, with the block it can start again from; or not started. A failed test vector names the task, the vector and the block. A miner's design bonus answer comes from the mining contract |
 | Wrapper check | A netlist made only of REF records is a wrapper and names its target; a netlist with REF records and real gates is not a pure wrapper |
 | Coverage | "No earlier copy found" always states how many circuits and up to which block; a circuit outside the index is "can't check" |
 | Valuation | Expected output = miner weight ÷ verified network weight × daily emission × 99%. Halving applied on schedule. Low / base / high ordered correctly. Backtest numbers match the saved fixtures |
@@ -218,7 +218,7 @@ The build order table in `docs/PRODUCT.md` is the order. Build so each step work
 | **Owner** | Holds one or more miners |
 | **Circuit** | A taped-out TapeOut netlist, held as an NFT on a processor |
 | **Miner** | A circuit registered for Proof of Design mining that earns BEM |
-| **Can mine** | The fact every result carries: "Mining now", "Can't mine" (processor isn't eligible, or uses REF records) or "Could mine: not started". Never a promise that a circuit passes a task |
+| **Can mine** | The fact every result carries: "Mining now"; "Can't mine" (processor isn't eligible, uses REF records, or failed a test vector); "Not mining: stopped" (with when it can start again); or "Could mine: not started". Never a promise that a circuit passes a task |
 | **RIG voucher** | An X Layer NFT standing for one miner held in the BNB rig vault |
 | **Netlist** | A circuit's list of records (gates, latches, REF records) as stored on chain |
 | **Netlist hash** | The hash of a netlist's input count, output count and bytes, with each NAND's two inputs put in order first, used to find exact copies |
