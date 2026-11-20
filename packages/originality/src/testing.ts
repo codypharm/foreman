@@ -118,3 +118,71 @@ const GET_MINER = "0x0527edc2";
 const getMinerAbi = parseAbi([
 	"function getMiner(bytes32 key) view returns ((address circuits, uint64 circuitId, uint32 taskId, uint32 gateCount, uint32 stateCount, uint32 depth, uint64 area, uint32 mult, uint64 since, uint8 status, address registrant, uint32 nandBurn, uint32 latchBurn, uint64 bstar, uint64 bonus, bool optimal, uint64 commitBlock, uint64 firstUnusedId, uint64 stopBlock, uint128 verifWeight, uint128 unverWeight, uint256 debt))",
 ]);
+
+/** A copy of a tape-out scan fixture with one more TapedOut log, in the read that covers its block. */
+export function withTapeOutLog(
+	f: Fixture,
+	log: {
+		address: string;
+		id: bigint;
+		owner: string;
+		block: bigint;
+		txIndex: number;
+		logIndex: number;
+	},
+): Fixture {
+	const word = (n: bigint | string) =>
+		`0x${BigInt(n).toString(16).padStart(64, "0")}`;
+	const raw = {
+		address: log.address,
+		topics: [TAPED_OUT, word(log.id), word(log.owner)],
+		data: `0x${"0".repeat(128)}`,
+		blockNumber: `0x${log.block.toString(16)}`,
+		transactionHash: `0x${"ab".repeat(32)}`,
+		transactionIndex: `0x${log.txIndex.toString(16)}`,
+		blockHash: `0x${"cd".repeat(32)}`,
+		logIndex: `0x${log.logIndex.toString(16)}`,
+		removed: false,
+	};
+	let added = 0;
+	const calls = f.calls.map((c) => {
+		if (c.method !== "eth_getLogs") return c;
+		const p = (c.params as { fromBlock: string; toBlock: string }[])[0];
+		if (!p || log.block < BigInt(p.fromBlock) || log.block > BigInt(p.toBlock))
+			return c;
+		added++;
+		return { ...c, result: [...(c.result as unknown[]), raw] };
+	});
+	if (added !== 1)
+		throw new Error(
+			`expected one log read covering block ${log.block}, found ${added}`,
+		);
+	return { ...f, calls };
+}
+
+/** A copy of a tape-out scan fixture missing one processor's TapedOut log, as a node with a gap would return. */
+export function withoutTapeOutLog(
+	f: Fixture,
+	processor: string,
+	id: bigint,
+): Fixture {
+	let removed = 0;
+	const calls = f.calls.map((c) => {
+		if (c.method !== "eth_getLogs") return c;
+		const logs = c.result as { address: string; topics: string[] }[];
+		const kept = logs.filter(
+			(l) =>
+				!(
+					l.address.toLowerCase() === processor &&
+					BigInt(l.topics[1] as string) === id
+				),
+		);
+		removed += logs.length - kept.length;
+		return { ...c, result: kept };
+	});
+	if (removed !== 1)
+		throw new Error(
+			`expected one TapedOut log for ${processor}/${id}, found ${removed}`,
+		);
+	return { ...f, calls };
+}

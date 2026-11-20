@@ -1,6 +1,26 @@
-# Originality fixture
+# Originality fixtures
 
 `bnb-circuits-134673279.json` holds saved JSON-RPC responses for 33 real BNB Chain circuits: 30 chosen and 3 reached through their REF records. Tests replay it with `replayClient` from `@foreman/chain-bnb/fixture`, which answers only recorded calls and refuses any other, so a test never reaches the network. It was recorded on 20 November 2026 by `scripts/record-fixture.ts`. Read only; the endpoint and its key are not in the file.
+
+## The tape-out scan: `bnb-tape-outs-116150000.json`
+
+Recorded on 20 November 2026 by `scripts/record-scan-fixture.ts` (`pnpm --filter @foreman/originality record:scan`), for `scanTapeOuts` (`docs/decisions/2026-11-20-circuit-index.md`, decision 2). It covers blocks 116,042,002 (the factory's first block with code) to 116,150,000:
+
+| Call | What it gives |
+| --- | --- |
+| `cpuCount()` and `cpuAt(i)` on the factory, at block 116,150,000 | 32 processors |
+| `nextId()` on each, at block 116,150,000 | 95 circuits in all, on 6 processors; the other 26 had none |
+| `eth_getLogs` for `TapedOut` with no address filter, in three reads of 50,000 blocks or fewer | 95 events, all from listed processors, each count equal to its `nextId()` |
+
+| Processor | Tape-outs |
+| --- | --- |
+| `MINE6` (`0x1f5c…`) | 67 |
+| `0xb102…` (multiplier 1) | 18 |
+| `P0` (`0x50a9…`) | 6; `/1` is the first tape-out, block 116,070,652, transaction 27, log 114, by `0x571d…af15` |
+| `0xd89b…` | 2 |
+| `0xbfc8…`, `0x592b…` | 1 each |
+
+There is no look-alike event in this range; the test adds one (`withTapeOutLog` in `src/testing.ts`). The count-check tests remove events (`withoutTapeOutLog`).
 
 ## What is recorded, per circuit
 
@@ -12,7 +32,7 @@
 | `eth_getLogs` for `DesignCommitted`, when `getMiner` has a `commitBlock` | the commitment block (one block) |
 | `eth_getLogs` for `Revoked` (revoked miner) or `Stopped` (cooling miner) | the block it happened in (one block); a revoke block was found by searching from the tape-out |
 
-Tape-out events are read one block at a time because the recorder found each block first. How the index finds tape-outs across all of history is still open (`CLAUDE.md`, "Still open"), so a test that needs a different log read means re-recording.
+Tape-out events are read one block at a time because the recorder found each block first. The index reads them differently (next section), so a test that needs a different log read means re-recording.
 
 **`nextId()` returns the last id issued, not the next one.** It read 6,534 before `0x50a9…/6535` was taped out and 6,535 after, and PodMining sets `firstUnusedId = nextId() + 1`. TAP-02 says otherwise.
 

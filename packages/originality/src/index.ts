@@ -21,3 +21,10 @@ export {
 	type NetlistRecord,
 	readNetlist,
 } from "./read-netlist.ts";
+export {
+	type CountMismatch,
+	type DroppedEvent,
+	scanTapeOuts,
+	type TapeOut,
+	type TapeOutScan,
+} from "./scan-tape-outs.ts";
