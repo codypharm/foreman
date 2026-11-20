@@ -20,6 +20,7 @@ export {
 	type NetlistHashes,
 } from "./hash.ts";
 export {
+	decodeNetlist,
 	type Netlist,
 	type NetlistRead,
 	type NetlistRecord,

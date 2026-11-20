@@ -96,7 +96,7 @@ export async function readNetlist(
 		};
 	}
 	const [bytes, [nIn, nOut, nState, gateCount]] = read;
-	const decoded = decode(bytes);
+	const decoded = decodeNetlist(bytes);
 	if ("unreadable" in decoded) {
 		return {
 			readable: false,
@@ -122,7 +122,8 @@ export async function readNetlist(
 /** REF header before its inputs: opcode, cpu, id, nIns, nOuts. */
 const REF_HEADER = 31;
 
-function decode(
+/** Decodes netlist bytes into records, or says why they don't decode. Used by readNetlist. */
+export function decodeNetlist(
 	hex: Hex,
 ): { records: NetlistRecord[] } | { unreadable: string } {
 	const b = Buffer.from(hex.slice(2), "hex");
