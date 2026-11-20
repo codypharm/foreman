@@ -20,6 +20,13 @@ Recorded on 20 November 2026 by `scripts/record-scan-fixture.ts` (`pnpm --filter
 | `0xd89b…` | 2 |
 | `0xbfc8…`, `0x592b…` | 1 each |
 
+Added on 20 November 2026 from the archive node, after the rest was recorded, for following the index (`packages/index/src/follow.test.ts`):
+
+| Call | What it gives |
+| --- | --- |
+| `cpuCount()`, `cpuAt(i)` and `nextId()` at block 116,092,001 | The index's first part: 2 processors and 2 tape-outs. Re-reading the first `TapedOut` window gave the saved answer exactly |
+| `netlist(id)` and `circuitInfo(id)` for all 95 circuits at block 116,150,000 | All 95 readable |
+
 There is no look-alike event in this range; the test adds one (`withTapeOutLog` in `src/testing.ts`). The count-check tests remove events (`withoutTapeOutLog`).
 
 ## Miner starts: `bnb-miner-starts-117268000-117271000.json`

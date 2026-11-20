@@ -120,13 +120,23 @@ export async function scanTapeOuts(
 	range: { fromBlock: bigint; toBlock: bigint },
 	/** Called before each read, with what is being read. */
 	onProgress?: (stage: string) => void,
+	/**
+	 * Tape-outs already indexed per processor (lower case), when following from an earlier
+	 * scan: the count check is then indexed + read = nextId.
+	 */
+	indexed: ReadonlyMap<Address, number> = new Map(),
 ): Promise<TapeOutScan> {
 	let stage = `processor list at block ${range.toBlock}`;
 	try {
-		return await scan(client, range, (s) => {
-			stage = s;
-			onProgress?.(s);
-		});
+		return await scan(
+			client,
+			range,
+			(s) => {
+				stage = s;
+				onProgress?.(s);
+			},
+			indexed,
+		);
 	} catch (error) {
 		// viem's full message names the RPC URL, which can carry a key: keep only its short message
 		const short =
@@ -143,6 +153,7 @@ async function scan(
 	client: PublicClient,
 	range: { fromBlock: bigint; toBlock: bigint },
 	reading: (stage: string) => void,
+	indexed: ReadonlyMap<Address, number>,
 ): Promise<TapeOutScan> {
 	const at = { blockNumber: range.toBlock };
 	const count = await client.readContract({
@@ -228,7 +239,7 @@ async function scan(
 			});
 		}
 	}
-	const events = new Map<Address, number>();
+	const events = new Map<Address, number>(indexed);
 	for (const t of tapeOuts) {
 		const p = t.circuit.processor;
 		events.set(p, (events.get(p) ?? 0) + 1);
@@ -248,7 +259,7 @@ async function scan(
 			detail: mismatches
 				.map(
 					(m) =>
-						`${m.processor}: ${m.events} TapedOut events, nextId ${m.nextId}, blocks ${range.fromBlock} to ${range.toBlock}`,
+						`${m.processor}: ${m.events} tape-outs indexed and read, nextId ${m.nextId}, blocks ${range.fromBlock} to ${range.toBlock}`,
 				)
 				.join("; "),
 		};

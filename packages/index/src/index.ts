@@ -12,6 +12,7 @@ export {
 	fillCommitmentTimes,
 	fillTapeOutTimes,
 } from "./fill-times.ts";
+export { type FollowResult, followIndex } from "./follow.ts";
 export {
 	type LoadedIndex,
 	loadCircuitIndex,

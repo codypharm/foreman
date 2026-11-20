@@ -14,7 +14,8 @@
 		"miners": "node --env-file-if-exists=../../.env scripts/index-miners.ts",
 		"measure-floor": "node --env-file-if-exists=../../.env scripts/measure-size-floor.ts",
 		"fill-times": "node --env-file-if-exists=../../.env scripts/fill-times.ts",
-		"revokes": "node --env-file-if-exists=../../.env scripts/index-revokes.ts"
+		"revokes": "node --env-file-if-exists=../../.env scripts/index-revokes.ts",
+		"follow": "node --env-file-if-exists=../../.env scripts/follow-index.ts"
 	},
 	"dependencies": {
 		"@foreman/contract": "workspace:*",

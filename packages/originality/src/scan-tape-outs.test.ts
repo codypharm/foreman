@@ -1,4 +1,5 @@
 import { replayClient } from "@foreman/chain-bnb/fixture";
+import type { Address } from "viem";
 import { describe, expect, test } from "vitest";
 import fixture from "../fixtures/bnb-tape-outs-116150000.json" with {
 	type: "json",
@@ -123,6 +124,60 @@ describe("the count check", () => {
 		expect(scan).toMatchObject({ complete: false, reason: "count-mismatch" });
 		if (scan.complete || scan.reason !== "count-mismatch") return;
 		expect(scan.mismatches).toHaveLength(6);
+	});
+});
+
+describe("following from an earlier scan", () => {
+	// The same blocks in two parts: a scan to block 116,092,001 (2 processors, 2 tape-outs), then
+	// the rest. The second part's count check adds the tape-outs already indexed.
+	const SPLIT = 116_092_001n;
+
+	async function firstPart() {
+		const scan = await scanTapeOuts(replayClient(fixture), {
+			fromBlock: RANGE.fromBlock,
+			toBlock: SPLIT,
+		});
+		if (!scan.complete) throw new Error(scan.detail);
+		const indexed = new Map<Address, number>();
+		for (const t of scan.tapeOuts) {
+			const p = t.circuit.processor;
+			indexed.set(p, (indexed.get(p) ?? 0) + 1);
+		}
+		return { scan, indexed };
+	}
+
+	test("checks each processor's nextId against the tape-outs already indexed plus those read", async () => {
+		const { scan: first, indexed } = await firstPart();
+		expect(first.tapeOuts).toHaveLength(2);
+		const rest = await scanTapeOuts(
+			replayClient(fixture),
+			{ fromBlock: SPLIT + 1n, toBlock: RANGE.toBlock },
+			undefined,
+			indexed,
+		);
+		expect(rest.complete).toBe(true);
+		if (!rest.complete) return;
+		expect(rest.processors).toHaveLength(32);
+		const whole = await scanTapeOuts(replayClient(fixture), RANGE);
+		if (!whole.complete) throw new Error(whole.detail);
+		expect([...first.tapeOuts, ...rest.tapeOuts]).toEqual(whole.tapeOuts);
+	});
+
+	test("stops when the tape-outs already indexed don't add up, naming the processor", async () => {
+		const { indexed } = await firstPart();
+		const [processor, n] = [...indexed][0] as [Address, number];
+		const wrong = new Map(indexed).set(processor, n - 1);
+		const rest = await scanTapeOuts(
+			replayClient(fixture),
+			{ fromBlock: SPLIT + 1n, toBlock: RANGE.toBlock },
+			undefined,
+			wrong,
+		);
+		expect(rest).toMatchObject({
+			complete: false,
+			reason: "count-mismatch",
+			detail: expect.stringContaining(processor),
+		});
 	});
 });
 
