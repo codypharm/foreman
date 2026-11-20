@@ -23,6 +23,7 @@ export {
 	type MarketBook,
 	type MarketFollowResult,
 	readMarketBook,
+	readSellMarket,
 } from "./market.ts";
 export { migrate } from "./migrate.ts";
 export {

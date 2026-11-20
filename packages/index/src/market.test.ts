@@ -7,7 +7,7 @@ import openListings from "@foreman/chain-bnb/fixtures/market-scan-open-listings.
 };
 import type pg from "pg";
 import { afterEach, describe, expect, test } from "vitest";
-import { followMarket, readMarketBook } from "./index.ts";
+import { followMarket, readMarketBook, readSellMarket } from "./index.ts";
 import { emptyIndexAt, TEST_DATABASE_URL } from "./testing.ts";
 
 // One follow of the market over blocks 134,650,000 to 134,713,299, from an index that holds
@@ -106,5 +106,111 @@ describe.skipIf(!TEST_DATABASE_URL)("following the market", () => {
 			"select count(*)::int as n from market_sales",
 		);
 		expect(sales.rows[0].n).toBe(0);
+	});
+
+	test("gives the Sell rule the last 14 days' sales and the asks that can be bought, at the market's block", async () => {
+		pool = await marketIndexedBefore();
+		await followMarket(pool, replayClient(fixture), { toBlock: TO });
+		const { rows } = await pool.query<{ t: string }>(
+			"select market_up_to_time::text as t from index_state",
+		);
+		const market = await readSellMarket(pool);
+		expect(market.at).toEqual({
+			chainId: 56,
+			block: TO,
+			time: BigInt(rows[0]?.t ?? 0),
+		});
+		expect(market.sales.map((s) => s.readAt.block)).toEqual([
+			134_671_741n,
+			134_688_886n,
+		]);
+		expect(market.sales.every((s) => !s.miner.mining)).toBe(true);
+		// 41 open, 2 of them can't be bought
+		expect(market.asks).toHaveLength(39);
+		expect(market.asks.every((a) => a.readAt.block === TO)).toBe(true);
+		const ask = await pool.query<{ price_wei: string }>(
+			"select price_wei::text from market_listings where listing_id = 28111",
+		);
+		expect(market.asks).toContainEqual({
+			priceWei: BigInt(ask.rows[0]?.price_wei ?? 0),
+			readAt: market.at,
+			miner: { mining: true, pool: "verified", weight: 61n },
+		});
+	});
+
+	test("refuses to give the Sell rule anything before the market's first fill", async () => {
+		pool = await emptyIndexAt(TO);
+		await expect(readSellMarket(pool)).rejects.toThrow("not filled yet");
+	});
+
+	test("refuses a sale from the last 14 days whose miner was never read, never dropping it", async () => {
+		pool = await marketIndexedBefore();
+		await followMarket(pool, replayClient(fixture), { toBlock: TO });
+		await pool.query(
+			`update market_sales set miner_status = null, miner_task_id = null,
+			   miner_verif_weight = null, miner_unver_weight = null where block = 134688886`,
+		);
+		await expect(readSellMarket(pool)).rejects.toThrow(
+			"no miner state for the sale at block 134688886",
+		);
+	});
+
+	test("leaves out sales older than 14 days, which have no miner state", async () => {
+		pool = await marketIndexedBefore();
+		await followMarket(pool, replayClient(fixture), { toBlock: TO });
+		const { at } = await readSellMarket(pool);
+		const window = 14n * 86_400n;
+		for (const [block, time] of [
+			[1n, at.time - window - 1n],
+			[2n, at.time - window],
+		] as const) {
+			await pool.query(
+				`insert into market_sales (block, log_index, tx, time, listing_id, processor, token_id,
+				   buyer, price_wei, fee_wei, miner_status, miner_task_id, miner_verif_weight, miner_unver_weight)
+				 values ($1, 0, $2, $3, 1, $4, 1, $4, 1000, 10, $5, $6, $7, $8)`,
+				block === 1n
+					? [block, `0x${"1".repeat(64)}`, time, `0x${"2".repeat(40)}`, null, null, null, null]
+					: [block, `0x${"3".repeat(64)}`, time, `0x${"2".repeat(40)}`, 1, 0, 0, 7],
+			);
+		}
+		const market = await readSellMarket(pool);
+		// The one exactly 14 days old is in, the one a second older is out
+		expect(market.sales.map((s) => s.readAt.block)).toEqual([
+			2n,
+			134_671_741n,
+			134_688_886n,
+		]);
+		expect(market.sales[0]?.miner).toEqual({
+			mining: true,
+			pool: "unverified",
+			weight: 7n,
+		});
+	});
+
+	test("counts only an active miner as mining, never a revoked or cooling one", async () => {
+		pool = await marketIndexedBefore();
+		await followMarket(pool, replayClient(fixture), { toBlock: TO });
+		await pool.query(
+			"update market_sales set miner_status = 2, miner_task_id = 4 where block = 134671741",
+		);
+		await pool.query(
+			"update market_sales set miner_status = 3, miner_task_id = 4 where block = 134688886",
+		);
+		const market = await readSellMarket(pool);
+		expect(market.sales.map((s) => s.miner)).toEqual([
+			{ mining: false },
+			{ mining: false },
+		]);
+	});
+
+	test("refuses an ask whose miner is mining with no weight in its pool", async () => {
+		pool = await marketIndexedBefore();
+		await followMarket(pool, replayClient(fixture), { toBlock: TO });
+		await pool.query(
+			"update market_listings set miner_verif_weight = 0, miner_unver_weight = 5 where listing_id = 28111",
+		);
+		await expect(readSellMarket(pool)).rejects.toThrow(
+			"listing 28111 is mining with no weight",
+		);
 	});
 });

@@ -48,6 +48,13 @@ export interface MarketAsk {
 	miner: MarketMinerState;
 }
 
+/** The market as the Sell rule reads it, all at one block: its sales and the asks that can be bought now. */
+export interface SellMarket {
+	at: ChainRead;
+	sales: MarketSale[];
+	asks: MarketAsk[];
+}
+
 export function sellComparables(input: {
 	miner: MarketMinerState;
 	sales: MarketSale[];

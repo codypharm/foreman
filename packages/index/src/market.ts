@@ -9,8 +9,12 @@ import {
 	type MarketScan,
 	scanMarket,
 } from "@foreman/chain-bnb";
-import { parseAddress } from "@foreman/contract";
-import { SALES_WINDOW_SECONDS } from "@foreman/valuation";
+import { parseAddress, parseHex32 } from "@foreman/contract";
+import {
+	type MarketMinerState,
+	SALES_WINDOW_SECONDS,
+	type SellMarket,
+} from "@foreman/valuation";
 import type pg from "pg";
 import type { PublicClient } from "viem";
 
@@ -53,6 +57,79 @@ export async function readMarketBook(pool: pg.Pool): Promise<MarketBook> {
 			feeBps: r.fee_bps,
 		})),
 	};
+}
+
+interface MinerColumns {
+	miner_status: number;
+	miner_task_id: number;
+	miner_verif_weight: string;
+	miner_unver_weight: string;
+}
+
+/**
+ * What the Sell rule reads (docs/decisions/2026-11-20-sell-comparables.md), at the block the market
+ * is indexed up to: the sales of the last 14 days, each with its miner at the block before, and the
+ * open listings that can be bought now, with their miners at that block.
+ */
+export async function readSellMarket(pool: pg.Pool): Promise<SellMarket> {
+	const state = await pool.query<{
+		market_up_to_block: string | null;
+		market_up_to_time: string | null;
+	}>("select market_up_to_block, market_up_to_time from index_state");
+	const row = state.rows[0];
+	if (!row?.market_up_to_block || !row.market_up_to_time) {
+		throw new Error("The market index is not filled yet: run the market's first fill");
+	}
+	const at = {
+		chainId: 56 as const,
+		block: BigInt(row.market_up_to_block),
+		time: BigInt(row.market_up_to_time),
+	};
+	const [sales, asks] = await Promise.all([
+		pool.query<
+			{ block: string; time: string; tx: string; price_wei: string } & MinerColumns
+		>(
+			`select block::text, time::text, tx, price_wei::text, miner_status, miner_task_id,
+			   miner_verif_weight::text, miner_unver_weight::text
+			 from market_sales where time >= $1 order by market_sales.block, market_sales.log_index`,
+			[(at.time - SALES_WINDOW_SECONDS).toString()],
+		),
+		pool.query<{ listing_id: string; price_wei: string } & MinerColumns>(
+			`select listing_id::text, price_wei::text, miner_status, miner_task_id,
+			   miner_verif_weight::text, miner_unver_weight::text
+			 from market_listings where open and buyable order by market_listings.listing_id`,
+		),
+	]);
+	return {
+		at,
+		sales: sales.rows.map((r) => ({
+			priceWei: BigInt(r.price_wei),
+			readAt: { chainId: 56, block: BigInt(r.block), time: BigInt(r.time) },
+			tx: parseHex32(r.tx, "market_sales.tx"),
+			miner: minerState(r, `the sale at block ${r.block}`),
+		})),
+		asks: asks.rows.map((r) => ({
+			priceWei: BigInt(r.price_wei),
+			readAt: at,
+			miner: minerState(r, `listing ${r.listing_id}`),
+		})),
+	};
+}
+
+/** Mining is status 1 (active); task 0 is the unverified pool, and its weight is unverWeight. */
+function minerState(r: MinerColumns, what: string): MarketMinerState {
+	if (r.miner_status === null) {
+		throw new Error(`The index holds no miner state for ${what}`);
+	}
+	if (r.miner_status !== 1) return { mining: false };
+	const pool = r.miner_task_id === 0 ? "unverified" : "verified";
+	const weight = BigInt(
+		pool === "verified" ? r.miner_verif_weight : r.miner_unver_weight,
+	);
+	if (weight === 0n) {
+		throw new Error(`The miner for ${what} is mining with no weight in its pool`);
+	}
+	return { mining: true, pool, weight };
 }
 
 export type MarketFollowResult =

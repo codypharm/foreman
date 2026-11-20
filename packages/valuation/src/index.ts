@@ -9,6 +9,7 @@ export {
 	type MarketSale,
 	type Pool,
 	SALES_WINDOW_SECONDS,
+	type SellMarket,
 	sellComparables,
 } from "./comparables.ts";
 export { emissionBetween } from "./emission.ts";
@@ -16,3 +17,4 @@ export { ValuationInputError } from "./errors.ts";
 export { expectedOutput } from "./output.ts";
 export { projectedOutput } from "./projection.ts";
 export { outputRange } from "./range.ts";
+export { type SellOffer, sellOffer } from "./sell-offer.ts";
