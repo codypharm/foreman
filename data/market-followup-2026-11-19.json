@@ -1,0 +1,747 @@
+{
+	"readAtBlock": 134532132,
+	"days": 7,
+	"secPerBlock": 0.450215,
+	"marketMedianPerWeight": 0.0343,
+	"buyers": [
+		{
+			"address": "0x36df3423472e03490f6440e7af485be7649b3564",
+			"kind": "contract (10965 bytes of code)",
+			"minersBought": 35,
+			"shareOfMinerSales": 0.5147058823529411,
+			"bnbSpent": 16.467898999999992,
+			"medianBnbPerWeight": 0.0345,
+			"belowMarketMedian": 17,
+			"withPriceKnown": 35,
+			"medianMinutesListingToBuy": 5601.154829333333,
+			"boughtInSameBlockAsListed": 0,
+			"withListingTimeKnown": 25,
+			"relistedInWindow": 0,
+			"medianMarkupOnRelist": null,
+			"relistsThatSold": 0
+		},
+		{
+			"address": "0xecd73c5786be7bfcfba5dc0d0d0b7099fb73051f",
+			"kind": "normal wallet with EIP-7702 delegation to 0x6c35fbcf24e57e5aa2e3aa2ca82e052499d02cf8",
+			"minersBought": 16,
+			"shareOfMinerSales": 0.23529411764705882,
+			"bnbSpent": 0.5524,
+			"medianBnbPerWeight": 0.0344,
+			"belowMarketMedian": 1,
+			"withPriceKnown": 16,
+			"medianMinutesListingToBuy": 694.9818883333334,
+			"boughtInSameBlockAsListed": 0,
+			"withListingTimeKnown": 13,
+			"relistedInWindow": 0,
+			"medianMarkupOnRelist": null,
+			"relistsThatSold": 0
+		},
+		{
+			"address": "0xa9abc701038b8ae5aeea4466f411bd6623130af5",
+			"kind": "contract (6086 bytes of code)",
+			"minersBought": 6,
+			"shareOfMinerSales": 0.08823529411764706,
+			"bnbSpent": 10.097125,
+			"medianBnbPerWeight": 0.032410571024067955,
+			"belowMarketMedian": 5,
+			"withPriceKnown": 6,
+			"medianMinutesListingToBuy": 203.03570962499998,
+			"boughtInSameBlockAsListed": 0,
+			"withListingTimeKnown": 6,
+			"relistedInWindow": 0,
+			"medianMarkupOnRelist": null,
+			"relistsThatSold": 0
+		}
+	],
+	"withdrawals": {
+		"withdrawnMinerListings": 75,
+		"relistedBySameSeller": 63,
+		"neverRelisted": 12,
+		"relistHigher": 11,
+		"relistLower": 35,
+		"relistSame": 17,
+		"medianChange": -0.015018773466833557,
+		"medianChangeWhenLower": -0.050000000000000044,
+		"medianMinutesToRelist": 0.3301576666666666,
+		"firstRelistSold": 11,
+		"anyRelistSold": 22,
+		"sameMinerWithdrawnMoreThanOnce": 35
+	},
+	"withdrawnRows": [
+		{
+			"listingId": "27820",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:15019",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": true,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.23261108333333333
+		},
+		{
+			"listingId": "27821",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:16432",
+			"relisted": true,
+			"change": -0.020000000000000018,
+			"firstRelistSold": true,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.23261108333333333
+		},
+		{
+			"listingId": "27827",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:15362",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": true,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.3001433333333333
+		},
+		{
+			"listingId": "27831",
+			"item": "0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c:787",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.24011466666666664
+		},
+		{
+			"listingId": "27832",
+			"item": "0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c:437",
+			"relisted": false,
+			"change": null,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": null
+		},
+		{
+			"listingId": "27837",
+			"item": "0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c:787",
+			"relisted": true,
+			"change": -0.03734939759036149,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.4126970833333333
+		},
+		{
+			"listingId": "27842",
+			"item": "0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c:787",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.24761824999999998
+		},
+		{
+			"listingId": "27849",
+			"item": "0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c:787",
+			"relisted": true,
+			"change": -0.015018773466833557,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.2551218333333333
+		},
+		{
+			"listingId": "27850",
+			"item": "0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c:787",
+			"relisted": false,
+			"change": null,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": null
+		},
+		{
+			"listingId": "27864",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:4795",
+			"relisted": true,
+			"change": 0.025404157043879882,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.6678189166666666
+		},
+		{
+			"listingId": "27865",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:4795",
+			"relisted": true,
+			"change": -0.29054054054054057,
+			"firstRelistSold": true,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.24011466666666664
+		},
+		{
+			"listingId": "27867",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:795",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 74.81072583333334
+		},
+		{
+			"listingId": "27868",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:6741",
+			"relisted": true,
+			"change": -0.0444444444444444,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.4802293333333333
+		},
+		{
+			"listingId": "27870",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:16619",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.3676755833333333
+		},
+		{
+			"listingId": "27885",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:16619",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": true,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.42770424999999995
+		},
+		{
+			"listingId": "27887",
+			"item": "0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c:2150",
+			"relisted": true,
+			"change": 0.18999999999999995,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 1302.1868588333334
+		},
+		{
+			"listingId": "27888",
+			"item": "0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c:2369",
+			"relisted": true,
+			"change": 0.18999999999999995,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 1302.2693982499998
+		},
+		{
+			"listingId": "27889",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:13931",
+			"relisted": false,
+			"change": null,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": null
+		},
+		{
+			"listingId": "27890",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:13338",
+			"relisted": false,
+			"change": null,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": null
+		},
+		{
+			"listingId": "27891",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:6050",
+			"relisted": false,
+			"change": null,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": null
+		},
+		{
+			"listingId": "27892",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:6047",
+			"relisted": false,
+			"change": null,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": null
+		},
+		{
+			"listingId": "27893",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:6741",
+			"relisted": true,
+			"change": -0.007751937984496138,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.1650788333333333
+		},
+		{
+			"listingId": "27894",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:5616",
+			"relisted": false,
+			"change": null,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": null
+		},
+		{
+			"listingId": "27895",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:3806",
+			"relisted": false,
+			"change": null,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": null
+		},
+		{
+			"listingId": "27899",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:14076",
+			"relisted": true,
+			"change": -0.0757575757575758,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.180086
+		},
+		{
+			"listingId": "27900",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:14075",
+			"relisted": true,
+			"change": -0.0757575757575758,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.46522216666666666
+		},
+		{
+			"listingId": "27901",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:11962",
+			"relisted": true,
+			"change": -0.0757575757575758,
+			"firstRelistSold": true,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.1875895833333333
+		},
+		{
+			"listingId": "27902",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:6741",
+			"relisted": true,
+			"change": 0.015625,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.15757524999999997
+		},
+		{
+			"listingId": "27943",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:16031",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.3751791666666666
+		},
+		{
+			"listingId": "27945",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:14087",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.3301576666666666
+		},
+		{
+			"listingId": "27952",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:16031",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.3676755833333333
+		},
+		{
+			"listingId": "27953",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:16031",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 1.0354945
+		},
+		{
+			"listingId": "27954",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:14087",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.8704156666666666
+		},
+		{
+			"listingId": "27955",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:14502",
+			"relisted": true,
+			"change": -0.010526315789473717,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.24761824999999998
+		},
+		{
+			"listingId": "27956",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:6741",
+			"relisted": true,
+			"change": -0.09230769230769231,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.3751791666666666
+		},
+		{
+			"listingId": "27964",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:16031",
+			"relisted": true,
+			"change": -0.017071908949818915,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 1.8683922499999999
+		},
+		{
+			"listingId": "27966",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:14087",
+			"relisted": true,
+			"change": -0.015131136516476129,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 4.622207333333333
+		},
+		{
+			"listingId": "27967",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:12848",
+			"relisted": true,
+			"change": -0.015131136516476129,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 3.9844027499999997
+		},
+		{
+			"listingId": "27968",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:13222",
+			"relisted": true,
+			"change": -0.01541047912580551,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 5.01989725
+		},
+		{
+			"listingId": "27969",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:2960",
+			"relisted": true,
+			"change": -0.015369836695485084,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 2.2435714166666667
+		},
+		{
+			"listingId": "27974",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:14502",
+			"relisted": true,
+			"change": 0.27659574468085113,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.21760391666666665
+		},
+		{
+			"listingId": "27975",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:16998",
+			"relisted": true,
+			"change": 0.13636363636363646,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.1650788333333333
+		},
+		{
+			"listingId": "27976",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:6741",
+			"relisted": true,
+			"change": -0.016949152542372836,
+			"firstRelistSold": true,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 1629.0729631666666
+		},
+		{
+			"listingId": "27977",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:66",
+			"relisted": true,
+			"change": -0.33340000000000003,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.20259675
+		},
+		{
+			"listingId": "27979",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:2960",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 3.234044416666667
+		},
+		{
+			"listingId": "27980",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:16031",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 3.8718489999999997
+		},
+		{
+			"listingId": "27995",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:16998",
+			"relisted": true,
+			"change": -0.14,
+			"firstRelistSold": true,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.20259675
+		},
+		{
+			"listingId": "27996",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:14502",
+			"relisted": true,
+			"change": -0.25416666666666665,
+			"firstRelistSold": true,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.1650788333333333
+		},
+		{
+			"listingId": "27998",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:7297",
+			"relisted": true,
+			"change": 0.26145769622833837,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 358.7012976666666
+		},
+		{
+			"listingId": "28019",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:14075",
+			"relisted": true,
+			"change": 0.47540983606557385,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 304.3528435833333
+		},
+		{
+			"listingId": "28021",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:14076",
+			"relisted": true,
+			"change": 0.47540983606557385,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 304.7130155833333
+		},
+		{
+			"listingId": "28023",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:66",
+			"relisted": true,
+			"change": 2.0003000300030003,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 74.34550366666666
+		},
+		{
+			"listingId": "28024",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:15453",
+			"relisted": true,
+			"change": 0.3999999999999999,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 305.16323058333336
+		},
+		{
+			"listingId": "28026",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:5220",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": true,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 8.12638075
+		},
+		{
+			"listingId": "28035",
+			"item": "0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c:1658",
+			"relisted": false,
+			"change": null,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": null
+		},
+		{
+			"listingId": "28036",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:2315",
+			"relisted": false,
+			"change": null,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": null
+		},
+		{
+			"listingId": "28037",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:5200",
+			"relisted": false,
+			"change": null,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": null
+		},
+		{
+			"listingId": "28039",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:14075",
+			"relisted": true,
+			"change": -0.050000000000000044,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 1.8233707499999998
+		},
+		{
+			"listingId": "28040",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:14076",
+			"relisted": true,
+			"change": -0.11111111111111116,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.17258241666666665
+		},
+		{
+			"listingId": "28041",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:15453",
+			"relisted": true,
+			"change": -0.050000000000000044,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.5627687499999999
+		},
+		{
+			"listingId": "28042",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:5062",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.23261108333333333
+		},
+		{
+			"listingId": "28044",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:13909",
+			"relisted": true,
+			"change": -0.051851851851851816,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.2551218333333333
+		},
+		{
+			"listingId": "28045",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:5237",
+			"relisted": true,
+			"change": -0.11111111111111116,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.180086
+		},
+		{
+			"listingId": "28046",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:5131",
+			"relisted": true,
+			"change": -0.11111111111111116,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.15757524999999997
+		},
+		{
+			"listingId": "28050",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:12814",
+			"relisted": true,
+			"change": -0.11111111111111116,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.1650788333333333
+		},
+		{
+			"listingId": "28055",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:13909",
+			"relisted": true,
+			"change": -0.007905138339920903,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 0.17258241666666665
+		},
+		{
+			"listingId": "28056",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:5131",
+			"relisted": true,
+			"change": -0.09999999999999998,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.11255375
+		},
+		{
+			"listingId": "28057",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:5237",
+			"relisted": true,
+			"change": -0.050000000000000044,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.17258241666666665
+		},
+		{
+			"listingId": "28058",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:14076",
+			"relisted": true,
+			"change": 0,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.1650788333333333
+		},
+		{
+			"listingId": "28061",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:4241",
+			"relisted": false,
+			"change": null,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": null
+		},
+		{
+			"listingId": "28075",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:13909",
+			"relisted": true,
+			"change": -0.019920318725099584,
+			"firstRelistSold": true,
+			"anyLaterRelistSold": true,
+			"minutesToRelist": 2.1310176666666667
+		},
+		{
+			"listingId": "28076",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:14076",
+			"relisted": true,
+			"change": -0.050000000000000044,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.19509316666666665
+		},
+		{
+			"listingId": "28085",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:14076",
+			"relisted": true,
+			"change": -0.052631578947368474,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.19509316666666665
+		},
+		{
+			"listingId": "28086",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:14075",
+			"relisted": true,
+			"change": -0.052631578947368474,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.14256808333333332
+		},
+		{
+			"listingId": "28089",
+			"item": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c:5237",
+			"relisted": true,
+			"change": -0.052631578947368474,
+			"firstRelistSold": false,
+			"anyLaterRelistSold": false,
+			"minutesToRelist": 0.12005733333333332
+		}
+	]
+}
