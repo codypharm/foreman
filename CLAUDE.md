@@ -116,6 +116,8 @@ Only facts confirmed on chain or on an official TapeOut page go here, each with 
 
 **RPC correction, 19 Nov 2026:** `bsc-rpc.publicnode.com` returns an **empty list, not an error,** for event logs older than a few hours. A read that needs history uses an archive node (`BNB_ARCHIVE_RPC_URL` in `.env`) and checks a known event is present before trusting an empty result.
 
+**Tape-out scan, 20 Nov 2026:** on the archive node, `eth_getLogs` for `TapedOut` with no address filter returns every processor's tape-outs, 1 to 3 seconds per 50,000 blocks (about 372 reads since the first tape-out at block 116,070,652). Keep only factory-listed processors, and check each processor's event count against its `nextId()`, which returns the last id issued, not the next.
+
 ---
 
 ## Tech stack
@@ -125,7 +127,7 @@ Each item gets 2–3 options, William chooses, it gets an ADR in `docs/decisions
 | Job | Status |
 | --- | --- |
 | Reading BNB Chain and X Layer | TypeScript with viem 2.57.16; `packages/chain-bnb`, later `packages/chain-xlayer`; tests on saved RPC responses: `2026-11-19-chain-readers.md` |
-| Circuit index and originality check | Open: where netlists live on chain decides it (see "Still open") |
+| Circuit index and originality check | TypeScript in `packages/originality`; every BNB Chain processor, tape-outs from one `TapedOut` scan with a per-processor count check, stored in Postgres (local until hosting is chosen), followed every 5 minutes: `2026-11-20-circuit-index.md` |
 | Valuation | TypeScript; token amounts as `bigint`, never `number`: `2026-11-18-language.md`, `2026-11-18-valuation-model.md` |
 | API and job runner | Hono on Node, Postgres, pg-boss: `2026-11-18-api-and-jobs.md`. Hosting open |
 | Results contract on X Layer | Open: shape, tooling, and who holds the publisher key |
@@ -253,7 +255,7 @@ The `grill-me` queue. Strike an item when an ADR settles it.
 - ~~Where netlists are stored on chain, and the exact REF record format (TAP-02 §4, §6).~~ Settled: `docs/notes/2026-11-20-netlist-storage.md` and `docs/decisions/2026-11-20-copy-and-wrapper-rules.md`.
 - The size floor below which an identical miner is "too small to tell": measure it from the index (`2026-11-20-copy-and-wrapper-rules.md`, decision 3).
 - ~~Can a REF-only wrapper or an exact copy mine, and with what weight?~~ Settled: `docs/notes/2026-11-20-what-can-mine.md` and `docs/decisions/2026-11-20-verdict-scope-and-earliest-design.md`.
-- How to index every circuit since launch: tape-out events, archive node limits, and X Layer circuits.
+- ~~How to index every circuit since launch: tape-out events, archive node limits, and X Layer circuits.~~ Settled: `docs/decisions/2026-11-20-circuit-index.md` (BNB Chain only for the MVP).
 - Is OCCC deployed anywhere, and how is its status read?
 - The results contract on X Layer: its shape, tooling, and who holds the publisher key.
 - Price conversion: `Price` is USD per BEM only; a BNB ask next to a BEM value needs BNB and OKB prices.

@@ -217,7 +217,7 @@ interface Originality {
 - **Stated limit:** "Checks identical netlists, including swapped gate inputs. A copy with its gates reordered isn't detected." Shown with every `copy` and `no-earlier-copy`.
 - **Can mine:** the states and their wording are in `docs/decisions/2026-11-20-can-mine-revoked-and-stopped.md`. A revoked miner's evidence is its `Revoked` event; a stopped miner's is `getMiner`'s `stopBlock` and its `Stopped` event.
 - **Contract first for miners:** a miner's `design-bonus` fact is shown before Foreman's verdict, each labelled with its source. Neither overrides the other.
-- **Never "original":** `no-earlier-copy` is shown as "No earlier copy found among N circuits checked, up to block B", using `index`. A circuit outside the index is `cant-check`.
+- **Never "original":** `no-earlier-copy` is shown as "No earlier copy found among N BNB Chain circuits checked, up to block B", using `index`. A circuit taped out after the index's last block is caught up first; one still outside the index is `cant-check` (`docs/decisions/2026-11-20-circuit-index.md`).
 - **Too small to tell:** shown as "Identical to N earlier circuits; too small to tell", with the floor stated. The floor is measured from the index, not chosen; until it is, no `copy` verdict is issued.
 - **Evidence travels with the verdict:** a `copy` names the earlier circuit, both design times (tape-out or commitment block) and the shared hash; a `wrapper` names what its REF records point to and where each chain ends. Nothing else is needed to re-check it from chain data.
 - **Facts are not verdicts:** an `OriginalityFact` adds context ("taped out by the same address", "1,204 of its 1,209 gates come from other circuits") and never changes the verdict.

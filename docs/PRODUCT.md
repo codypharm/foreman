@@ -37,7 +37,7 @@ For any miner or RIG voucher, Foreman answers three questions, and publishes the
 
 | Step | What happens |
 | --- | --- |
-| 1. **Index** | Read every taped-out circuit's netlist and tape-out block from chain, and each miner's design commitment block; hash each netlist (input and output counts and bytes, each NAND's inputs put in order) |
+| 1. **Index** | Every circuit on every BNB Chain processor (80,290 on 20 Nov). Tape-outs from one `TapedOut` scan, keeping only factory-listed processors, with each processor's count checked against `nextId()`; then each netlist and each miner's design commitment block. A job follows new tape-outs and miner starts every 5 minutes, and a check of a newer circuit catches up first (`docs/decisions/2026-11-20-circuit-index.md`); hash each netlist (input and output counts and bytes, each NAND's inputs put in order) |
 | 2. **Check** | For each miner and each listed circuit (and anything pasted, on screen only): wrapper if the netlist is only REF records (follow the chain to the gates); copy if a circuit with an earlier design time (design commitment, else tape-out) has the same netlist hash, or "too small to tell" below the size floor; otherwise "no earlier copy found among N circuits checked". Every result says whether the circuit can mine and why; a miner's shows the mining contract's design bonus answer first. OCCC status where available |
 | 3. **Value** | Valuation range and payback from the miner's weight, network weight and emission (`packages/valuation`) |
 | 4. **Market** | Sell context from TapeOut's BNB market (recent sales and asks of comparable miners), TapePool's offer on X Layer, and Rent's "no market yet" |
@@ -58,7 +58,7 @@ A missing offer is shown as missing, never as zero.
 
 **In:**
 
-- Circuit index and originality check (copies, wrappers) across BNB Chain, and X Layer where circuits exist.
+- Circuit index and originality check (copies, wrappers) across every BNB Chain processor. X Layer circuits are later, once the X Layer factory is confirmed.
 - Valuation range and payback for any miner.
 - Sell context, Lend and Rent states, as above.
 - Results contract on X Layer and a job that publishes results to it.
@@ -108,7 +108,7 @@ Mirrors "Still open" in `CLAUDE.md`. Strike an item when a decision settles it.
 - ~~Where netlists are stored on chain, and the exact REF record format (TAP-02 §4, §6).~~ Settled: `docs/notes/2026-11-20-netlist-storage.md`, `docs/decisions/2026-11-20-copy-and-wrapper-rules.md`.
 - The size floor for "too small to tell": measured from the index.
 - ~~Can a REF-only wrapper or an exact copy mine, and with what weight?~~ Settled: `docs/notes/2026-11-20-what-can-mine.md`, `docs/decisions/2026-11-20-verdict-scope-and-earliest-design.md`.
-- How to index every circuit since launch: tape-out events, archive node limits.
+- ~~How to index every circuit since launch: tape-out events, archive node limits.~~ Settled: `docs/decisions/2026-11-20-circuit-index.md`.
 - Is OCCC deployed anywhere, and how is its status read?
 - Results contract on X Layer: its shape, and who holds the publisher key.
 - Price conversion: `Price` is USD per BEM only; showing a BNB ask next to a BEM value needs BNB and OKB prices.
