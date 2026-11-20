@@ -1,8 +1,4 @@
-import {
-	type Miner,
-	parseAddress,
-	parseHex32,
-} from "@foreman/contract";
+import { type Miner, parseAddress, parseHex32 } from "@foreman/contract";
 import { describe, expect, test } from "vitest";
 import {
 	type MarketSale,

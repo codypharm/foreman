@@ -45,8 +45,6 @@ const LABELS = ["30d", "to-2030-halving"] as const;
 export function parseValuation(wire: unknown, field: string): Valuation {
 	const w = parseObject(wire, field);
 	const window = parseObject(w.window, `${field}.window`);
-	const inputs = parseObject(w.inputs, `${field}.inputs`);
-	const model = parseObject(w.model, `${field}.model`);
 	const from = parseUint(window.from, `${field}.window.from`);
 	const to = parseUint(window.to, `${field}.window.to`);
 	if (to <= from) {
@@ -58,18 +56,6 @@ export function parseValuation(wire: unknown, field: string): Valuation {
 	}
 	const range = parseScenario(w.range, `${field}.range`, parseUint);
 	checkOrder(range, `${field}.range`, "rising");
-	const minerWeight = parseScenario(
-		inputs.minerWeight,
-		`${field}.inputs.minerWeight`,
-		sourcedUint,
-	);
-	checkOrder(valuesOf(minerWeight), `${field}.inputs.minerWeight`, "rising");
-	const growthPpm = parseScenario(
-		inputs.growthPpm,
-		`${field}.inputs.growthPpm`,
-		sourcedGrowth,
-	);
-	checkOrder(valuesOf(growthPpm), `${field}.inputs.growthPpm`, "falling");
 	return {
 		minerKey: parseHex32(w.minerKey, `${field}.minerKey`),
 		pool: parseOneOf(w.pool, `${field}.pool`, POOLS),
@@ -79,22 +65,45 @@ export function parseValuation(wire: unknown, field: string): Valuation {
 			label: parseOneOf(window.label, `${field}.window.label`, LABELS),
 		},
 		range,
-		inputs: {
-			minerWeight,
-			networkWeight: sourcedUint(
-				inputs.networkWeight,
-				`${field}.inputs.networkWeight`,
-			),
-			growthPpm,
-			emissionRate: sourcedUint(
-				inputs.emissionRate,
-				`${field}.inputs.emissionRate`,
-			),
-		},
-		model: {
-			version: parseText(model.version, `${field}.model.version`),
-			backtest: parseBacktest(model.backtest, `${field}.model.backtest`),
-		},
+		inputs: parseValuationInputs(w.inputs, `${field}.inputs`),
+		model: parseValuationModel(w.model, `${field}.model`),
+	};
+}
+
+/** A valuation's inputs, each with its source; shared with `Payback`, which uses the same ones. */
+export function parseValuationInputs(
+	wire: unknown,
+	field: string,
+): Valuation["inputs"] {
+	const inputs = parseObject(wire, field);
+	const minerWeight = parseScenario(
+		inputs.minerWeight,
+		`${field}.minerWeight`,
+		sourcedUint,
+	);
+	checkOrder(valuesOf(minerWeight), `${field}.minerWeight`, "rising");
+	const growthPpm = parseScenario(
+		inputs.growthPpm,
+		`${field}.growthPpm`,
+		sourcedGrowth,
+	);
+	checkOrder(valuesOf(growthPpm), `${field}.growthPpm`, "falling");
+	return {
+		minerWeight,
+		networkWeight: sourcedUint(inputs.networkWeight, `${field}.networkWeight`),
+		growthPpm,
+		emissionRate: sourcedUint(inputs.emissionRate, `${field}.emissionRate`),
+	};
+}
+
+export function parseValuationModel(
+	wire: unknown,
+	field: string,
+): Valuation["model"] {
+	const model = parseObject(wire, field);
+	return {
+		version: parseText(model.version, `${field}.version`),
+		backtest: parseBacktest(model.backtest, `${field}.backtest`),
 	};
 }
 
@@ -104,10 +113,6 @@ export function serialiseValuation(
 	field: string,
 ): Record<string, unknown> {
 	const { window, range, inputs, model } = valuation;
-	const uint = (sourced: Sourced<bigint>, at: string) =>
-		serialiseSourced(sourced, at, serialiseUint);
-	const signed = (sourced: Sourced<bigint>, at: string) =>
-		serialiseSourced(sourced, at, serialiseSignedInt);
 	const wire = {
 		minerKey: valuation.minerKey,
 		pool: valuation.pool,
@@ -117,30 +122,38 @@ export function serialiseValuation(
 			label: window.label,
 		},
 		range: serialiseScenario(range, `${field}.range`, serialiseUint),
-		inputs: {
-			minerWeight: serialiseScenario(
-				inputs.minerWeight,
-				`${field}.inputs.minerWeight`,
-				uint,
-			),
-			networkWeight: uint(
-				inputs.networkWeight,
-				`${field}.inputs.networkWeight`,
-			),
-			growthPpm: serialiseScenario(
-				inputs.growthPpm,
-				`${field}.inputs.growthPpm`,
-				signed,
-			),
-			emissionRate: uint(inputs.emissionRate, `${field}.inputs.emissionRate`),
-		},
+		inputs: serialiseValuationInputs(inputs, `${field}.inputs`),
 		model: { version: model.version, backtest: model.backtest },
 	};
 	parseValuation(wire, field);
 	return wire;
 }
 
-function serialiseScenario<T>(
+export function serialiseValuationInputs(
+	inputs: Valuation["inputs"],
+	field: string,
+): Record<string, unknown> {
+	const uint = (sourced: Sourced<bigint>, at: string) =>
+		serialiseSourced(sourced, at, serialiseUint);
+	const signed = (sourced: Sourced<bigint>, at: string) =>
+		serialiseSourced(sourced, at, serialiseSignedInt);
+	return {
+		minerWeight: serialiseScenario(
+			inputs.minerWeight,
+			`${field}.minerWeight`,
+			uint,
+		),
+		networkWeight: uint(inputs.networkWeight, `${field}.networkWeight`),
+		growthPpm: serialiseScenario(
+			inputs.growthPpm,
+			`${field}.growthPpm`,
+			signed,
+		),
+		emissionRate: uint(inputs.emissionRate, `${field}.emissionRate`),
+	};
+}
+
+export function serialiseScenario<T>(
 	scenario: Scenario<T>,
 	field: string,
 	serialiseValue: (value: T, field: string) => unknown,
@@ -223,7 +236,7 @@ function sourcedUint(wire: unknown, field: string): Sourced<bigint> {
 	return parseSourced(wire, field, parseUint);
 }
 
-function parseScenario<T>(
+export function parseScenario<T>(
 	wire: unknown,
 	field: string,
 	parseValue: (wire: unknown, field: string) => T,

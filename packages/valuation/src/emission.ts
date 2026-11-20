@@ -14,6 +14,9 @@ const INITIAL_RATE = (50n * 10n ** 8n) / 600n;
 /** 210,000 ten-minute blocks, as in Bitcoin: about 3.995 years. */
 const HALVING_PERIOD = 126_000_000n;
 
+/** The first halving: 18 Aug 2030, 21:15:32 UTC. Payback and the long window end here. */
+export const FIRST_HALVING = START_TIME + HALVING_PERIOD;
+
 /** BEM emitted between two timestamps, in base units. */
 export function emissionBetween(from: bigint, to: bigint): bigint {
 	if (to < from) {

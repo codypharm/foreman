@@ -2,13 +2,17 @@
 // Read only. Decisions: docs/decisions/2026-11-19-chain-readers.md.
 
 export {
+	BEM,
+	BEM_WBNB_POOL,
 	CIRCUIT_MARKET,
 	CIRCUIT_MARKET_FIRST_BLOCK,
 	CIRCUIT_MARKET_IMPLEMENTATION,
 	CIRCUIT_MARKET_UPGRADES,
 	POD_MINING,
 	podMiningAbi,
+	WBNB,
 } from "./abi.ts";
+export { type BemPriceRead, readBemPrice } from "./bem-price.ts";
 export { ChainReadError, UnknownMinerError } from "./errors.ts";
 export { blockAtOrAfter, readNetworkHistory } from "./history.ts";
 export {

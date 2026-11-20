@@ -16,7 +16,8 @@
 		"record:market": "node scripts/record-market-fixture.ts",
 		"backfill": "node --env-file-if-exists=../../.env scripts/backfill-history.ts",
 		"record:market-events": "node --env-file-if-exists=../../.env scripts/record-market-events-fixture.ts",
-		"record:market-scan": "node --env-file-if-exists=../../.env scripts/record-market-scan-fixture.ts"
+		"record:market-scan": "node --env-file-if-exists=../../.env scripts/record-market-scan-fixture.ts",
+		"record:bem-price": "node --env-file-if-exists=../../.env scripts/record-bem-price-fixture.ts"
 	},
 	"dependencies": {
 		"@foreman/contract": "workspace:*",

@@ -301,3 +301,67 @@ export const circuitMarketAbi = [
 		],
 	},
 ] as const;
+
+/** BEM on BNB Smart Chain, 8 decimals. In CLAUDE.md "On-chain facts". */
+export const BEM = "0x5ce033b2bfca3af30b3e8c8457deaf776a8b695a" as const;
+
+/** WBNB, 18 decimals: the BEM/WBNB pool's token1. In CLAUDE.md "On-chain facts". */
+export const WBNB = "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c" as const;
+
+/**
+ * The PancakeSwap v3 BEM/WBNB pool, 1% fee: token0 BEM, token1 WBNB. Payback reads its 30-minute
+ * average (docs/decisions/2026-11-20-payback-and-bem-price.md). In CLAUDE.md "On-chain facts".
+ */
+export const BEM_WBNB_POOL =
+	"0x28b12792f9d81bd529bc5572434e861c9edbbbc2" as const;
+
+/** The pool's oracle reads, from the PancakeSwap v3 pool interface. */
+export const v3PoolAbi = [
+	{
+		name: "slot0",
+		type: "function",
+		stateMutability: "view",
+		inputs: [],
+		outputs: [
+			{ name: "sqrtPriceX96", type: "uint160" },
+			{ name: "tick", type: "int24" },
+			{ name: "observationIndex", type: "uint16" },
+			{ name: "observationCardinality", type: "uint16" },
+			{ name: "observationCardinalityNext", type: "uint16" },
+			{ name: "feeProtocol", type: "uint32" },
+			{ name: "unlocked", type: "bool" },
+		],
+	},
+	{
+		name: "observations",
+		type: "function",
+		stateMutability: "view",
+		inputs: [{ name: "index", type: "uint256" }],
+		outputs: [
+			{ name: "blockTimestamp", type: "uint32" },
+			{ name: "tickCumulative", type: "int56" },
+			{ name: "secondsPerLiquidityCumulativeX128", type: "uint160" },
+			{ name: "initialized", type: "bool" },
+		],
+	},
+	{
+		name: "observe",
+		type: "function",
+		stateMutability: "view",
+		inputs: [{ name: "secondsAgos", type: "uint32[]" }],
+		outputs: [
+			{ name: "tickCumulatives", type: "int56[]" },
+			{ name: "secondsPerLiquidityCumulativeX128s", type: "uint160[]" },
+		],
+	},
+] as const;
+
+export const erc20BalanceOfAbi = [
+	{
+		name: "balanceOf",
+		type: "function",
+		stateMutability: "view",
+		inputs: [{ name: "account", type: "address" }],
+		outputs: [{ name: "", type: "uint256" }],
+	},
+] as const;

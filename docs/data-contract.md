@@ -10,7 +10,8 @@
 | `Miner` | Settled | BNB reader | Valuation, originality, API, app |
 | `NetworkState` | Settled | BNB reader | Valuation, API, app |
 | `Valuation` | Settled | Valuation engine | API, app |
-| `Price` | Settled; a currency pair is still open (BNB and OKB against BEM) | API job | App |
+| `Price` | Settled; display only. BNB against BEM is `BemPrice` (in `Payback`); OKB against BEM is still open | API job | App |
+| `Payback` | Settled (`2026-11-20-payback-and-bem-price.md`) | Valuation engine, from the market index and the BEM/WBNB pool | API, app |
 | `Offer` | Settled (`2026-11-19-offer-shape.md`) | Readers (BNB market, TapePool) + comparables rule | API, app |
 | `CircuitRef` | Provisional: storage known (`docs/notes/2026-11-20-netlist-storage.md`), times decided (`2026-11-20-originality-result.md`); waits for the result to be built | Circuit index | Originality, API, app |
 | `Originality` | Provisional: rules decided (`2026-11-20-copy-and-wrapper-rules.md`, `2026-11-20-verdict-scope-and-earliest-design.md`, `2026-11-20-size-floor.md`, `2026-11-20-originality-result.md`); waits for the result to be built | Originality check | API, app, publish job |
@@ -120,6 +121,45 @@ interface Price {
 ```
 
 A price of zero is refused (a broken feed). Shown only as a dollar figure beside a BEM value, with its age. Stale after one hour (the app greys it out). Never an input to a valuation or a ranking.
+
+### `Payback`
+
+Days until the miner's own asking price is earned back, for each case. Rules: `docs/decisions/2026-11-20-payback-and-bem-price.md`.
+
+```ts
+interface BemPrice {
+  bnbPerBem: bigint;       // BNB wei per whole BEM: the pool's 30-minute time-weighted average, rounded toward a cheaper BEM
+  pool: Address;           // the PancakeSwap v3 BEM/WBNB 1% pool, from "On-chain facts"
+  averagedOver: 1800;      // seconds before readAt.block
+  poolBem: bigint;         // BEM base units the pool holds at readAt.block
+  poolWbnb: bigint;        // WBNB wei the pool holds at readAt.block
+  readAt: { chainId: 56; block: bigint; time: bigint };
+}
+
+type Payback =
+  | {
+      state: "shown";
+      minerKey: Hex32;
+      listingId: bigint;             // the miner's open, buyable listing on TapeOut's BNB market
+      ask: Amount;                   // BNB, what the buyer pays
+      bemPrice: BemPrice;
+      askInBem: bigint;              // BEM base units, rounded up
+      days: Scenario<bigint | null>; // whole days from readAt; null = not earned back by the 2030 halving
+      inputs: Valuation["inputs"];   // the same weight, network, growth and emission as the valuation
+      readAt: { chainId: 56; block: bigint; time: bigint };
+      model: Valuation["model"];
+    }
+  | { state: "not-listed"; minerKey: Hex32; readAt: { chainId: 56; block: bigint; time: bigint } }
+  | { state: "no-price"; minerKey: Hex32; reason: string; readAt: { chainId: 56; block: bigint; time: bigint } }
+  | { state: "not-mining"; minerKey: Hex32; readAt: { chainId: 56; block: bigint; time: bigint } };
+```
+
+- **One block:** the miner, the network, the listing and `bemPrice` are all read at `readAt.block`. The parser refuses a `bemPrice` read at another block.
+- **Days are ordered the other way:** low ≥ base ≥ high, with `null` (not earned back by the 2030 halving) counted as the longest. A day count of 0 is refused: payback is at least day 1.
+- **No zero price:** `bnbPerBem`, `ask` and `askInBem` of 0 are refused. `ask` is BNB. `askInBem` = `ask` × 10^8 ÷ `bnbPerBem`, rounded up, and the parser checks it.
+- **Missing is missing:** no buyable listing is `not-listed`; a pool that can't give a 30-minute average is `no-price`, with the reason; a miner that isn't active is `not-mining`. None of them is a number of days.
+- **Not counted:** unclaimed BEM, which the seller can claim before the sale.
+- **On screen:** "Payback for the asking price", the days for each case, and beside them the BEM price with its block, "30-minute average", the pool and what it holds. Never "you will earn it back".
 
 ### `Offer`
 

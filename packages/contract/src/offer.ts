@@ -411,7 +411,7 @@ function parseRange(wire: unknown, field: string): ComparablesRange {
 	}
 }
 
-function parseAmount(
+export function parseAmount(
 	wire: unknown,
 	field: string,
 	options: { only?: Currency; positive: boolean },
