@@ -12,8 +12,8 @@
 | `Valuation` | Settled | Valuation engine | API, app |
 | `Price` | Settled; a currency pair is still open (BNB and OKB against BEM) | API job | App |
 | `Offer` | Settled (`2026-11-19-offer-shape.md`) | Readers (BNB market, TapePool) + comparables rule | API, app |
-| `CircuitRef` | Provisional: waits for where netlists live on chain | Circuit index | Originality, API, app |
-| `Originality` | Provisional: waits for the netlist and REF record format | Originality check | API, app, publish job |
+| `CircuitRef` | Provisional: storage known (`docs/notes/2026-11-20-netlist-storage.md`); waits for the netlist reader | Circuit index | Originality, API, app |
+| `Originality` | Provisional: rules decided (`2026-11-20-copy-and-wrapper-rules.md`); waits for the netlist reader and the size floor | Originality check | API, app, publish job |
 | `PublishedResult` | Provisional: waits for the results contract design | Publish job | App, markets, lenders |
 | ~~`Policy`, `TapeOutResult`, `AgentKey`, `ActionLogEntry`~~ | **Withdrawn** 20 Nov 2026 with autopilot (`2026-11-20-scope-and-team.md`). Parsers removed in a later commit | — | — |
 
@@ -164,33 +164,45 @@ interface CircuitRef {
   processor: Address;        // the processor contract (the circuit's NFT collection)
   tokenId: bigint;           // the circuit's id on that processor
   tapedOutAt: { block: bigint; txIndex: number; logIndex: number; time: bigint };
+  tapedOutBy: Address;       // the owner in the processor's TapedOut event
 }
 ```
 
 - **Order:** a circuit is earlier than another when its `tapedOutAt` is earlier: block, then transaction index, then log index. The earliest tape-out of a netlist is the original.
 - **Miner link:** a miner's key is `keccak256(abi.encodePacked(processor, tokenId))` (`docs/notes/2026-11-18-mining-contract-findings.md`).
+- **Where it comes from:** `tapedOutAt` and `tapedOutBy` come from the processor's `TapedOut(uint256 indexed id, address indexed owner, uint32, uint32)` event (`docs/notes/2026-11-20-netlist-storage.md`).
 
 ### `Originality` (provisional)
 
 ```ts
 type OriginalityVerdict =
-  | { verdict: "copy"; of: CircuitRef; netlistHash: Hex32 }             // byte-identical to an earlier circuit
-  | { verdict: "wrapper"; pointsTo: CircuitRef[]; refRecords: number }  // netlist is only REF records
+  | { verdict: "wrapper"; pointsTo: CircuitRef[]; finalTarget: CircuitRef; chainSteps: number } // netlist is only REF records; finalTarget is the first circuit in the chain with gates of its own
+  | { verdict: "copy"; of: CircuitRef; netlistHash: Hex32 }             // identical netlist hash to an earlier circuit, at or above the size floor
+  | { verdict: "too-small-to-tell"; sameAs: number; earliest: CircuitRef; netlistHash: Hex32; gateCount: number; floor: number } // identical, below the size floor
   | { verdict: "no-earlier-copy"; netlistHash: Hex32 }
-  | { verdict: "cant-check"; reason: "netlist-unreadable" | "outside-index" | "read-failed" };
+  | { verdict: "cant-check"; reason: "netlist-unreadable" | "outside-index" | "read-failed" | "ref-chain-too-long" };
+
+type OriginalityFact =
+  | { fact: "tape-out-address"; same: boolean }                      // beside "copy": the earlier circuit was taped out by the same address, or not
+  | { fact: "uses-ref"; refRecords: number; targets: CircuitRef[]; borrowedGates: number; totalGates: number } // REF records mixed with real gates
+  | { fact: "also-identical"; to: CircuitRef; netlistHash: Hex32 };  // beside "wrapper": also identical to an earlier circuit
 
 interface Originality {
-  circuit: CircuitRef;
+  circuit: CircuitRef;       // always a miner (decision 2); other circuits are in the index but get no verdict
   result: OriginalityVerdict;
+  facts: OriginalityFact[];
   occc: { status: "official"; collection: Address } | { status: "not-listed" } | { status: "not-checked" };
   index: { circuitsChecked: bigint; upToBlock: { chainId: 56 | 196; block: bigint } };
-  ruleVersion: string;       // which version of the copy and wrapper rules produced this
+  ruleVersion: string;       // which version of the copy and wrapper rules produced this, including the hash rule, the size floor and the chain step limit
 }
 ```
 
+- **Rules:** `docs/decisions/2026-11-20-copy-and-wrapper-rules.md`, run in this order: can't check → wrapper → copy or too small to tell → no earlier copy found.
+- **Netlist hash:** covers `nIn`, `nOut` and the netlist bytes, because the same bytes with a different `nOut` are a different circuit. The exact encoding is fixed in the rule version when the netlist reader is built.
 - **Never "original":** `no-earlier-copy` is shown as "No earlier copy found among N circuits checked, up to block B", using `index`. A circuit outside the index is `cant-check`.
-- **Evidence travels with the verdict:** a `copy` names the earlier circuit and the shared hash; a `wrapper` names what its REF records point to. Nothing else is needed to re-check it from chain data.
-- **A wrapper with real gates as well as REF records** is not a pure wrapper. How it is shown is open until the REF record format is known.
+- **Too small to tell:** shown as "Identical to N earlier circuits; too small to tell", with the floor stated. The floor is measured from the index, not chosen; until it is, no `copy` verdict is issued.
+- **Evidence travels with the verdict:** a `copy` names the earlier circuit and the shared hash; a `wrapper` names what its REF records point to and where the chain ends. Nothing else is needed to re-check it from chain data.
+- **Facts are not verdicts:** an `OriginalityFact` adds context ("taped out by the same address", "1,204 of its 1,209 gates come from other circuits") and never changes the verdict.
 - **Value is separate:** an `Originality` never changes a `Valuation`. There is no copy discount.
 
 ### `PublishedResult` (provisional)

@@ -38,7 +38,7 @@ For any miner or RIG voucher, Foreman answers three questions, and publishes the
 | Step | What happens |
 | --- | --- |
 | 1. **Index** | Read every taped-out circuit's netlist and tape-out block from chain; hash each netlist |
-| 2. **Check** | Exact copy: an earlier circuit has the same netlist hash. Wrapper: the netlist is only REF records; record what it points to. OCCC status where available. Otherwise "no earlier copy found among N circuits checked" |
+| 2. **Check** | For each miner: wrapper if the netlist is only REF records (follow the chain to the gates); copy if an earlier circuit has the same netlist hash (input count, output count and bytes), or "too small to tell" below the size floor; otherwise "no earlier copy found among N circuits checked". OCCC status where available |
 | 3. **Value** | Valuation range and payback from the miner's weight, network weight and emission (`packages/valuation`) |
 | 4. **Market** | Sell context from TapeOut's BNB market (recent sales and asks of comparable miners), TapePool's offer on X Layer, and Rent's "no market yet" |
 | 5. **Publish** | Write each result to Foreman's results contract on X Layer, with the rule version and the block it was read at |
@@ -48,7 +48,7 @@ For any miner or RIG voucher, Foreman answers three questions, and publishes the
 
 | Answer | Shows |
 | --- | --- |
-| **Original?** | One of: **Copy** (of which circuit, taped out when, same netlist hash) · **Wrapper** (points to which circuit; REF records only) · **No earlier copy found** (among how many circuits checked, up to which block) · **Can't check** (and why). Plus "Official (OCCC)" where it applies |
+| **Original?** | For miners only, one of: **Wrapper** (REF records only; points to which circuit, and which circuit at the end of the chain holds the gates) · **Copy** (of which circuit, taped out when, same netlist hash; by the same address or a different one) · **Too small to tell** (identical to N earlier circuits, below the stated size floor) · **No earlier copy found** (among how many circuits checked, up to which block) · **Can't check** (and why). Plus facts where they apply ("1,204 of its 1,209 gates come from other circuits") and "Official (OCCC)". Rules: `docs/decisions/2026-11-20-copy-and-wrapper-rules.md` |
 | **Worth?** | Estimated value range over 30 days and until the 2030 halving, its inputs, and payback for the asking price |
 | **Options?** | **Hold**: the value range · **Sell**: "no bid right now", recent sales and asks of comparable miners (labelled, with the rule that picked them), and a listing the owner signs · **Lend**: TapePool's advance, or "no offer" · **Rent**: "no rental market yet" |
 
@@ -105,7 +105,8 @@ Build so each step works end to end before the next.
 
 Mirrors "Still open" in `CLAUDE.md`. Strike an item when a decision settles it.
 
-- Where netlists are stored on chain, and the exact REF record format (TAP-02 §4, §6).
+- ~~Where netlists are stored on chain, and the exact REF record format (TAP-02 §4, §6).~~ Settled: `docs/notes/2026-11-20-netlist-storage.md`, `docs/decisions/2026-11-20-copy-and-wrapper-rules.md`.
+- The size floor for "too small to tell": measured from the index.
 - Can a REF-only wrapper or an exact copy mine, and with what weight?
 - How to index every circuit since launch: tape-out events, archive node limits.
 - Is OCCC deployed anywhere, and how is its status read?

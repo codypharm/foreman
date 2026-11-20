@@ -199,7 +199,7 @@ The build order table in `docs/PRODUCT.md` is the order. Build so each step work
 - Use the product's words exactly (see "Domain language").
 - Plain language. No ABI, RPC or contract jargon in the UI.
 - Say "estimated value", never "price", for Foreman's own numbers. Never "guaranteed", never "you should".
-- Originality copy states facts: "Copy of circuit #X", "Wrapper of circuit #X", "No earlier copy found among N circuits", "Can't check". Never "fake", "stolen", "scam" or "authentic".
+- Originality copy states facts: "Copy of circuit #X", "Wrapper of circuit #X", "Identical to N earlier circuits; too small to tell", "No earlier copy found among N circuits", "Can't check". Facts beside a verdict stay facts: "taped out by the same address", "1,204 of its 1,209 gates come from other circuits". Never "fake", "stolen", "scam" or "authentic".
 - Mobile first, OKX Wallet first.
 
 ---
@@ -216,8 +216,9 @@ The build order table in `docs/PRODUCT.md` is the order. Build so each step work
 | **Netlist** | A circuit's list of records (gates, latches, REF records) as stored on chain |
 | **Netlist hash** | The hash of a netlist's bytes, used to find exact copies |
 | **REF record** | A netlist record that points to another circuit instead of containing gates |
-| **Copy** | A circuit whose netlist is byte-identical to a circuit taped out earlier |
-| **Wrapper** | A circuit whose netlist is only REF records pointing to another circuit |
+| **Copy** | A miner whose netlist (with its input and output counts) is byte-identical to a circuit taped out earlier, at or above the size floor |
+| **Too small to tell** | The verdict when a miner is identical to earlier circuits but below the stated size floor, where honest circuits match by nature |
+| **Wrapper** | A circuit whose netlist is only REF records pointing to another circuit. Named with its direct target and the circuit at the end of the chain that holds the gates |
 | **No earlier copy found** | The verdict when no earlier circuit in the index shares the netlist hash and the netlist is not a wrapper. Never shortened to "original" |
 | **Can't check** | The verdict when the netlist can't be read or the circuit is outside the index |
 | **OCCC** | Official Curated Circuit Collections: a TAP proposal certifying new collections by their issuer |
@@ -242,7 +243,8 @@ Never abbreviate these. Never invent synonyms.
 
 The `grill-me` queue. Strike an item when an ADR settles it.
 
-- Where netlists are stored on chain, and the exact REF record format (TAP-02 §4, §6).
+- ~~Where netlists are stored on chain, and the exact REF record format (TAP-02 §4, §6).~~ Settled: `docs/notes/2026-11-20-netlist-storage.md` and `docs/decisions/2026-11-20-copy-and-wrapper-rules.md`.
+- The size floor below which an identical miner is "too small to tell": measure it from the index (`2026-11-20-copy-and-wrapper-rules.md`, decision 3).
 - Can a REF-only wrapper or an exact copy mine, and with what weight?
 - How to index every circuit since launch: tape-out events, archive node limits, and X Layer circuits.
 - Is OCCC deployed anywhere, and how is its status read?
