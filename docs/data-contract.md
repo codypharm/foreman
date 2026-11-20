@@ -12,8 +12,8 @@
 | `Valuation` | Settled | Valuation engine | API, app |
 | `Price` | Settled; a currency pair is still open (BNB and OKB against BEM) | API job | App |
 | `Offer` | Settled (`2026-11-19-offer-shape.md`) | Readers (BNB market, TapePool) + comparables rule | API, app |
-| `CircuitRef` | Provisional: storage known (`docs/notes/2026-11-20-netlist-storage.md`); waits for the netlist reader | Circuit index | Originality, API, app |
-| `Originality` | Provisional: rules decided (`2026-11-20-copy-and-wrapper-rules.md`, `2026-11-20-verdict-scope-and-earliest-design.md`); waits for the netlist reader and the size floor | Originality check | API, app, publish job |
+| `CircuitRef` | Provisional: storage known (`docs/notes/2026-11-20-netlist-storage.md`), times decided (`2026-11-20-originality-result.md`); waits for the result to be built | Circuit index | Originality, API, app |
+| `Originality` | Provisional: rules decided (`2026-11-20-copy-and-wrapper-rules.md`, `2026-11-20-verdict-scope-and-earliest-design.md`, `2026-11-20-size-floor.md`, `2026-11-20-originality-result.md`); waits for the result to be built | Originality check | API, app, publish job |
 | `PublishedResult` | Provisional: waits for the results contract design | Publish job | App, markets, lenders |
 | ~~`Policy`, `TapeOutResult`, `AgentKey`, `ActionLogEntry`~~ | **Withdrawn** 20 Nov 2026 with autopilot (`2026-11-20-scope-and-team.md`). Parsers removed in a later commit | — | — |
 
@@ -165,11 +165,12 @@ interface CircuitRef {
   tokenId: bigint;           // the circuit's id on that processor
   tapedOutAt: { block: bigint; txIndex: number; logIndex: number; time: bigint };
   tapedOutBy: Address;       // the owner in the processor's TapedOut event
-  designCommittedAt: bigint | null; // block of the design commitment the mining contract accepted for this circuit (the miner's commitBlock); null when there is none. Only miners can have one
+  designCommittedAt: { block: bigint; time: bigint } | null; // the design commitment the mining contract accepted for this circuit (the miner's commitBlock) and that block's time; null when there is none. Only miners can have one
 }
 ```
 
-- **Design time:** `designCommittedAt` when it is set and before `tapedOutAt.block`, otherwise `tapedOutAt.block`.
+- **Design time:** `designCommittedAt.block` when it is set and before `tapedOutAt.block`, otherwise `tapedOutAt.block`.
+- **Times:** each `time` is its block's own timestamp (Unix seconds), so it is reproducible. Tape-out times come from the `TapedOut` logs' `blockTimestamp`; a commitment's from its block (`2026-11-20-originality-result.md`, decision 1).
 - **Order:** a circuit is earlier than another when its design time is earlier. Same block: the lower `tapedOutAt` (block, then transaction index, then log index) is earlier. The earliest proven design is the original (`2026-11-20-verdict-scope-and-earliest-design.md`, decision 4).
 - **Miner link:** a miner's key is `keccak256(abi.encodePacked(processor, tokenId))` (`docs/notes/2026-11-18-mining-contract-findings.md`).
 - **Where it comes from:** `tapedOutAt` and `tapedOutBy` come from the processor's `TapedOut(uint256 indexed id, address indexed owner, uint32, uint32)` event (`docs/notes/2026-11-20-netlist-storage.md`). `designCommittedAt` comes from `getMiner(key).commitBlock` on the mining contract, re-checkable against the `DesignCommitted` event in that block (`docs/notes/2026-11-20-what-can-mine.md`).
@@ -192,7 +193,8 @@ type OriginalityFact =
   | { fact: "can-mine"; state: "cant-mine"; reasons: CantMineReason[] } // every reason that applies, at least one
   | { fact: "can-mine"; state: "stopped"; stoppedAt: bigint; canStartFrom: bigint } // cooling: stopBlock, and stopBlock + 1,200
   | { fact: "can-mine"; state: "not-started" }                       // nothing rules it out; never a promise that it passes a task
-  | { fact: "design-bonus"; holds: boolean; bonus: bigint };         // miners only, from getMiner (optimal, bonus); shown before the verdict
+  | { fact: "design-bonus"; holds: boolean; bonus: bigint }          // miners only, from getMiner (optimal, bonus); shown before the verdict
+  | { fact: "design-shared"; miners: number };                      // miners in the index with the same netlist hash, this one included, up to index.upToBlock; only when 2 or more, beside copy, too-small-to-tell and no-earlier-copy
 
 type CantMineReason =
   | { reason: "processor-not-eligible" }                             // processorMultiplier is 0
@@ -206,7 +208,7 @@ interface Originality {
   facts: OriginalityFact[];
   occc: { status: "official"; collection: Address } | { status: "not-listed" } | { status: "not-checked" };
   index: { circuitsChecked: bigint; upToBlock: { chainId: 56 | 196; block: bigint } };
-  ruleVersion: string;       // which version of the copy and wrapper rules produced this, including the hash rule, the size floor and the chain step limit
+  ruleVersion: string;       // every setting that can change the result, spelled out: "hash 2026-11-20, floor 4, chain 10" (hash rule, size floor in gates, wrapper chain step limit)
 }
 ```
 
@@ -218,7 +220,10 @@ interface Originality {
 - **Can mine:** the states and their wording are in `docs/decisions/2026-11-20-can-mine-revoked-and-stopped.md`. A revoked miner's evidence is its `Revoked` event; a stopped miner's is `getMiner`'s `stopBlock` and its `Stopped` event.
 - **Contract first for miners:** a miner's `design-bonus` fact is shown before Foreman's verdict, each labelled with its source. Neither overrides the other.
 - **Never "original":** `no-earlier-copy` is shown as "No earlier copy found among N BNB Chain circuits checked, up to block B", using `index`. A circuit taped out after the index's last block is caught up first; one still outside the index is `cant-check` (`docs/decisions/2026-11-20-circuit-index.md`).
-- **Too small to tell:** shown as "Identical to N earlier circuits; too small to tell", with the floor stated. The floor is measured from the index, not chosen; until it is, no `copy` verdict is issued.
+- **Too small to tell:** shown as "Identical to N earlier circuits; too small to tell", with the floor stated. The floor is 4 gates, measured from the index (`docs/decisions/2026-11-20-size-floor.md`).
+- **Rule version:** spelled out, never a bare label, so a published result can be recomputed without a lookup table. Changing any setting is a new ADR and a new rule version (`2026-11-20-originality-result.md`, decision 2).
+- **How common a design is:** `design-shared` is a count, never a judgement: "1 of 3,021 miners using this design", or for the earliest, "3,020 later miners use this design" (`2026-11-20-originality-result.md`, decision 3).
+- **Wrappers are listed circuits only:** a miner can't have a REF record (`start` reverts), so a miner never gets `wrapper` or `uses-ref`.
 - **Evidence travels with the verdict:** a `copy` names the earlier circuit, both design times (tape-out or commitment block) and the shared hash; a `wrapper` names what its REF records point to and where each chain ends. Nothing else is needed to re-check it from chain data.
 - **Facts are not verdicts:** an `OriginalityFact` adds context ("taped out by the same address", "1,204 of its 1,209 gates come from other circuits") and never changes the verdict.
 - **Value is separate:** an `Originality` never changes a `Valuation`. There is no copy discount.
