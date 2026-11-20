@@ -22,10 +22,13 @@ export {
 	type Comparables,
 	type ComparablesRange,
 	type Currency,
+	type LendNoneReason,
 	type Offer,
 	parseOffer,
 	type SellBid,
 	serialiseOffer,
+	TAPEPOOL_REASONS,
+	type TapePoolReason,
 	type Venue,
 } from "./offer.ts";
 export type {

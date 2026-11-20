@@ -413,23 +413,37 @@ describe("a Rent offer", () => {
 });
 
 describe("a Lend offer", () => {
+	// docs/decisions/2026-11-20-lend-from-tapepool.md: one offer per term, a live one only for a
+	// voucher alone in its TapePool account, and every "none" with its reason.
 	const live = {
 		option: "lend",
 		minerKey: KEY,
+		termDays: 7,
 		state: "live",
 		venue: "tapepool",
 		readAt: AT_XL,
+		voucherId: "16",
 		receivedNow: { currency: "BEM", value: "850000000" },
-		fee: { currency: "BEM", value: "6375000" },
-		termDays: 7,
+		fee: { currency: "BEM", value: "2125000" },
+		opsFee: { currency: "OKB", value: "0" },
 		repayment: "from-output-until-paid",
 	};
+	const none = (reason: unknown) => ({
+		option: "lend",
+		minerKey: KEY,
+		termDays: 14,
+		state: "none",
+		checkedAt: "1795085000",
+		reason,
+	});
 
-	test("from TapePool: BEM received now, the fee and the term", () => {
+	test("from TapePool: the voucher, BEM received now, the fee, the OKB operating fee and the term", () => {
 		expect(parseOffer(live, "offer")).toMatchObject({
 			state: "live",
 			venue: "tapepool",
+			voucherId: 16n,
 			receivedNow: { currency: "BEM", value: 850_000_000n },
+			opsFee: { currency: "OKB", value: 0n },
 			termDays: 7,
 		});
 	});
@@ -441,6 +455,18 @@ describe("a Lend offer", () => {
 			{ receivedNow: { currency: "BNB", value: "1" } },
 			"offer.receivedNow.currency",
 		],
+		[
+			"an advance of 0",
+			{ receivedNow: { currency: "BEM", value: "0" } },
+			"offer.receivedNow.value",
+		],
+		[
+			"an operating fee not in OKB",
+			{ opsFee: { currency: "BEM", value: "0" } },
+			"offer.opsFee.currency",
+		],
+		["no operating fee", { opsFee: undefined }, "offer.opsFee"],
+		["no voucher", { voucherId: undefined }, "offer.voucherId"],
 		["read on BNB Chain", { readAt: AT_BNB }, "offer.readAt.chainId"],
 	])("is refused with %s", (_why, overrides, field) => {
 		expect(() => parseOffer({ ...live, ...overrides }, "offer")).toThrow(
@@ -448,18 +474,73 @@ describe("a Lend offer", () => {
 		);
 	});
 
-	test("may be none, with when it was checked", () => {
-		expect(
+	test.each([
+		["a miner that isn't a RIG voucher", { kind: "not-a-voucher" }, {}],
+		[
+			"a voucher not deposited with TapePool",
+			{ kind: "not-deposited", voucherId: "4" },
+			{ voucherId: 4n },
+		],
+		[
+			"a voucher sharing its TapePool account",
+			{ kind: "shared-account", voucherId: "4", vouchers: 3 },
+			{ voucherId: 4n, vouchers: 3 },
+		],
+		[
+			"a voucher TapePool declines, with TapePool's reason",
+			{ kind: "declined", voucherId: "16", tapepool: "paused" },
+			{ voucherId: 16n, tapepool: "paused" },
+		],
+	])(
+		"may be none for %s, with the term and when it was checked",
+		(_why, reason, parsed) => {
+			expect(parseOffer(none(reason), "offer")).toEqual({
+				option: "lend",
+				minerKey: KEY,
+				termDays: 14,
+				state: "none",
+				checkedAt: 1_795_085_000n,
+				reason: { kind: reason.kind, ...parsed },
+			});
+		},
+	);
+
+	test.each([
+		["no reason", undefined, "offer.reason"],
+		["an unknown reason", { kind: "too-small" }, "offer.reason.kind"],
+		[
+			"a shared account of one voucher",
+			{ kind: "shared-account", voucherId: "4", vouchers: 1 },
+			"offer.reason.vouchers",
+		],
+		[
+			"TapePool's OK as a reason for no offer",
+			{ kind: "declined", voucherId: "16", tapepool: "ok" },
+			"offer.reason.tapepool",
+		],
+		[
+			"a voucher missing from a reason that needs one",
+			{ kind: "not-deposited" },
+			"offer.reason.voucherId",
+		],
+	])("none is refused with %s", (_why, reason, field) => {
+		expect(() => parseOffer(none(reason), "offer")).toThrow(
+			expect.objectContaining({ name: "ContractParseError", field }),
+		);
+	});
+
+	test("none is refused without its term", () => {
+		expect(() =>
 			parseOffer(
-				{
-					option: "lend",
-					minerKey: KEY,
-					state: "none",
-					checkedAt: "1795085000",
-				},
+				{ ...none({ kind: "not-a-voucher" }), termDays: undefined },
 				"offer",
 			),
-		).toMatchObject({ state: "none", checkedAt: 1_795_085_000n });
+		).toThrow(
+			expect.objectContaining({
+				name: "ContractParseError",
+				field: "offer.termDays",
+			}),
+		);
 	});
 });
 
@@ -492,13 +573,37 @@ describe("an offer written to the wire", () => {
 			{
 				option: "lend",
 				minerKey: KEY,
+				termDays: 14,
 				state: "live",
 				venue: "tapepool",
 				readAt: AT_XL,
+				voucherId: "16",
 				receivedNow: { currency: "BEM", value: "850000000" },
-				fee: { currency: "BEM", value: "6375000" },
-				termDays: 14,
+				fee: { currency: "BEM", value: "4250000" },
+				opsFee: { currency: "OKB", value: "0" },
 				repayment: "from-output-until-paid",
+			},
+		],
+		[
+			"lend, none: declined",
+			{
+				option: "lend",
+				minerKey: KEY,
+				termDays: 7,
+				state: "none",
+				checkedAt: "1795085000",
+				reason: { kind: "declined", voucherId: "16", tapepool: "no-room" },
+			},
+		],
+		[
+			"lend, none: not a voucher",
+			{
+				option: "lend",
+				minerKey: KEY,
+				termDays: 7,
+				state: "none",
+				checkedAt: "1795085000",
+				reason: { kind: "not-a-voucher" },
 			},
 		],
 	])("reads back unchanged: %s", (_name, wire) => {

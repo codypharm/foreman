@@ -163,7 +163,7 @@ type Payback =
 
 ### `Offer`
 
-*Decided in `docs/decisions/2026-11-19-offer-shape.md`, following the venue decisions (`2026-11-19-offer-venues.md`, `2026-11-19-sell-without-bids.md`).*
+*Decided in `docs/decisions/2026-11-19-offer-shape.md`, following the venue decisions (`2026-11-19-offer-venues.md`, `2026-11-19-sell-without-bids.md`). Lend changed by `2026-11-20-lend-from-tapepool.md`.*
 
 ```ts
 type Currency = "BNB" | "OKB" | "BEM";            // BNB and OKB: 18 decimals; BEM: 8
@@ -194,15 +194,29 @@ type Offer =
   | { option: "sell"; minerKey: Hex32; bid: SellBid; sales: Comparables; asks: Comparables }
   | { option: "rent"; minerKey: Hex32; state: "no-venue" }
   | { option: "rent"; minerKey: Hex32; state: "none"; checkedAt: bigint }
-  | { option: "lend"; minerKey: Hex32; state: "live"; venue: "tapepool"; readAt: ChainRead;
-      receivedNow: Amount; fee: Amount; termDays: 7 | 14; repayment: "from-output-until-paid" }
-  | { option: "lend"; minerKey: Hex32; state: "none"; checkedAt: bigint };
+  | { option: "lend"; minerKey: Hex32; termDays: 7 | 14; state: "live"; venue: "tapepool";
+      readAt: ChainRead; voucherId: bigint; receivedNow: Amount; fee: Amount; opsFee: Amount;
+      repayment: "from-output-until-paid" }
+  | { option: "lend"; minerKey: Hex32; termDays: 7 | 14; state: "none"; checkedAt: bigint;
+      reason: LendNoneReason };
+
+type TapePoolReason =                       // TapePool's quote reasons 1 to 16; OK is never one
+  | "bad-ids" | "emission" | "pin" | "policy-failed" | "policy-mismatch" | "denied" | "paused"
+  | "feed-off" | "policy-change-queued" | "no-collateral" | "loan-open" | "closed" | "bad-term"
+  | "no-room" | "below-min-advance" | "above-lend-limit";
+
+type LendNoneReason =
+  | { kind: "not-a-voucher" }                                       // TapePool lends only against RIG vouchers
+  | { kind: "not-deposited"; voucherId: bigint }                    // not in a TapePool account
+  | { kind: "shared-account"; voucherId: bigint; vouchers: number } // ≥ 2, this one included
+  | { kind: "declined"; voucherId: bigint; tapepool: TapePoolReason };
 ```
 
 - **No offer is a state, never a zero.** A bid, sale, ask or advance of 0 is refused.
 - **Rent today is always `no-venue`:** no rental market exists. There is no live Rent shape until one does.
 - **Sell with no bid** still carries `sales` and `asks` of comparable miners. Each list has a `rule` saying how they were picked, shown on screen. The bid headline stays "no bid right now".
-- **Currencies:** every amount names its currency. Sell prices on the BNB market are BNB, on the X Layer market OKB. A Lend advance and its fee are BEM. Conversion to BEM for comparison happens on screen, at today's prices, labelled.
+- **Lend is one offer per term** (7 and 14 days), each `live` or `none`. A live offer is TapePool's own quote for a RIG voucher alone in its TapePool account: the largest advance ("up to"), its fee, and the operating fee in OKB, even when 0. A `none` always carries its reason. A voucher sharing an account gets `shared-account`, never the account's quote as its own.
+- **Currencies:** every amount names its currency. Sell prices on the BNB market are BNB, on the X Layer market OKB. A Lend advance and its fee are BEM; its operating fee is OKB. Conversion to BEM for comparison happens on screen, at today's prices, labelled.
 - **Chains:** each venue is on one chain (BNB market 56; X Layer market and TapePool 196). A read from the wrong chain is refused.
 - **Weights:** comparables carry the comparable miner's weight (never 0), so the screen can show price per unit of weight.
 - **Comparables rule** (`2026-11-20-sell-comparables.md`): miners that were mining, same pool, last 14 days, BNB per unit of weight. `range` is the 25th percentile, median and 75th percentile rate × this miner's weight, shown only from 10 items. An ask over 3× the median sale rate is left out and counted in `leftOut`. With fewer than 10 sales, the asks' range is always `too-few-sales` (counting the sales listed) and no ask is left out; `too-few` on asks means 10 sales or more but fewer than 10 asks kept. Sales and asks share one pool. `range` is computed in `packages/valuation`, never on screen.

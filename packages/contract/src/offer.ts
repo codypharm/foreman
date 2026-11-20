@@ -93,15 +93,59 @@ export type Offer =
 	| {
 			option: "lend";
 			minerKey: Hex32;
+			termDays: 7 | 14;
 			state: "live";
 			venue: "tapepool";
 			readAt: ChainRead;
+			/** The RIG voucher, alone in its TapePool account. */
+			voucherId: bigint;
+			/** The largest advance TapePool's quote allows now: "up to". */
 			receivedNow: Amount;
 			fee: Amount;
-			termDays: 7 | 14;
+			/** TapePool's operating fee, in OKB; shown even when 0. */
+			opsFee: Amount;
 			repayment: "from-output-until-paid";
 	  }
-	| { option: "lend"; minerKey: Hex32; state: "none"; checkedAt: bigint };
+	| {
+			option: "lend";
+			minerKey: Hex32;
+			termDays: 7 | 14;
+			state: "none";
+			checkedAt: bigint;
+			reason: LendNoneReason;
+	  };
+
+/** TapePool's quote reasons 1 to 16, in its order (TapePool's `Reasons`; OK is never a reason for no offer). */
+export const TAPEPOOL_REASONS = [
+	"bad-ids",
+	"emission",
+	"pin",
+	"policy-failed",
+	"policy-mismatch",
+	"denied",
+	"paused",
+	"feed-off",
+	"policy-change-queued",
+	"no-collateral",
+	"loan-open",
+	"closed",
+	"bad-term",
+	"no-room",
+	"below-min-advance",
+	"above-lend-limit",
+] as const;
+export type TapePoolReason = (typeof TAPEPOOL_REASONS)[number];
+
+/** Why a miner has no Lend offer (docs/decisions/2026-11-20-lend-from-tapepool.md). */
+export type LendNoneReason =
+	/** Not held in the rig vault as a RIG voucher: TapePool lends only against vouchers. */
+	| { kind: "not-a-voucher" }
+	/** A voucher not held by an account from TapePool's live account factory. */
+	| { kind: "not-deposited"; voucherId: bigint }
+	/** The voucher's account holds others too; its quote covers them all. `vouchers` counts this one. */
+	| { kind: "shared-account"; voucherId: bigint; vouchers: number }
+	/** TapePool's quote gave a reason other than OK. */
+	| { kind: "declined"; voucherId: bigint; tapepool: TapePoolReason };
 
 const CURRENCIES = ["BNB", "OKB", "BEM"] as const;
 const VENUES = ["bnb-market", "xlayer-market", "tapepool"] as const;
@@ -152,12 +196,15 @@ export function parseOffer(wire: unknown, field: string): Offer {
 				"live",
 				"none",
 			] as const);
+			const termDays = parseTerm(w.termDays, `${field}.termDays`);
 			if (state === "none") {
 				return {
 					option,
 					minerKey,
+					termDays,
 					state,
 					checkedAt: parseUint(w.checkedAt, `${field}.checkedAt`),
+					reason: parseLendNoneReason(w.reason, `${field}.reason`),
 				};
 			}
 			const venue = parseOneOf(w.venue, `${field}.venue`, [
@@ -166,9 +213,11 @@ export function parseOffer(wire: unknown, field: string): Offer {
 			return {
 				option,
 				minerKey,
+				termDays,
 				state,
 				venue,
 				readAt: parseChainRead(w.readAt, `${field}.readAt`, CHAIN_OF[venue]),
+				voucherId: parseUint(w.voucherId, `${field}.voucherId`),
 				receivedNow: parseAmount(w.receivedNow, `${field}.receivedNow`, {
 					only: "BEM",
 					positive: true,
@@ -177,12 +226,48 @@ export function parseOffer(wire: unknown, field: string): Offer {
 					only: "BEM",
 					positive: false,
 				}),
-				termDays: parseTerm(w.termDays, `${field}.termDays`),
+				opsFee: parseAmount(w.opsFee, `${field}.opsFee`, {
+					only: "OKB",
+					positive: false,
+				}),
 				repayment: parseOneOf(w.repayment, `${field}.repayment`, [
 					"from-output-until-paid",
 				] as const),
 			};
 		}
+	}
+}
+
+function parseLendNoneReason(wire: unknown, field: string): LendNoneReason {
+	const w = parseObject(wire, field);
+	const kind = parseOneOf(w.kind, `${field}.kind`, [
+		"not-a-voucher",
+		"not-deposited",
+		"shared-account",
+		"declined",
+	] as const);
+	if (kind === "not-a-voucher") return { kind };
+	const voucherId = parseUint(w.voucherId, `${field}.voucherId`);
+	switch (kind) {
+		case "not-deposited":
+			return { kind, voucherId };
+		case "shared-account": {
+			const vouchers = w.vouchers;
+			if (!Number.isSafeInteger(vouchers) || (vouchers as number) < 2) {
+				throw new ContractParseError(
+					`${field}.vouchers`,
+					"a count of 2 or more, this voucher included",
+					vouchers,
+				);
+			}
+			return { kind, voucherId, vouchers: vouchers as number };
+		}
+		case "declined":
+			return {
+				kind,
+				voucherId,
+				tapepool: parseOneOf(w.tapepool, `${field}.tapepool`, TAPEPOOL_REASONS),
+			};
 	}
 }
 
