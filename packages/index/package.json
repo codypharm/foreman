@@ -1,0 +1,24 @@
+{
+	"name": "@foreman/index",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"test": "vitest run --passWithNoTests",
+		"test:watch": "vitest",
+		"typecheck": "tsc -p ."
+	},
+	"dependencies": {
+		"@foreman/originality": "workspace:*",
+		"pg": "^8.23.1",
+		"viem": "2.57.16"
+	},
+	"devDependencies": {
+		"@foreman/chain-bnb": "workspace:*",
+		"@types/node": "24.19.2",
+		"@types/pg": "^8.23.1",
+		"vitest": "^5.1.0"
+	}
+}

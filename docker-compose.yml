@@ -1,0 +1,21 @@
+# Local Postgres for the circuit index (docs/decisions/2026-11-20-database-access.md).
+# Reachable from this machine only. The password is a local development value, not a secret.
+#
+#   docker compose up -d
+#
+# Databases: foreman (DATABASE_URL) and foreman_test (TEST_DATABASE_URL); see .env.example.
+services:
+  postgres:
+    image: postgres:18.7
+    environment:
+      POSTGRES_USER: foreman
+      POSTGRES_PASSWORD: foreman-local
+      POSTGRES_DB: foreman
+    ports:
+      - "127.0.0.1:54320:5432"
+    volumes:
+      - foreman-pg:/var/lib/postgresql
+      - ./docker/create-test-database.sql:/docker-entrypoint-initdb.d/create-test-database.sql:ro
+
+volumes:
+  foreman-pg:

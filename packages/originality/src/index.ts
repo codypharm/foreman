@@ -24,6 +24,7 @@ export {
 export {
 	type CountMismatch,
 	type DroppedEvent,
+	type ListedProcessor,
 	scanTapeOuts,
 	type TapeOut,
 	type TapeOutScan,

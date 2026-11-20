@@ -59,8 +59,8 @@ export type TapeOutScan =
 	| {
 			complete: true;
 			upToBlock: bigint;
-			/** Every processor the factory listed at upToBlock, lower case. */
-			processors: Address[];
+			/** Every processor the factory listed at upToBlock, lower case, with the last id it had issued. */
+			processors: ListedProcessor[];
 			/** In chain order (block, transaction index, log index), as the node returns them. */
 			tapeOuts: TapeOut[];
 			/** TapedOut events from contracts the factory doesn't list: dropped, kept here to be logged. */
@@ -81,6 +81,12 @@ export interface CountMismatch {
 	events: number;
 	/** The last id the processor issued by the scan's last block. */
 	nextId: number;
+}
+
+export interface ListedProcessor {
+	address: Address;
+	/** nextId() at the scan's last block: the last id issued. */
+	issued: bigint;
 }
 
 export interface DroppedEvent {
@@ -130,8 +136,7 @@ async function scan(
 		functionName: "cpuCount",
 		...at,
 	});
-	const processors: Address[] = [];
-	const issued = new Map<Address, number>();
+	const processors: ListedProcessor[] = [];
 	for (let i = 0n; i < count; i++) {
 		const p = await client.readContract({
 			address: FACTORY,
@@ -146,11 +151,10 @@ async function scan(
 			functionName: "nextId",
 			...at,
 		});
-		processors.push(p.toLowerCase() as Address);
-		issued.set(p.toLowerCase() as Address, Number(last));
+		processors.push({ address: p.toLowerCase() as Address, issued: last });
 	}
 
-	const listed = new Set(processors);
+	const listed = new Set(processors.map((p) => p.address));
 	const tapeOuts: TapeOut[] = [];
 	const dropped: DroppedEvent[] = [];
 	for (let from = range.fromBlock; from <= range.toBlock; from += LOG_SPAN) {
@@ -194,10 +198,10 @@ async function scan(
 		events.set(p, (events.get(p) ?? 0) + 1);
 	}
 	const mismatches = processors
-		.map((processor) => ({
-			processor,
-			events: events.get(processor) ?? 0,
-			nextId: issued.get(processor) ?? 0,
+		.map(({ address, issued }) => ({
+			processor: address,
+			events: events.get(address) ?? 0,
+			nextId: Number(issued),
 		}))
 		.filter((m) => m.events !== m.nextId);
 	if (mismatches.length > 0) {
