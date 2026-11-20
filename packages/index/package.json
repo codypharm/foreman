@@ -16,7 +16,8 @@
 		"fill-times": "node --env-file-if-exists=../../.env scripts/fill-times.ts",
 		"revokes": "node --env-file-if-exists=../../.env scripts/index-revokes.ts",
 		"follow": "node --env-file-if-exists=../../.env scripts/follow-index.ts",
-		"fill-market": "node --env-file-if-exists=../../.env scripts/fill-market.ts"
+		"fill-market": "node --env-file-if-exists=../../.env scripts/fill-market.ts",
+		"fill-network": "node --env-file-if-exists=../../.env scripts/fill-network.ts"
 	},
 	"dependencies": {
 		"@foreman/chain-bnb": "workspace:*",

@@ -37,6 +37,12 @@ export {
 	saveMinerStarts,
 } from "./miners.ts";
 export {
+	followNetworkDays,
+	type NetworkDaysFollowResult,
+	readNetworkDays,
+	saveNetworkDays,
+} from "./network-days.ts";
+export {
 	type CompleteScan,
 	readIndex,
 	type StoredIndex,

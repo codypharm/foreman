@@ -1,0 +1,162 @@
+{
+	"chainId": 56,
+	"source": "verifiedWeight from PodMining at the first block at or after each 00:00 UTC (packages/chain-bnb/scripts/backfill-history.ts)",
+	"recordedAt": "2026-11-20T18:46:52.342Z",
+	"samples": [
+		{
+			"time": "1792540800",
+			"block": "128838305",
+			"verifiedWeight": "1581408"
+		},
+		{
+			"time": "1792627200",
+			"block": "129030233",
+			"verifiedWeight": "1583383"
+		},
+		{
+			"time": "1792713600",
+			"block": "129222152",
+			"verifiedWeight": "1583527"
+		},
+		{
+			"time": "1792800000",
+			"block": "129414102",
+			"verifiedWeight": "1583537"
+		},
+		{
+			"time": "1792886400",
+			"block": "129606057",
+			"verifiedWeight": "1583579"
+		},
+		{
+			"time": "1792972800",
+			"block": "129797838",
+			"verifiedWeight": "1583555"
+		},
+		{
+			"time": "1793059200",
+			"block": "129989707",
+			"verifiedWeight": "1583660"
+		},
+		{
+			"time": "1793145600",
+			"block": "130181610",
+			"verifiedWeight": "1583948"
+		},
+		{
+			"time": "1793232000",
+			"block": "130373471",
+			"verifiedWeight": "1584342"
+		},
+		{
+			"time": "1793318400",
+			"block": "130565343",
+			"verifiedWeight": "1584430"
+		},
+		{
+			"time": "1793404800",
+			"block": "130757301",
+			"verifiedWeight": "1584534"
+		},
+		{
+			"time": "1793491200",
+			"block": "130949246",
+			"verifiedWeight": "1584634"
+		},
+		{
+			"time": "1793577600",
+			"block": "131141195",
+			"verifiedWeight": "1585352"
+		},
+		{
+			"time": "1793664000",
+			"block": "131333148",
+			"verifiedWeight": "1585954"
+		},
+		{
+			"time": "1793750400",
+			"block": "131525097",
+			"verifiedWeight": "1586234"
+		},
+		{
+			"time": "1793836800",
+			"block": "131717051",
+			"verifiedWeight": "1587041"
+		},
+		{
+			"time": "1793923200",
+			"block": "131908997",
+			"verifiedWeight": "1587246"
+		},
+		{
+			"time": "1794009600",
+			"block": "132100911",
+			"verifiedWeight": "1587246"
+		},
+		{
+			"time": "1794096000",
+			"block": "132292867",
+			"verifiedWeight": "1587648"
+		},
+		{
+			"time": "1794182400",
+			"block": "132484800",
+			"verifiedWeight": "1588757"
+		},
+		{
+			"time": "1794268800",
+			"block": "132676598",
+			"verifiedWeight": "1589290"
+		},
+		{
+			"time": "1794355200",
+			"block": "132868542",
+			"verifiedWeight": "1589746"
+		},
+		{
+			"time": "1794441600",
+			"block": "133060468",
+			"verifiedWeight": "1607646"
+		},
+		{
+			"time": "1794528000",
+			"block": "133252160",
+			"verifiedWeight": "1608149"
+		},
+		{
+			"time": "1794614400",
+			"block": "133443969",
+			"verifiedWeight": "1608168"
+		},
+		{
+			"time": "1794700800",
+			"block": "133635907",
+			"verifiedWeight": "1608217"
+		},
+		{
+			"time": "1794787200",
+			"block": "133827843",
+			"verifiedWeight": "1609095"
+		},
+		{
+			"time": "1794873600",
+			"block": "134019793",
+			"verifiedWeight": "1609391"
+		},
+		{
+			"time": "1794960000",
+			"block": "134211719",
+			"verifiedWeight": "1609616"
+		},
+		{
+			"time": "1795046400",
+			"block": "134403582",
+			"verifiedWeight": "1609667"
+		},
+		{
+			"time": "1795132800",
+			"block": "134595494",
+			"verifiedWeight": "1614135"
+		}
+	]
+}

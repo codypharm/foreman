@@ -78,7 +78,9 @@ export async function readSellMarket(pool: pg.Pool): Promise<SellMarket> {
 	}>("select market_up_to_block, market_up_to_time from index_state");
 	const row = state.rows[0];
 	if (!row?.market_up_to_block || !row.market_up_to_time) {
-		throw new Error("The market index is not filled yet: run the market's first fill");
+		throw new Error(
+			"The market index is not filled yet: run the market's first fill",
+		);
 	}
 	const at = {
 		chainId: 56 as const,
@@ -87,7 +89,12 @@ export async function readSellMarket(pool: pg.Pool): Promise<SellMarket> {
 	};
 	const [sales, asks] = await Promise.all([
 		pool.query<
-			{ block: string; time: string; tx: string; price_wei: string } & MinerColumns
+			{
+				block: string;
+				time: string;
+				tx: string;
+				price_wei: string;
+			} & MinerColumns
 		>(
 			`select block::text, time::text, tx, price_wei::text, miner_status, miner_task_id,
 			   miner_verif_weight::text, miner_unver_weight::text
@@ -127,7 +134,9 @@ function minerState(r: MinerColumns, what: string): MarketMinerState {
 		pool === "verified" ? r.miner_verif_weight : r.miner_unver_weight,
 	);
 	if (weight === 0n) {
-		throw new Error(`The miner for ${what} is mining with no weight in its pool`);
+		throw new Error(
+			`The miner for ${what} is mining with no weight in its pool`,
+		);
 	}
 	return { mining: true, pool, weight };
 }

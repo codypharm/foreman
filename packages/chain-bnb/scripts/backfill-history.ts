@@ -46,8 +46,8 @@ const history = await readNetworkHistory(client, {
 	process.exit(1);
 });
 
-mkdirSync(new URL("../data/", import.meta.url), { recursive: true });
-const out = new URL("../data/network-daily.json", import.meta.url);
+mkdirSync(new URL("../../../data/", import.meta.url), { recursive: true });
+const out = new URL("../../../data/network-daily.json", import.meta.url);
 writeFileSync(
 	out,
 	`${JSON.stringify(

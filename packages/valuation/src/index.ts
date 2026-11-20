@@ -14,8 +14,10 @@ export {
 } from "./comparables.ts";
 export { emissionBetween, FIRST_HALVING } from "./emission.ts";
 export { ValuationInputError } from "./errors.ts";
+export { type DailySample, growthRates } from "./growth.ts";
 export { expectedOutput } from "./output.ts";
 export { type PaybackInput, payback } from "./payback.ts";
 export { projectedOutput } from "./projection.ts";
 export { outputRange } from "./range.ts";
 export { type SellOffer, sellOffer } from "./sell-offer.ts";
+export { MODEL_VERSION, valueMiner } from "./value-miner.ts";

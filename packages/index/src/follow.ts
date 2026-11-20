@@ -20,6 +20,10 @@ import {
 	saveMinerRevokes,
 	saveMinerStarts,
 } from "./miners.ts";
+import {
+	followNetworkDays,
+	type NetworkDaysFollowResult,
+} from "./network-days.ts";
 import { saveScan } from "./store.ts";
 
 export type FollowResult =
@@ -34,6 +38,8 @@ export type FollowResult =
 			revokes: number;
 			commitments: CommitmentBackfillResult;
 			netlists: BackfillResult;
+			/** One network sample a day, for the growth rates. */
+			network: NetworkDaysFollowResult;
 			/**
 			 * The market, last and on its own: a market read that stops leaves the rest followed
 			 * (docs/decisions/2026-11-20-market-index.md).
@@ -130,6 +136,10 @@ export async function followIndex(
 	const commitments = await backfillCommitments(pool, client);
 	const netlists = await backfillNetlists(pool, client);
 
+	// One network sample for each new day (docs/decisions/2026-11-20-growth-rates.md)
+	onProgress?.("network days");
+	const network = await followNetworkDays(pool, client, { toBlock });
+
 	// The market follows from its own last block; its first fill is a long run of its own
 	const marketState = await pool.query<{ market_up_to_block: string | null }>(
 		"select market_up_to_block from index_state",
@@ -150,6 +160,7 @@ export async function followIndex(
 		revokes,
 		commitments,
 		netlists,
+		network,
 		market,
 	};
 }

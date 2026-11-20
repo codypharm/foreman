@@ -47,6 +47,11 @@ try {
 				`netlists read ${r.netlists.read}, unreadable ${r.netlists.unreadable}, failed ${r.netlists.failed.length}, still unread ${r.netlists.remaining}`,
 		);
 		console.log(
+			r.network.followed
+				? `network days added: ${r.network.days}`
+				: `network days not followed: ${r.network.detail}`,
+		);
+		console.log(
 			r.market.followed
 				? `market to block ${r.market.toBlock}: ${r.market.sales} sales, ${r.market.listings} listings touched, ${r.market.open} open`
 				: `market not followed: ${r.market.detail}`,
@@ -54,6 +59,7 @@ try {
 		if (
 			r.commitments.failed.length ||
 			r.netlists.failed.length ||
+			!r.network.followed ||
 			!r.market.followed
 		)
 			process.exitCode = 1;

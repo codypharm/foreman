@@ -169,8 +169,26 @@ describe.skipIf(!TEST_DATABASE_URL)("following the market", () => {
 				   buyer, price_wei, fee_wei, miner_status, miner_task_id, miner_verif_weight, miner_unver_weight)
 				 values ($1, 0, $2, $3, 1, $4, 1, $4, 1000, 10, $5, $6, $7, $8)`,
 				block === 1n
-					? [block, `0x${"1".repeat(64)}`, time, `0x${"2".repeat(40)}`, null, null, null, null]
-					: [block, `0x${"3".repeat(64)}`, time, `0x${"2".repeat(40)}`, 1, 0, 0, 7],
+					? [
+							block,
+							`0x${"1".repeat(64)}`,
+							time,
+							`0x${"2".repeat(40)}`,
+							null,
+							null,
+							null,
+							null,
+						]
+					: [
+							block,
+							`0x${"3".repeat(64)}`,
+							time,
+							`0x${"2".repeat(40)}`,
+							1,
+							0,
+							0,
+							7,
+						],
 			);
 		}
 		const market = await readSellMarket(pool);
