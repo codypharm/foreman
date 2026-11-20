@@ -40,7 +40,9 @@ export {
 	type DroppedEvent,
 	FACTORY_FIRST_BLOCK,
 	type ListedProcessor,
+	LOG_SPAN,
 	scanTapeOuts,
+	TAPED_OUT,
 	type TapeOut,
 	type TapeOutScan,
 } from "./scan-tape-outs.ts";

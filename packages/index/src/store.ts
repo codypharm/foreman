@@ -12,12 +12,17 @@ import type { Address } from "viem";
 /** Only a complete scan can be saved: a stopped one never reaches the index. */
 export type CompleteScan = Extract<TapeOutScan, { complete: true }>;
 
+/** A stored tape-out: its time is null only on rows saved before migration 004, until filled. */
+export type StoredTapeOut = Omit<TapeOut, "tapedOutAt"> & {
+	tapedOutAt: Omit<TapeOut["tapedOutAt"], "time"> & { time: bigint | null };
+};
+
 export interface StoredIndex {
 	/** null before the first scan is saved. */
 	upToBlock: bigint | null;
 	processors: ListedProcessor[];
 	/** In chain order: block, transaction index, log index. */
-	tapeOuts: TapeOut[];
+	tapeOuts: StoredTapeOut[];
 }
 
 export async function saveScan(
@@ -36,14 +41,15 @@ export async function saveScan(
 		}
 		for (const t of scan.tapeOuts) {
 			await client.query(
-				`insert into circuits (processor, id, taped_out_block, taped_out_tx, taped_out_log, taped_out_by)
-				 values ($1, $2, $3, $4, $5, $6)`,
+				`insert into circuits (processor, id, taped_out_block, taped_out_tx, taped_out_log, taped_out_time, taped_out_by)
+				 values ($1, $2, $3, $4, $5, $6, $7)`,
 				[
 					t.circuit.processor,
 					t.circuit.id.toString(),
 					t.tapedOutAt.block.toString(),
 					t.tapedOutAt.txIndex,
 					t.tapedOutAt.logIndex,
+					t.tapedOutAt.time.toString(),
 					t.tapedOutBy,
 				],
 			);
@@ -75,9 +81,10 @@ export async function readIndex(pool: pg.Pool): Promise<StoredIndex> {
 		taped_out_block: string;
 		taped_out_tx: number;
 		taped_out_log: number;
+		taped_out_time: string | null;
 		taped_out_by: string;
 	}>(
-		`select processor, id, taped_out_block, taped_out_tx, taped_out_log, taped_out_by
+		`select processor, id, taped_out_block, taped_out_tx, taped_out_log, taped_out_time, taped_out_by
 		 from circuits order by taped_out_block, taped_out_tx, taped_out_log`,
 	);
 	const row = state.rows[0];
@@ -93,6 +100,7 @@ export async function readIndex(pool: pg.Pool): Promise<StoredIndex> {
 				block: BigInt(c.taped_out_block),
 				txIndex: c.taped_out_tx,
 				logIndex: c.taped_out_log,
+				time: c.taped_out_time === null ? null : BigInt(c.taped_out_time),
 			},
 			tapedOutBy: c.taped_out_by as Address,
 		})),

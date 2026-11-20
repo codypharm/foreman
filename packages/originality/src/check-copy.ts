@@ -13,10 +13,16 @@ export interface IndexEntry {
 	byteHash: Hex32;
 	/** From circuitInfo. */
 	gateCount: number;
-	tapedOutAt: { block: bigint; txIndex: number; logIndex: number };
+	/** Position in the chain, and the block's time (Unix seconds). */
+	tapedOutAt: {
+		block: bigint;
+		txIndex: number;
+		logIndex: number;
+		time: bigint;
+	};
 	tapedOutBy: Address;
-	/** The design commitment block the mining contract accepted, or null. */
-	designCommittedAt: bigint | null;
+	/** The design commitment the mining contract accepted (its block and that block's time), or null. */
+	designCommittedAt: { block: bigint; time: bigint } | null;
 }
 
 export interface CircuitIndex {
@@ -99,7 +105,7 @@ export function checkCopy(
  * tape-out block, otherwise its tape-out block (decision 4).
  */
 function designTime(e: IndexEntry): bigint {
-	const c = e.designCommittedAt;
+	const c = e.designCommittedAt?.block ?? null;
 	return c !== null && c < e.tapedOutAt.block ? c : e.tapedOutAt.block;
 }
 

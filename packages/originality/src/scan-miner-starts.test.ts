@@ -59,13 +59,13 @@ describe("a start read that fails", () => {
 });
 
 describe("reading a miner's design commitment", () => {
-	test("gives the block of the commitment the mining contract accepted", async () => {
+	test("gives the block of the commitment the mining contract accepted, and its time", async () => {
 		const key = minerKey({ processor: B102, id: 1363n });
 		expect(
 			await readDesignCommitment(replayClient(fixture), key, INDEX_BLOCK),
 		).toEqual({
 			read: true,
-			committedAt: 117_250_955n,
+			committedAt: { block: 117_250_955n, time: 1_787_323_775n },
 		});
 	});
 
@@ -89,7 +89,10 @@ describe("reading a miner's design commitment", () => {
 			await readDesignCommitment(replayClient(circuits), key, {
 				blockNumber: 134_673_279n,
 			}),
-		).toEqual({ read: true, committedAt: 122_268_369n });
+		).toEqual({
+			read: true,
+			committedAt: { block: 122_268_369n, time: 1_789_582_759n },
+		});
 	});
 
 	test("a failed read is a clear error, never no commitment", async () => {
@@ -100,6 +103,20 @@ describe("reading a miner's design commitment", () => {
 		).toEqual({
 			read: false,
 			detail: expect.stringContaining(key),
+		});
+	});
+
+	test("a failed read of the commitment's block is a clear error, never a missing time", async () => {
+		const key = minerKey({ processor: B102, id: 1363n });
+		const f = {
+			...fixture,
+			calls: fixture.calls.filter((c) => c.method !== "eth_getBlockByNumber"),
+		};
+		expect(
+			await readDesignCommitment(replayClient(f), key, INDEX_BLOCK),
+		).toEqual({
+			read: false,
+			detail: expect.stringContaining("block 117250955"),
 		});
 	});
 });

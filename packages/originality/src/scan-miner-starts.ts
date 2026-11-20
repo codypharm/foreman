@@ -114,14 +114,19 @@ export function minerKey(circuit: CircuitId): Hex32 {
 }
 
 export type CommitmentRead =
-	/** null: the miner started without a design commitment, so its design time is its tape-out. */
-	{ read: true; committedAt: bigint | null } | { read: false; detail: string };
+	/**
+	 * null: the miner started without a design commitment, so its design time is its tape-out.
+	 * Otherwise the commitment's block and that block's time (Unix seconds).
+	 */
+	| { read: true; committedAt: { block: bigint; time: bigint } | null }
+	| { read: false; detail: string };
 
 export async function readDesignCommitment(
 	client: PublicClient,
 	key: Hex32,
 	at: { blockNumber: bigint },
 ): Promise<CommitmentRead> {
+	let stage = `getMiner(${key}) at block ${at.blockNumber}`;
 	try {
 		const m = await client.readContract({
 			address: POD_MINING,
@@ -130,17 +135,17 @@ export async function readDesignCommitment(
 			args: [key],
 			blockNumber: at.blockNumber,
 		});
+		if (m.commitBlock === 0n) return { read: true, committedAt: null };
+		stage = `getMiner(${key}): commitment block ${m.commitBlock}`;
+		const block = await client.getBlock({ blockNumber: m.commitBlock });
 		return {
 			read: true,
-			committedAt: m.commitBlock > 0n ? m.commitBlock : null,
+			committedAt: { block: m.commitBlock, time: block.timestamp },
 		};
 	} catch (error) {
 		// viem's full message names the RPC URL, which can carry a key: keep only its short message
 		const short =
 			(error as { shortMessage?: string }).shortMessage ?? "read failed";
-		return {
-			read: false,
-			detail: `getMiner(${key}) at block ${at.blockNumber}: ${short}`,
-		};
+		return { read: false, detail: `${stage}: ${short}` };
 	}
 }

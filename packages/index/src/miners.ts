@@ -24,8 +24,15 @@ export interface StoredMiner {
 	starts: number;
 	commitment:
 		| { status: "not-read" }
-		/** committedAt null: started without a design commitment. */
-		| { status: "read"; committedAt: bigint | null; readAtBlock: bigint };
+		/**
+		 * committedAt null: started without a design commitment. Its time is null only for a
+		 * commitment read before migration 004, until filled.
+		 */
+		| {
+				status: "read";
+				committedAt: { block: bigint; time: bigint | null } | null;
+				readAtBlock: bigint;
+		  };
 }
 
 export async function saveMinerStarts(
@@ -45,7 +52,8 @@ export async function saveMinerStarts(
 				   last_started_tx = excluded.last_started_tx,
 				   last_started_log = excluded.last_started_log,
 				   starts = miners.starts + 1,
-				   commitment_status = null, commitment_read_at_block = null, design_committed_at = null`,
+				   commitment_status = null, commitment_read_at_block = null, design_committed_at = null,
+				   design_committed_time = null`,
 				[
 					Buffer.from(s.key.slice(2), "hex"),
 					s.circuit.processor,
@@ -90,9 +98,10 @@ export async function readMiners(
 		commitment_status: "read" | null;
 		commitment_read_at_block: string | null;
 		design_committed_at: string | null;
+		design_committed_time: string | null;
 	}>(
 		`select key, processor, id, first_started_block, last_started_block, starts,
-		   commitment_status, commitment_read_at_block, design_committed_at
+		   commitment_status, commitment_read_at_block, design_committed_at, design_committed_time
 		 from miners order by first_started_block, processor, id`,
 	);
 	const up = state.rows[0]?.miners_up_to_block;
@@ -112,7 +121,13 @@ export async function readMiners(
 							committedAt:
 								r.design_committed_at === null
 									? null
-									: BigInt(r.design_committed_at),
+									: {
+											block: BigInt(r.design_committed_at),
+											time:
+												r.design_committed_time === null
+													? null
+													: BigInt(r.design_committed_time),
+										},
 							readAtBlock: BigInt(r.commitment_read_at_block as string),
 						},
 		})),
@@ -173,12 +188,13 @@ export async function backfillCommitments(
 			}
 			await pool.query(
 				`update miners set commitment_status = 'read', commitment_read_at_block = $2,
-				   design_committed_at = $3
+				   design_committed_at = $3, design_committed_time = $4
 				 where key = $1 and commitment_status is null`,
 				[
 					Buffer.from(key.slice(2), "hex"),
 					atBlock.toString(),
-					r.committedAt === null ? null : r.committedAt.toString(),
+					r.committedAt?.block.toString() ?? null,
+					r.committedAt?.time.toString() ?? null,
 				],
 			);
 			result.read++;

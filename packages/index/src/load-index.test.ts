@@ -84,6 +84,33 @@ describe.skipIf(!TEST_DATABASE_URL)(
 			});
 		});
 
+		test("refuses while a tape-out time is missing, never showing a blank date", async () => {
+			pool = await fixtureIndexedDatabase();
+			// A row saved before migration 004, not filled yet
+			await pool.query(
+				"update circuits set taped_out_time = null where processor = $1 and id = 1",
+				[P0],
+			);
+			expect(await loadCircuitIndex(pool)).toEqual({
+				ready: false,
+				reason: "times-missing",
+				detail: expect.stringContaining("1 circuit"),
+			});
+		});
+
+		test("refuses while a design commitment's time is missing", async () => {
+			pool = await fixtureIndexedDatabase();
+			await pool.query(
+				"update miners set design_committed_time = null where processor = $1 and id = 2683",
+				[MINE6],
+			);
+			expect(await loadCircuitIndex(pool)).toEqual({
+				ready: false,
+				reason: "times-missing",
+				detail: expect.stringContaining("1 design commitment"),
+			});
+		});
+
 		test("refuses before miners are indexed at all", async () => {
 			pool = await fixtureIndexedDatabase({ skipMiners: true });
 			expect(await loadCircuitIndex(pool)).toEqual({

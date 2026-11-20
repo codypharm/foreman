@@ -7,6 +7,11 @@ export {
 	readStoredNetlist,
 	type StoredNetlist,
 } from "./backfill.ts";
+export {
+	type FillResult,
+	fillCommitmentTimes,
+	fillTapeOutTimes,
+} from "./fill-times.ts";
 export { type LoadedIndex, loadCircuitIndex } from "./load-index.ts";
 export { migrate } from "./migrate.ts";
 export {
@@ -21,5 +26,6 @@ export {
 	type CompleteScan,
 	readIndex,
 	type StoredIndex,
+	type StoredTapeOut,
 	saveScan,
 } from "./store.ts";

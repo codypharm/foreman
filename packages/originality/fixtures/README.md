@@ -30,12 +30,13 @@ Recorded on 20 November 2026 by `scripts/record-miners-fixture.ts` (`pnpm --filt
 | --- | --- |
 | `eth_getLogs` for `Started` on the mining contract, blocks 117,268,000 to 117,271,000 | 112 starts by 111 miners, all on `MINE6` or `0xb102…` |
 | `getMiner(key)` for each of the 111, at block 134,690,552 (the index's block) | 110 active, 1 cooling; 7 with a design commitment |
+| `eth_getBlockByNumber` for each of the 7 commitment blocks | Each commitment's time. Added on 20 November 2026 from the archive node, after the rest was recorded (`docs/decisions/2026-11-20-originality-result.md`, decision 1); a re-recording reads them itself |
 
 | Case | Values |
 | --- | --- |
 | First start | `0xb102…/1150`, block 117,268,030, transaction 42, log 170; no commitment |
 | A restart | `0xb102…/647` started at block 117,268,905 (transaction 49, log 153) and again at 117,270,988 (transaction 61, log 390) |
-| A commitment | `0xb102…/1363`: committed at block 117,250,955 |
+| A commitment | `0xb102…/1363`: committed at block 117,250,955, time 1,787,323,775 |
 
 `Started` is emitted on every start, a restart after a stop included. A miner's commitment stays with the circuit across restarts, and a restart that brings a commitment replaces it (verified PodMining source, `start`).
 
@@ -47,6 +48,7 @@ Recorded on 20 November 2026 by `scripts/record-miners-fixture.ts` (`pnpm --filt
 | `processorMultiplier(processor)`, `getMiner(minerKey)` on the mining contract | block 134,673,279 |
 | `eth_getLogs` for its `TapedOut` event, and `eth_getBlockByNumber` for the time | the tape-out block (one block) |
 | `eth_getLogs` for `DesignCommitted`, when `getMiner` has a `commitBlock` | the commitment block (one block) |
+| `eth_getBlockByNumber` for the commitment's time (7 blocks; `MINE6/2683`'s is 122,268,369, time 1,789,582,759) | the commitment block. Added on 20 November 2026 from the archive node, after the rest was recorded |
 | `eth_getLogs` for `Revoked` (revoked miner) or `Stopped` (cooling miner) | the block it happened in (one block); a revoke block was found by searching from the tape-out |
 
 Tape-out events are read one block at a time because the recorder found each block first. The index reads them differently (next section), so a test that needs a different log read means re-recording.

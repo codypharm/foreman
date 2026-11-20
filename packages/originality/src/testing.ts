@@ -52,9 +52,16 @@ export async function fixtureIndex(): Promise<CircuitIndex> {
 
 	const tapeOuts = new Map<
 		string,
-		{ block: bigint; txIndex: number; logIndex: number; by: Address }
+		{
+			block: bigint;
+			txIndex: number;
+			logIndex: number;
+			time: bigint;
+			by: Address;
+		}
 	>();
 	const commits = new Map<string, bigint>();
+	const blockTimes = new Map<bigint, bigint>();
 	for (const c of calls) {
 		const p = c.params[0] as {
 			address?: string;
@@ -69,6 +76,7 @@ export async function fixtureIndex(): Promise<CircuitIndex> {
 				blockNumber: string;
 				transactionIndex: string;
 				logIndex: string;
+				blockTimestamp: string;
 			}[]) {
 				tapeOuts.set(
 					`${log.address.toLowerCase()}/${BigInt(log.topics[1] as string)}`,
@@ -76,10 +84,15 @@ export async function fixtureIndex(): Promise<CircuitIndex> {
 						block: BigInt(log.blockNumber),
 						txIndex: Number(log.transactionIndex),
 						logIndex: Number(log.logIndex),
+						time: BigInt(log.blockTimestamp),
 						by: `0x${(log.topics[2] as string).slice(26)}` as Address,
 					},
 				);
 			}
+		}
+		if (c.method === "eth_getBlockByNumber") {
+			const b = c.result as { number: string; timestamp: string };
+			blockTimes.set(BigInt(b.number), BigInt(b.timestamp));
 		}
 		if (c.method === "eth_call" && p.data?.startsWith(GET_MINER)) {
 			const m = decodeFunctionResult({
@@ -100,13 +113,28 @@ export async function fixtureIndex(): Promise<CircuitIndex> {
 		const [processor, id] = k.split("/") as [Address, string];
 		const read = await readNetlist(client, { processor, id: BigInt(id) }, at);
 		if (!read.readable) throw new Error(read.detail);
+		const committed = commits.get(k);
+		const committedTime =
+			committed === undefined ? undefined : blockTimes.get(committed);
+		if (committed !== undefined && committedTime === undefined)
+			throw new Error(
+				`the fixture has no block ${committed} for ${k}'s commitment`,
+			);
 		entries.push({
 			circuit: { processor, id: BigInt(id) },
 			...hashNetlist(read.netlist),
 			gateCount: read.netlist.gateCount,
-			tapedOutAt: { block: t.block, txIndex: t.txIndex, logIndex: t.logIndex },
+			tapedOutAt: {
+				block: t.block,
+				txIndex: t.txIndex,
+				logIndex: t.logIndex,
+				time: t.time,
+			},
 			tapedOutBy: t.by,
-			designCommittedAt: commits.get(k) ?? null,
+			designCommittedAt:
+				committed === undefined
+					? null
+					: { block: committed, time: committedTime as bigint },
 		});
 	}
 	return { entries, upToBlock: at.blockNumber };

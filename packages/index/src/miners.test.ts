@@ -63,7 +63,7 @@ describe.skipIf(!TEST_DATABASE_URL)("saving miners", () => {
 				?.commitment,
 		).toEqual({
 			status: "read",
-			committedAt: 117_250_955n,
+			committedAt: { block: 117_250_955n, time: 1_787_323_775n },
 			readAtBlock: INDEX_BLOCK,
 		});
 		expect(

@@ -25,7 +25,12 @@ function laterScan(scan: CompleteScan): CompleteScan {
 		tapeOuts: [
 			{
 				circuit: { processor: MINE6, id: 68n },
-				tapedOutAt: { block: 116_160_000n, txIndex: 0, logIndex: 0 },
+				tapedOutAt: {
+					block: 116_160_000n,
+					txIndex: 0,
+					logIndex: 0,
+					time: 1_786_900_000n,
+				},
 				tapedOutBy: "0x571d447f4f24688ec35ccf07f1d6993655f6af15",
 			},
 		],

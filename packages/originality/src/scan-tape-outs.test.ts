@@ -24,9 +24,16 @@ describe("scanning every tape-out", () => {
 		expect(scan.tapeOuts).toHaveLength(95);
 		expect(scan.tapeOuts[0]).toEqual({
 			circuit: { processor: P0, id: 1n },
-			tapedOutAt: { block: 116_070_652n, txIndex: 27, logIndex: 114 },
+			tapedOutAt: {
+				block: 116_070_652n,
+				txIndex: 27,
+				logIndex: 114,
+				time: 1_786_792_493n,
+			},
 			tapedOutBy: "0x571d447f4f24688ec35ccf07f1d6993655f6af15",
 		});
+		// Every tape-out carries its block's time, never a blank
+		expect(scan.tapeOuts.every((t) => t.tapedOutAt.time > 0n)).toBe(true);
 		const order = scan.tapeOuts.map((t) => t.tapedOutAt);
 		const sorted = [...order].sort((a, b) =>
 			a.block !== b.block
@@ -36,6 +43,32 @@ describe("scanning every tape-out", () => {
 					: a.logIndex - b.logIndex,
 		);
 		expect(order).toEqual(sorted);
+	});
+});
+
+describe("block times", () => {
+	test("stops the scan when the node leaves out a tape-out's block time, naming the circuit", async () => {
+		const f = {
+			...fixture,
+			calls: fixture.calls.map((c) =>
+				c.method === "eth_getLogs"
+					? {
+							...c,
+							result: (c.result as { blockNumber: string }[]).map((l) =>
+								BigInt(l.blockNumber) === 116_070_652n
+									? { ...l, blockTimestamp: undefined }
+									: l,
+							),
+						}
+					: c,
+			),
+		};
+		const scan = await scanTapeOuts(replayClient(f), RANGE);
+		expect(scan).toEqual({
+			complete: false,
+			reason: "read-failed",
+			detail: expect.stringContaining(`${P0}/1 in block 116070652`),
+		});
 	});
 });
 

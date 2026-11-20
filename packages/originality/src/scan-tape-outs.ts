@@ -55,7 +55,13 @@ export const processorAbi = [
 /** One tape-out as the chain records it. */
 export interface TapeOut {
 	circuit: CircuitId;
-	tapedOutAt: { block: bigint; txIndex: number; logIndex: number };
+	/** Its position in the chain, and its block's time (Unix seconds) from the log. */
+	tapedOutAt: {
+		block: bigint;
+		txIndex: number;
+		logIndex: number;
+		time: bigint;
+	};
 	tapedOutBy: Address;
 }
 
@@ -96,7 +102,7 @@ export interface ListedProcessor {
 export interface DroppedEvent {
 	address: Address;
 	id: bigint;
-	tapedOutAt: TapeOut["tapedOutAt"];
+	tapedOutAt: { block: bigint; txIndex: number; logIndex: number };
 }
 
 interface RawLog {
@@ -105,6 +111,8 @@ interface RawLog {
 	blockNumber: Hex;
 	transactionIndex: Hex;
 	logIndex: Hex;
+	/** Not every node returns it: a listed tape-out without one stops the scan. */
+	blockTimestamp?: Hex;
 }
 
 export async function scanTapeOuts(
@@ -206,9 +214,16 @@ async function scan(
 				dropped.push({ address: processor, id, tapedOutAt });
 				continue;
 			}
+			if (!log.blockTimestamp) {
+				return {
+					complete: false,
+					reason: "read-failed",
+					detail: `${processor}/${id} in block ${tapedOutAt.block}: the node returned no block time`,
+				};
+			}
 			tapeOuts.push({
 				circuit: { processor, id },
-				tapedOutAt,
+				tapedOutAt: { ...tapedOutAt, time: hexToBigInt(log.blockTimestamp) },
 				tapedOutBy: `0x${(log.topics[2] as Hex).slice(26)}` as Address,
 			});
 		}
