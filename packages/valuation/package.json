@@ -3,7 +3,8 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./fixtures/*": "./fixtures/*"
 	},
 	"scripts": {
 		"test": "vitest run",
@@ -12,5 +13,8 @@
 	},
 	"devDependencies": {
 		"vitest": "^5.1.0"
+	},
+	"dependencies": {
+		"@foreman/contract": "workspace:*"
 	}
 }

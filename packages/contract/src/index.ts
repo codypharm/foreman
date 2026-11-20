@@ -11,8 +11,10 @@ export {
 export {
 	type Amount,
 	type ChainRead,
+	COMPARABLES_MINIMUM,
 	type Comparable,
 	type Comparables,
+	type ComparablesRange,
 	type Currency,
 	type Offer,
 	parseOffer,

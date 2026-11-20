@@ -1,6 +1,7 @@
 // Offer: what each option can actually get for a miner right now, by venue.
 // Venues: docs/decisions/2026-11-19-offer-venues.md. Sell without bids:
 // docs/decisions/2026-11-19-sell-without-bids.md. Shape: 2026-11-19-offer-shape.md.
+// Comparables rule (pool, range, asks left out): 2026-11-20-sell-comparables.md.
 // A missing offer is its own state, never an amount of zero. Hold is not an offer.
 
 import { ContractParseError } from "./errors.ts";
@@ -39,11 +40,34 @@ export interface Comparable {
 	tx?: Hex32;
 }
 
+/** The fewest comparables a range is drawn from. */
+export const COMPARABLES_MINIMUM = 10;
+
+export type ComparablesRange =
+	/** The 25th percentile, median and 75th percentile rate, each × this miner's weight. */
+	| { state: "shown"; low: Amount; mid: Amount; high: Amount }
+	/** Fewer than the minimum: the items are listed, with no range. */
+	| { state: "too-few"; count: number; minimum: typeof COMPARABLES_MINIMUM }
+	/** Asks only: fewer sales than the minimum, so no median to filter asks by. Asks listed, unfiltered. */
+	| {
+			state: "too-few-sales";
+			sales: number;
+			minimum: typeof COMPARABLES_MINIMUM;
+	  }
+	/** This miner has no weight earning, so nothing is comparable. */
+	| { state: "not-mining" };
+
 export interface Comparables {
 	venue: Venue;
+	/** This miner's pool; null when it isn't mining. Sales and asks come from this pool only. */
+	pool: "verified" | "unverified" | null;
 	/** How the comparable miners were picked, in words for the screen. Code, never a model. */
 	rule: string;
+	/** For asks, only those under the ceiling. */
 	items: Comparable[];
+	range: ComparablesRange;
+	/** Asks over 3× the median sale rate. Always 0 for sales. */
+	leftOut: number;
 }
 
 export type SellBid =
@@ -96,14 +120,18 @@ export function parseOffer(wire: unknown, field: string): Offer {
 	] as const);
 	const minerKey = parseHex32(w.minerKey, `${field}.minerKey`);
 	switch (option) {
-		case "sell":
+		case "sell": {
+			const sales = parseComparables(w.sales, `${field}.sales`, true);
+			const asks = parseComparables(w.asks, `${field}.asks`, false);
+			checkAsksAgainstSales(sales, asks, `${field}.asks`);
 			return {
 				option,
 				minerKey,
 				bid: parseBid(w.bid, `${field}.bid`),
-				sales: parseComparables(w.sales, `${field}.sales`, true),
-				asks: parseComparables(w.asks, `${field}.asks`, false),
+				sales,
+				asks,
 			};
+		}
 		case "rent": {
 			// No rental venue exists, so there is no live rental shape to read (offer-venues ADR)
 			const state = parseOneOf(w.state, `${field}.state`, [
@@ -204,7 +232,183 @@ function parseComparables(
 		if (sales) comparable.tx = parseHex32(x.tx, `${at}.tx`);
 		return comparable;
 	});
-	return { venue, rule, items };
+	const pool =
+		w.pool === null
+			? null
+			: parseOneOf(w.pool, `${field}.pool`, [
+					"verified",
+					"unverified",
+				] as const);
+	const range = parseRange(w.range, `${field}.range`);
+	if ((pool === null) !== (range.state === "not-mining")) {
+		throw new ContractParseError(
+			`${field}.pool`,
+			range.state === "not-mining"
+				? "null for a miner that isn't mining"
+				: "verified or unverified for a miner that is mining",
+			pool,
+		);
+	}
+	if (range.state === "not-mining" && items.length > 0) {
+		throw new ContractParseError(
+			`${field}.range`,
+			"no items for a miner that isn't mining",
+			items.length,
+		);
+	}
+	if (range.state === "shown" && items.length < COMPARABLES_MINIMUM) {
+		throw new ContractParseError(
+			`${field}.range`,
+			`a range from ${COMPARABLES_MINIMUM} items or more`,
+			items.length,
+		);
+	}
+	if (range.state === "shown") {
+		const { low, mid, high } = range;
+		const currencies = new Set([
+			low.currency,
+			mid.currency,
+			high.currency,
+			...items.map((x) => x.price.currency),
+		]);
+		if (currencies.size > 1) {
+			throw new ContractParseError(
+				`${field}.range`,
+				"a range in its items' currency",
+				[...currencies].join(", "),
+			);
+		}
+		if (low.value > mid.value || mid.value > high.value) {
+			throw new ContractParseError(
+				`${field}.range`,
+				"low ≤ mid ≤ high",
+				`${low.value}, ${mid.value}, ${high.value}`,
+			);
+		}
+	}
+	if (
+		range.state === "too-few" &&
+		(range.count !== items.length || range.count >= COMPARABLES_MINIMUM)
+	) {
+		throw new ContractParseError(
+			`${field}.range.count`,
+			`the ${items.length} items listed, under ${COMPARABLES_MINIMUM}`,
+			range.count,
+		);
+	}
+	const leftOut = w.leftOut;
+	if (!Number.isSafeInteger(leftOut) || (leftOut as number) < 0) {
+		throw new ContractParseError(`${field}.leftOut`, "a count", leftOut);
+	}
+	if (sales && range.state === "too-few-sales") {
+		throw new ContractParseError(
+			`${field}.range`,
+			"a sales range: too-few-sales is for asks",
+			range.state,
+		);
+	}
+	if (sales && leftOut !== 0) {
+		throw new ContractParseError(
+			`${field}.leftOut`,
+			"0: only asks are left out",
+			leftOut,
+		);
+	}
+	return { venue, pool, rule, items, range, leftOut: leftOut as number };
+}
+
+/** Asks are filtered by the median sale: no range of sales, no filter and no asking range. */
+function checkAsksAgainstSales(
+	sales: Comparables,
+	asks: Comparables,
+	field: string,
+): void {
+	if (asks.pool !== sales.pool) {
+		throw new ContractParseError(
+			`${field}.pool`,
+			`the sales' pool (${sales.pool})`,
+			asks.pool,
+		);
+	}
+	if (sales.range.state === "shown") {
+		if (asks.range.state === "too-few-sales") {
+			throw new ContractParseError(
+				`${field}.range`,
+				`a range or too-few: there are ${sales.items.length} sales`,
+				asks.range.state,
+			);
+		}
+		return;
+	}
+	if (sales.range.state === "too-few") {
+		if (asks.range.state !== "too-few-sales") {
+			throw new ContractParseError(
+				`${field}.range`,
+				`too-few-sales: only ${sales.items.length} sales to filter asks by`,
+				asks.range.state,
+			);
+		}
+		if (asks.range.sales !== sales.items.length) {
+			throw new ContractParseError(
+				`${field}.range.sales`,
+				`the ${sales.items.length} sales listed`,
+				asks.range.sales,
+			);
+		}
+	}
+	if (asks.leftOut > 0) {
+		throw new ContractParseError(
+			`${field}.leftOut`,
+			`0: fewer than ${COMPARABLES_MINIMUM} sales give no median to measure asks against`,
+			asks.leftOut,
+		);
+	}
+	if (asks.range.state === "shown") {
+		throw new ContractParseError(
+			`${field}.range`,
+			`no range: fewer than ${COMPARABLES_MINIMUM} sales give no median to filter asks by`,
+			asks.range.state,
+		);
+	}
+}
+
+function parseRange(wire: unknown, field: string): ComparablesRange {
+	const w = parseObject(wire, field);
+	const state = parseOneOf(w.state, `${field}.state`, [
+		"shown",
+		"too-few",
+		"too-few-sales",
+		"not-mining",
+	] as const);
+	switch (state) {
+		case "shown":
+			return {
+				state,
+				low: parseAmount(w.low, `${field}.low`, { positive: true }),
+				mid: parseAmount(w.mid, `${field}.mid`, { positive: true }),
+				high: parseAmount(w.high, `${field}.high`, { positive: true }),
+			};
+		case "too-few":
+		case "too-few-sales": {
+			const key = state === "too-few" ? "count" : "sales";
+			const count = w[key];
+			if (!Number.isSafeInteger(count) || (count as number) < 0) {
+				throw new ContractParseError(`${field}.${key}`, "a count", count);
+			}
+			if (w.minimum !== COMPARABLES_MINIMUM) {
+				throw new ContractParseError(
+					`${field}.minimum`,
+					`${COMPARABLES_MINIMUM}`,
+					w.minimum,
+				);
+			}
+			return state === "too-few"
+				? { state, count: count as number, minimum: COMPARABLES_MINIMUM }
+				: { state, sales: count as number, minimum: COMPARABLES_MINIMUM };
+		}
+		case "not-mining":
+			return { state };
+	}
 }
 
 function parseAmount(

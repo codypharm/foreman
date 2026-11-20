@@ -132,7 +132,19 @@ type Venue = "bnb-market" | "xlayer-market" | "tapepool";
 type ChainRead = { chainId: 56 | 196; block: bigint; time: bigint };
 
 type Comparable = { price: Amount; weight: bigint; readAt: ChainRead; tx?: Hex32 }; // tx on sales only
-type Comparables = { venue: Venue; rule: string; items: Comparable[] };
+type ComparablesRange =
+  | { state: "shown"; low: Amount; mid: Amount; high: Amount } // middle half of the rates × this miner's weight
+  | { state: "too-few"; count: number; minimum: 10 }           // items listed, no range
+  | { state: "too-few-sales"; sales: number; minimum: 10 }     // asks only: under 10 sales, so asks listed unfiltered
+  | { state: "not-mining" };                                   // this miner has no weight earning: no comparables
+type Comparables = {
+  venue: Venue;
+  pool: "verified" | "unverified" | null; // this miner's pool; null when it isn't mining
+  rule: string;                           // shown on screen
+  items: Comparable[];                    // asks: only those kept by the ceiling
+  range: ComparablesRange;
+  leftOut: number;                        // asks over 3× the median sale rate; always 0 for sales
+};
 
 type SellBid =
   | { state: "live"; venue: Venue; readAt: ChainRead; price: Amount; expiresAt: bigint | null }
@@ -153,6 +165,7 @@ type Offer =
 - **Currencies:** every amount names its currency. Sell prices on the BNB market are BNB, on the X Layer market OKB. A Lend advance and its fee are BEM. Conversion to BEM for comparison happens on screen, at today's prices, labelled.
 - **Chains:** each venue is on one chain (BNB market 56; X Layer market and TapePool 196). A read from the wrong chain is refused.
 - **Weights:** comparables carry the comparable miner's weight (never 0), so the screen can show price per unit of weight.
+- **Comparables rule** (`2026-11-20-sell-comparables.md`): miners that were mining, same pool, last 14 days, BNB per unit of weight. `range` is the 25th percentile, median and 75th percentile rate × this miner's weight, shown only from 10 items. An ask over 3× the median sale rate is left out and counted in `leftOut`. With fewer than 10 sales, the asks' range is always `too-few-sales` (counting the sales listed) and no ask is left out; `too-few` on asks means 10 sales or more but fewer than 10 asks kept. Sales and asks share one pool. `range` is computed in `packages/valuation`, never on screen.
 - **Hold is not an offer:** it comes from the `Valuation`.
 - **Unclaimed rewards move with the NFT when it's sold:** a Sell is always shown with "claim first".
 
