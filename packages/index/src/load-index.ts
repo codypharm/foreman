@@ -2,8 +2,8 @@
 // (packages/originality/src/check-copy.ts). Only circuits whose netlist was read are compared,
 // so "No earlier copy found among N circuits" counts only those; the rest are counted apart.
 
-import { parseHex32 } from "@foreman/contract";
-import type { CircuitIndex, IndexEntry } from "@foreman/originality";
+import { type CircuitRef, parseAddress, parseHex32 } from "@foreman/contract";
+import type { CircuitId, CircuitIndex, IndexEntry } from "@foreman/originality";
 import type pg from "pg";
 import type { Address } from "viem";
 
@@ -145,5 +145,60 @@ export async function loadCircuitIndex(pool: pg.Pool): Promise<LoadedIndex> {
 			unread: Number(counts?.unread),
 			unreadable: Number(counts?.unreadable),
 		},
+	};
+}
+
+/**
+ * Any indexed circuit as the data contract's CircuitRef, whether or not its netlist could be
+ * read, so an unreadable one still gets its "Can't check" result. null when it isn't indexed:
+ * the caller's "Can't check: outside the index", never a result (2026-11-20, complete or none).
+ */
+export async function readCircuitRef(
+	pool: pg.Pool,
+	circuit: CircuitId,
+): Promise<CircuitRef | null> {
+	const rows = await pool.query<{
+		taped_out_block: string;
+		taped_out_tx: number;
+		taped_out_log: number;
+		taped_out_time: string | null;
+		taped_out_by: string;
+		design_committed_at: string | null;
+		design_committed_time: string | null;
+	}>(
+		`select c.taped_out_block, c.taped_out_tx, c.taped_out_log, c.taped_out_time, c.taped_out_by,
+		   m.design_committed_at, m.design_committed_time
+		 from circuits c left join miners m on m.processor = c.processor and m.id = c.id
+		 where c.processor = $1 and c.id = $2`,
+		[circuit.processor.toLowerCase(), circuit.id.toString()],
+	);
+	const r = rows.rows[0];
+	if (!r) return null;
+	if (
+		r.taped_out_time === null ||
+		(r.design_committed_at !== null && r.design_committed_time === null)
+	) {
+		throw new Error(
+			`${circuit.processor}/${circuit.id} has no stored time yet: run fill-times`,
+		);
+	}
+	return {
+		chainId: 56,
+		processor: parseAddress(circuit.processor.toLowerCase(), "processor"),
+		tokenId: circuit.id,
+		tapedOutAt: {
+			block: BigInt(r.taped_out_block),
+			txIndex: r.taped_out_tx,
+			logIndex: r.taped_out_log,
+			time: BigInt(r.taped_out_time),
+		},
+		tapedOutBy: parseAddress(r.taped_out_by, "tapedOutBy"),
+		designCommittedAt:
+			r.design_committed_at === null
+				? null
+				: {
+						block: BigInt(r.design_committed_at),
+						time: BigInt(r.design_committed_time as string),
+					},
 	};
 }

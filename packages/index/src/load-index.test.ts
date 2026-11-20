@@ -1,11 +1,11 @@
-import { checkCopy } from "@foreman/originality";
+import { checkCopy, circuitRef } from "@foreman/originality";
 import circuits from "@foreman/originality/fixtures/bnb-circuits-134673279.json" with {
 	type: "json",
 };
 import { fixtureIndex, withNetlist } from "@foreman/originality/testing";
 import type pg from "pg";
 import { afterEach, describe, expect, test } from "vitest";
-import { loadCircuitIndex } from "./index.ts";
+import { loadCircuitIndex, readCircuitRef } from "./index.ts";
 import { fixtureIndexedDatabase, TEST_DATABASE_URL } from "./testing.ts";
 
 // The originality fixture's 33 real circuits at block 134,673,279, built into the database the
@@ -109,6 +109,40 @@ describe.skipIf(!TEST_DATABASE_URL)(
 				reason: "times-missing",
 				detail: expect.stringContaining("1 design commitment"),
 			});
+		});
+
+		test("gives any indexed circuit's CircuitRef, an unreadable one included, and null outside the index", async () => {
+			const changed = withNetlist(
+				circuits,
+				MINE6,
+				512n,
+				"0x01000003000000020000",
+			);
+			pool = await fixtureIndexedDatabase({ changed });
+			const expected = await fixtureIndex();
+			for (const id of [2683n, 512n]) {
+				const entry = expected.entries.find(
+					(e) => e.circuit.processor === MINE6 && e.circuit.id === id,
+				);
+				if (!entry) throw new Error(`MINE6/${id} is in the fixture`);
+				expect(await readCircuitRef(pool, { processor: MINE6, id })).toEqual(
+					circuitRef(entry),
+				);
+			}
+			expect(
+				await readCircuitRef(pool, { processor: MINE6, id: 999_999n }),
+			).toBeNull();
+		});
+
+		test("refuses a CircuitRef whose time isn't stored yet, never a blank date", async () => {
+			pool = await fixtureIndexedDatabase();
+			await pool.query(
+				"update miners set design_committed_time = null where processor = $1 and id = 2683",
+				[MINE6],
+			);
+			await expect(
+				readCircuitRef(pool, { processor: MINE6, id: 2683n }),
+			).rejects.toThrow("no stored time");
 		});
 
 		test("refuses before miners are indexed at all", async () => {

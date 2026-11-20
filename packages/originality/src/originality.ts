@@ -7,6 +7,7 @@
 
 import {
 	type CircuitRef,
+	type Originality,
 	type OriginalityFact,
 	type OriginalityVerdict,
 	parseAddress,
@@ -171,6 +172,37 @@ export function originalityVerdict(input: {
 				facts,
 			);
 	}
+}
+
+/**
+ * One complete result. A result is built whole or not at all: a circuit outside the index, or a
+ * failed mining contract read, is an error for the caller, never a partial Originality.
+ */
+export function buildOriginality(input: {
+	/** The circuit's own CircuitRef, from the index (which holds every tape-out, readable or not). */
+	circuit: CircuitRef;
+	scope: Originality["scope"];
+	verdict: OriginalityVerdictResult;
+	/** readCanMine's facts: the design bonus (miners only), then exactly one can-mine fact. */
+	mining: OriginalityFact[];
+}): Originality {
+	const canMine = input.mining.filter((f) => f.fact === "can-mine");
+	if (canMine.length !== 1) {
+		throw new Error(
+			`a result carries exactly one can-mine fact; got ${canMine.length}`,
+		);
+	}
+	const bonus = input.mining.filter((f) => f.fact === "design-bonus");
+	return {
+		circuit: input.circuit,
+		scope: input.scope,
+		result: input.verdict.result,
+		// The contract's own answer first, then Foreman's facts, then whether it can mine
+		facts: [...bonus, ...input.verdict.facts, ...canMine],
+		occc: { status: "not-checked" },
+		index: input.verdict.index,
+		ruleVersion: input.verdict.ruleVersion,
+	};
 }
 
 /** An index entry as the data contract's CircuitRef. */

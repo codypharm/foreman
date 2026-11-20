@@ -213,6 +213,7 @@ interface Originality {
 ```
 
 - **Rules:** `docs/decisions/2026-11-20-copy-and-wrapper-rules.md` as amended by `docs/decisions/2026-11-20-verdict-scope-and-earliest-design.md`, run in this order: can't check → wrapper → copy or too small to tell → no earlier copy found.
+- **Complete or none:** a result is built whole or not at all. A circuit outside the index, or a failed mining contract read, is a "Can't check" error for the caller, never a partial `Originality`, and is never published. `cant-check` with `outside-index` is for an indexed circuit whose wrapper or REF targets are not indexed; an unreadable netlist still gets a complete result (`docs/decisions/2026-11-20-complete-result-or-none.md`).
 - **Who gets a result:** every miner and every circuit listed on TapeOut's circuit market; anything else pasted into the app is checked on screen with `scope: "pasted"` and never published.
 - **Netlist hash:** `keccak256(abi.encodePacked(uint32 nIn, uint32 nOut, bytes sorted))`, where `sorted` is the netlist with each NAND record's two inputs in ascending order and LATCH and REF records unchanged. A copy with swapped inputs matches; the same bytes with a different `nIn` or `nOut` don't. The byte hash is the same encoding with the bytes as stored, kept as evidence (`bytesIdentical`). Code: `packages/originality/src/hash.ts`.
 - **Wrapper chains:** followed for at most 10 steps on the longest branch; past that the verdict is `cant-check` with `ref-chain-too-long` (`docs/decisions/2026-11-20-wrapper-targets-and-step-limit.md`).

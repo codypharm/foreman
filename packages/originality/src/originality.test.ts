@@ -5,11 +5,14 @@ import fixture from "../fixtures/bnb-circuits-134673279.json" with {
 	type: "json",
 };
 import {
+	buildOriginality,
 	type CircuitId,
 	checkWrapper,
+	circuitRef,
 	ORIGINALITY_RULES,
 	originalityVerdict,
 	RULE_VERSION,
+	readCanMine,
 	readNetlist,
 	type WrapperCheck,
 } from "./index.ts";
@@ -379,5 +382,83 @@ describe("a netlist that can't be read", () => {
 			expect(result.result).toEqual({ verdict: "cant-check", reason });
 			expect(result.facts).toEqual([]);
 		}
+	});
+});
+
+describe("one complete result", () => {
+	test("puts the contract's design bonus answer first, then the verdict's facts, then exactly one can-mine fact", async () => {
+		const index = await fixtureIndex();
+		const target = { processor: MINE6, id: 2683n };
+		const entry = index.entries.find(
+			(e) => e.circuit.processor === MINE6 && e.circuit.id === 2683n,
+		);
+		if (!entry) throw new Error("MINE6/2683 is in the fixture");
+		const verdict = originalityVerdict({ target, index, wrapper: NO_REF });
+		const mining = await readCanMine(
+			replayClient(fixture),
+			{ circuit: target, usesRef: false, revoke: null },
+			{ blockNumber: 134_673_279n },
+		);
+		if (!mining.read) throw new Error(mining.detail);
+		expect(
+			buildOriginality({
+				circuit: circuitRef(entry),
+				scope: "miner",
+				verdict,
+				mining: mining.facts,
+			}),
+		).toEqual({
+			circuit: {
+				chainId: 56,
+				processor: MINE6,
+				tokenId: 2683n,
+				tapedOutAt: {
+					block: 127_718_339n,
+					txIndex: 101,
+					logIndex: 640,
+					time: 1_792_036_565n,
+				},
+				tapedOutBy: "0x697efe8016e09457c794e2339ca764cae3a28ec8",
+				designCommittedAt: { block: 122_268_369n, time: 1_789_582_759n },
+			},
+			scope: "miner",
+			result: { verdict: "no-earlier-copy", netlistHash: entry.netlistHash },
+			facts: [
+				{ fact: "design-bonus", holds: true, bonus: 328n },
+				{ fact: "design-shared", miners: 2 },
+				{ fact: "can-mine", state: "mining" },
+			],
+			occc: { status: "not-checked" },
+			index: {
+				circuitsChecked: 33n,
+				upToBlock: { chainId: 56, block: 134_673_279n },
+			},
+			ruleVersion: "hash 2026-11-20, floor 4, chain 10",
+		});
+	});
+
+	test("is never built without exactly one can-mine fact", async () => {
+		const index = await fixtureIndex();
+		const entry = index.entries[0];
+		if (!entry) throw new Error("the fixture has circuits");
+		const verdict = originalityVerdict({
+			target: entry.circuit,
+			index,
+			wrapper: NO_REF,
+		});
+		const build = (mining: Parameters<typeof buildOriginality>[0]["mining"]) =>
+			buildOriginality({
+				circuit: circuitRef(entry),
+				scope: "listed",
+				verdict,
+				mining,
+			});
+		expect(() => build([])).toThrow("can-mine");
+		expect(() =>
+			build([
+				{ fact: "can-mine", state: "mining" },
+				{ fact: "can-mine", state: "not-started" },
+			]),
+		).toThrow("can-mine");
 	});
 });

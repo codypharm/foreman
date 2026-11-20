@@ -21,6 +21,7 @@ export {
 	type NetlistHashes,
 } from "./hash.ts";
 export {
+	buildOriginality,
 	circuitRef,
 	ORIGINALITY_RULES,
 	type OriginalityVerdictResult,
