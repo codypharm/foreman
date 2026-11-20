@@ -101,7 +101,7 @@ export async function readNetlist(
 		return {
 			readable: false,
 			reason: "netlist-unreadable",
-			detail: decoded.unreadable,
+			detail: `${processor}/${id} at block ${blockNumber}: ${decoded.unreadable}`,
 		};
 	}
 	return {

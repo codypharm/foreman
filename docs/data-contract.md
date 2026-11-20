@@ -178,7 +178,7 @@ interface CircuitRef {
 
 ```ts
 type OriginalityVerdict =
-  | { verdict: "wrapper"; pointsTo: CircuitRef[]; finalTarget: CircuitRef; chainSteps: number } // netlist is only REF records; finalTarget is the first circuit in the chain with gates of its own
+  | { verdict: "wrapper"; pointsTo: CircuitRef[]; finalTargets: CircuitRef[]; chainSteps: number } // netlist is only REF records; pointsTo is every distinct direct target; finalTargets is every circuit where a chain ends (the first with gates of its own); chainSteps counts the longest branch, at most 10
   | { verdict: "copy"; of: CircuitRef; netlistHash: Hex32; bytesIdentical: boolean; earlierBy: "tape-out" | "commitment" } // same netlist hash as a circuit with an earlier design time, at or above the size floor; bytesIdentical is false when they match only once NAND inputs are sorted; earlierBy says what made "of" earlier
   | { verdict: "too-small-to-tell"; sameAs: number; earliest: CircuitRef; netlistHash: Hex32; gateCount: number; floor: number } // identical, below the size floor
   | { verdict: "no-earlier-copy"; netlistHash: Hex32 }
@@ -212,13 +212,14 @@ interface Originality {
 
 - **Rules:** `docs/decisions/2026-11-20-copy-and-wrapper-rules.md` as amended by `docs/decisions/2026-11-20-verdict-scope-and-earliest-design.md`, run in this order: can't check → wrapper → copy or too small to tell → no earlier copy found.
 - **Who gets a result:** every miner and every circuit listed on TapeOut's circuit market; anything else pasted into the app is checked on screen with `scope: "pasted"` and never published.
-- **Netlist hash:** covers `nIn`, `nOut` and the netlist bytes with each NAND record's two inputs in ascending order, so a copy with swapped inputs matches. The same bytes with a different `nOut` are a different circuit. The raw byte hash is kept as evidence (`bytesIdentical`). The exact encoding is fixed in the rule version when the netlist reader is built.
+- **Netlist hash:** `keccak256(abi.encodePacked(uint32 nIn, uint32 nOut, bytes sorted))`, where `sorted` is the netlist with each NAND record's two inputs in ascending order and LATCH and REF records unchanged. A copy with swapped inputs matches; the same bytes with a different `nIn` or `nOut` don't. The byte hash is the same encoding with the bytes as stored, kept as evidence (`bytesIdentical`). Code: `packages/originality/src/hash.ts`.
+- **Wrapper chains:** followed for at most 10 steps on the longest branch; past that the verdict is `cant-check` with `ref-chain-too-long` (`docs/decisions/2026-11-20-wrapper-targets-and-step-limit.md`).
 - **Stated limit:** "Checks identical netlists, including swapped gate inputs. A copy with its gates reordered isn't detected." Shown with every `copy` and `no-earlier-copy`.
 - **Can mine:** the states and their wording are in `docs/decisions/2026-11-20-can-mine-revoked-and-stopped.md`. A revoked miner's evidence is its `Revoked` event; a stopped miner's is `getMiner`'s `stopBlock` and its `Stopped` event.
 - **Contract first for miners:** a miner's `design-bonus` fact is shown before Foreman's verdict, each labelled with its source. Neither overrides the other.
 - **Never "original":** `no-earlier-copy` is shown as "No earlier copy found among N circuits checked, up to block B", using `index`. A circuit outside the index is `cant-check`.
 - **Too small to tell:** shown as "Identical to N earlier circuits; too small to tell", with the floor stated. The floor is measured from the index, not chosen; until it is, no `copy` verdict is issued.
-- **Evidence travels with the verdict:** a `copy` names the earlier circuit, both design times (tape-out or commitment block) and the shared hash; a `wrapper` names what its REF records point to and where the chain ends. Nothing else is needed to re-check it from chain data.
+- **Evidence travels with the verdict:** a `copy` names the earlier circuit, both design times (tape-out or commitment block) and the shared hash; a `wrapper` names what its REF records point to and where each chain ends. Nothing else is needed to re-check it from chain data.
 - **Facts are not verdicts:** an `OriginalityFact` adds context ("taped out by the same address", "1,204 of its 1,209 gates come from other circuits") and never changes the verdict.
 - **Value is separate:** an `Originality` never changes a `Valuation`. There is no copy discount.
 
