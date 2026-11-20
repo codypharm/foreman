@@ -7,6 +7,7 @@ export {
 	readStoredNetlist,
 	type StoredNetlist,
 } from "./backfill.ts";
+export { type LoadedIndex, loadCircuitIndex } from "./load-index.ts";
 export { migrate } from "./migrate.ts";
 export {
 	backfillCommitments,

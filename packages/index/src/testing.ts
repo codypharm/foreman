@@ -1,10 +1,24 @@
 // Test helpers: a fresh, migrated test database.
 
+import { podMiningAbi } from "@foreman/chain-bnb";
+import { type Fixture, replayClient } from "@foreman/chain-bnb/fixture";
+import { parseHex32 } from "@foreman/contract";
+import type { MinerStart } from "@foreman/originality";
+import circuits from "@foreman/originality/fixtures/bnb-circuits-134673279.json" with {
+	type: "json",
+};
 import { fixtureIndex } from "@foreman/originality/testing";
 import pg from "pg";
-import type { Address } from "viem";
+import {
+	type Address,
+	decodeFunctionResult,
+	type Hex,
+	zeroAddress,
+} from "viem";
+import { backfillNetlists } from "./backfill.ts";
 import { migrate } from "./migrate.ts";
-import type { CompleteScan } from "./store.ts";
+import { backfillCommitments, saveMinerStarts } from "./miners.ts";
+import { type CompleteScan, saveScan } from "./store.ts";
 
 export const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
@@ -67,5 +81,58 @@ export async function emptyIndexAt(block: bigint): Promise<pg.Pool> {
 	await pool.query("insert into index_state (up_to_block) values ($1)", [
 		block.toString(),
 	]);
+	return pool;
+}
+
+/**
+ * The originality fixture's 33 circuits built into a test database the way the real index is:
+ * tape-outs saved, netlists backfilled, its 16 miners saved (their Started events aren't in the
+ * fixture, so each gets one made-up start) and their commitments backfilled.
+ */
+export async function fixtureIndexedDatabase(
+	options: {
+		netlistLimit?: number;
+		skipCommitments?: boolean;
+		skipMiners?: boolean;
+		/** Save the miner starts as read up to this block instead of the index's. */
+		minersUpTo?: bigint;
+		/** The fixture with changed responses, e.g. from withNetlist. */
+		changed?: Fixture;
+	} = {},
+): Promise<pg.Pool> {
+	const pool = await freshDatabase();
+	const client = replayClient(options.changed ?? circuits);
+	await saveScan(pool, await fixtureCircuitsScan());
+	await backfillNetlists(
+		pool,
+		client,
+		options.netlistLimit === undefined ? {} : { limit: options.netlistLimit },
+	);
+	if (options.skipMiners) return pool;
+	const starts: MinerStart[] = [];
+	for (const c of circuits.calls) {
+		const p = (c.params as { data?: string }[])[0];
+		if (c.method !== "eth_call" || !p?.data?.startsWith("0x0527edc2")) continue;
+		const m = decodeFunctionResult({
+			abi: podMiningAbi,
+			functionName: "getMiner",
+			data: c.result as Hex,
+		});
+		if (m.circuits === zeroAddress) continue;
+		starts.push({
+			key: parseHex32(`0x${p.data.slice(10)}`, "key"),
+			circuit: {
+				processor: m.circuits.toLowerCase() as Address,
+				id: m.circuitId,
+			},
+			startedAt: { block: 134_000_000n, txIndex: 0, logIndex: starts.length },
+		});
+	}
+	await saveMinerStarts(pool, {
+		complete: true,
+		upToBlock: options.minersUpTo ?? BigInt(circuits.block),
+		starts,
+	});
+	if (!options.skipCommitments) await backfillCommitments(pool, client);
 	return pool;
 }
