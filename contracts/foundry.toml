@@ -1,0 +1,15 @@
+# Foreman's results contract on X Layer (docs/decisions/2026-11-21-results-contract.md).
+# Same compiler and EVM version as TapeOut's RIG voucher on X Layer (Sourcify, exact match).
+[profile.default]
+src = "src"
+test = "test"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.24"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+
+[rpc_endpoints]
+xlayer_testnet = "https://testrpc.xlayer.tech"
+xlayer = "https://rpc.xlayer.tech"

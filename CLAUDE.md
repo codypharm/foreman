@@ -154,7 +154,7 @@ pnpm workspaces (`docs/decisions/2026-11-18-package-layout.md`). Everything is W
 | `packages/originality` | Netlist reader, hashing, copy and wrapper checks, the tape-out scan. No database |
 | `packages/index` | The circuit index's storage: SQL migrations, saving a scan, reading the index back (`pg`) |
 | `packages/chain-xlayer` | X Layer reader: RIG vouchers and TapePool Lend offers (live quote or no offer with its reason; the live quote tested on a local copy of X Layer). Planned: the results contract |
-| `contracts/` | Planned: the X Layer results contract (Foundry, `2026-11-21-results-contract.md`) |
+| `contracts/` | The X Layer results contract, `ForemanResults` (Foundry: `forge test` in `contracts/`; not deployed), `2026-11-21-results-contract.md` |
 | `apps/api` | Planned: Hono API and jobs |
 | `apps/web` | Planned: web app (Vite, React) |
 | `scripts/` | One-off checks (`check_pod_mining.py`) |

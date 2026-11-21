@@ -22,3 +22,8 @@ coverage/
 # impeccable working files (draft mocks, decision pages, hook cache); chosen mocks go in docs/mocks
 .impeccable/*
 !.impeccable/config.json
+
+# Foundry build output
+contracts/out/
+contracts/cache/
+contracts/broadcast/
