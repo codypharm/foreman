@@ -13,12 +13,20 @@ import circuits from "@foreman/originality/fixtures/bnb-circuits-134673279.json"
 	type: "json",
 };
 import type pg from "pg";
-import { hexToString, keccak256, zeroAddress } from "viem";
+import {
+	createWalletClient,
+	custom,
+	hexToString,
+	keccak256,
+	RpcRequestError,
+	zeroAddress,
+} from "viem";
 import { afterEach, describe, expect, test } from "vitest";
 import { buildResult, loadResultContext } from "../result.ts";
 import { foremanResultsAbi } from "./abi.ts";
 import { FOUNDRY, type LocalXLayer, localXLayer } from "./local-xlayer.ts";
 import { planPublish, shortVerdict } from "./plan.ts";
+import { recoverBatch } from "./recover.ts";
 import { sendPlan } from "./send.ts";
 
 // Sending a plan to ForemanResults on a local X Layer testnet (anvil, chain 1952), with real results
@@ -242,6 +250,215 @@ describe.skipIf(!TEST_DATABASE_URL || !FOUNDRY)("sending a plan", () => {
 		expect(report).toMatchObject({ status: "failed", failedBatch: 1 });
 		expect(report.sent).toHaveLength(1);
 		expect((await readPublished(pool, contract)).size).toBe(2);
+	});
+
+	test("a node that can't be read before sending is a clean refusal, with nothing sent", async () => {
+		const { pool, chain, results, contract } = await setUp();
+		await chain.stop();
+		const report = await sendPlan({
+			pool,
+			publicClient: chain.publicClient,
+			wallet: chain.publisher,
+			contract,
+			plan: planPublish(results, new Map()),
+			batchSize: 10,
+		});
+		expect(report).toMatchObject({
+			status: "refused",
+			detail: expect.stringContaining("nothing was sent"),
+		});
+		expect((await readPublished(pool, contract)).size).toBe(0);
+	});
+
+	test("a batch that landed unrecorded is recovered from its receipt, and the same plan then resumes without resending it", async () => {
+		const { pool, chain, results, contract } = await setUp();
+		const plan = planPublish(results, await readPublished(pool, contract));
+		// Sent straight to the contract, as if the wait for its receipt had timed out
+		const landed = plan.entries.slice(0, 2);
+		const tx = await chain.publisher.writeContract({
+			address: contract.address,
+			abi: foremanResultsAbi,
+			functionName: "publish",
+			args: [
+				landed.map((e) => ({
+					processor: e.processor,
+					circuitId: e.id,
+					kind: e.kind,
+					canMine: e.canMine,
+					indexBlock: e.indexBlock,
+					result: e.result,
+				})),
+			],
+			account: chain.publisher.account ?? null,
+			chain: chain.publisher.chain,
+		});
+		await chain.publicClient.waitForTransactionReceipt({ hash: tx });
+
+		const recovered = await recoverBatch({
+			pool,
+			publicClient: chain.publicClient,
+			contract,
+			plan,
+			tx: parseHex32(tx, "tx"),
+		});
+		expect(recovered).toMatchObject({ recovered: true, entries: 2 });
+		const recorded = await readPublished(pool, contract);
+		expect([...recorded.values()].map((r) => r.tx)).toEqual([tx, tx]);
+
+		const report = await sendPlan({
+			pool,
+			publicClient: chain.publicClient,
+			wallet: chain.publisher,
+			contract,
+			plan,
+			batchSize: 10,
+		});
+		expect(report).toMatchObject({ status: "done", alreadyPublished: 2 });
+		expect(report.sent.map((b) => b.entries)).toEqual([3]);
+		const logs = await chain.publicClient.getContractEvents({
+			address: contract.address,
+			abi: foremanResultsAbi,
+			eventName: "Published",
+			fromBlock: 0n,
+		});
+		expect(logs).toHaveLength(results.length);
+	});
+
+	test("a node that takes a batch but times out answering still names the transaction, which can then be recovered", async () => {
+		const { pool, chain, results, contract } = await setUp();
+		const plan = planPublish(results, await readPublished(pool, contract));
+		// As on the testnet at batch 125 (21 Nov 2026): the node accepted the transaction and the
+		// request timed out before it returned the hash
+		const node = chain.publisher;
+		const timesOut = createWalletClient({
+			account: node.account,
+			chain: node.chain,
+			transport: custom(
+				{
+					async request({ method, params }) {
+						const answer = await node.request({ method, params } as never);
+						if (method.startsWith("eth_send")) {
+							throw new Error("The request took too long to respond.");
+						}
+						return answer;
+					},
+				},
+				{ retryCount: 0 },
+			),
+		});
+		const report = await sendPlan({
+			pool,
+			publicClient: chain.publicClient,
+			wallet: timesOut,
+			contract,
+			plan,
+			batchSize: 10,
+		});
+		expect(report).toMatchObject({ status: "failed", failedBatch: 0 });
+		if (report.status !== "failed" || !report.pendingTx) {
+			throw new Error("the failed batch named no transaction");
+		}
+		expect((await readPublished(pool, contract)).size).toBe(0);
+		// It lands even though nobody heard back
+		await chain.publicClient.waitForTransactionReceipt({
+			hash: report.pendingTx,
+		});
+
+		const recovered = await recoverBatch({
+			pool,
+			publicClient: chain.publicClient,
+			contract,
+			plan,
+			tx: report.pendingTx,
+		});
+		expect(recovered).toMatchObject({
+			recovered: true,
+			entries: results.length,
+		});
+	});
+
+	test("a batch the node refuses outright is not left pending: nothing was sent", async () => {
+		const { pool, chain, results, contract } = await setUp();
+		const plan = planPublish(results, await readPublished(pool, contract));
+		// As at batch 41 (21 Nov 2026): the node answered with an error and kept nothing
+		const node = chain.publisher;
+		const refuses = createWalletClient({
+			account: node.account,
+			chain: node.chain,
+			transport: custom(
+				{
+					async request({ method, params }) {
+						if (method === "eth_sendRawTransaction") {
+							throw new RpcRequestError({
+								body: { method, params },
+								error: { code: -32000, message: "oversized data" },
+								url: "local",
+							});
+						}
+						return node.request({ method, params } as never);
+					},
+				},
+				{ retryCount: 0 },
+			),
+		});
+		const report = await sendPlan({
+			pool,
+			publicClient: chain.publicClient,
+			wallet: refuses,
+			contract,
+			plan,
+			batchSize: 10,
+		});
+		expect(report).toMatchObject({
+			status: "failed",
+			failedBatch: 0,
+			detail: expect.stringContaining("oversized data"),
+		});
+		expect(report).not.toHaveProperty("pendingTx");
+		const logs = await chain.publicClient.getContractEvents({
+			address: contract.address,
+			abi: foremanResultsAbi,
+			eventName: "Published",
+			fromBlock: 0n,
+		});
+		expect(logs).toHaveLength(0);
+	});
+
+	test("a transaction whose events aren't the plan's is never recovered", async () => {
+		const { pool, chain, results, contract } = await setUp();
+		const plan = planPublish(results, new Map());
+		const first = plan.entries[0];
+		if (!first) throw new Error("no entry");
+		const tx = await chain.publisher.writeContract({
+			address: contract.address,
+			abi: foremanResultsAbi,
+			functionName: "publish",
+			args: [
+				[
+					{
+						processor: first.processor,
+						circuitId: first.id,
+						kind: first.kind,
+						canMine: first.canMine,
+						indexBlock: first.indexBlock,
+						result: first.result,
+					},
+				],
+			],
+			account: chain.publisher.account ?? null,
+			chain: chain.publisher.chain,
+		});
+		await chain.publicClient.waitForTransactionReceipt({ hash: tx });
+
+		const report = await recoverBatch({
+			pool,
+			publicClient: chain.publicClient,
+			contract,
+			plan: { entries: plan.entries.slice(1), unchanged: 0 },
+			tx: parseHex32(tx, "tx"),
+		});
+		expect(report).toMatchObject({ recovered: false });
+		expect((await readPublished(pool, contract)).size).toBe(0);
 	});
 
 	test("a wallet that isn't the publisher is refused before anything is read or sent", async () => {

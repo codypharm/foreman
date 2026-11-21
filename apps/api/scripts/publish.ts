@@ -11,9 +11,17 @@
 // key, set for this run only. It is never logged or written anywhere.
 //
 //   pnpm --filter @foreman/api publish-results --chain testnet --send data/publish-plan-1952-<block>.json
+//
+// A stopped send resumes with the same command: entries already recorded with the same hash are
+// skipped. A batch that was sent but not confirmed in time is recorded from its receipt, once it
+// has landed, with --recover (no key: it reads the chain and writes the table only):
+//
+//   pnpm --filter @foreman/api publish-results --chain testnet --send data/publish-plan-1952-<block>.json --recover 0x<tx>
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { parseHex32 } from "@foreman/contract";
 import { migrate, readPublished } from "@foreman/index";
 import pg from "pg";
 import {
@@ -26,6 +34,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { bsc } from "viem/chains";
 import { foremanResultsAbi } from "../src/publish/abi.ts";
+import { batchEntries, MAX_BATCH_CALLDATA } from "../src/publish/batch.ts";
 import { circuitsToPublish, collectResults } from "../src/publish/collect.ts";
 import {
 	DEFAULT_BATCH_SIZE,
@@ -39,6 +48,7 @@ import {
 	parsePlanFile,
 	serialisePlanFile,
 } from "../src/publish/plan-file.ts";
+import { recoverBatch } from "../src/publish/recover.ts";
 import { sendPlan } from "../src/publish/send.ts";
 import { loadResultContext } from "../src/result.ts";
 
@@ -47,6 +57,7 @@ const { values } = parseArgs({
 		chain: { type: "string" },
 		batch: { type: "string" },
 		send: { type: "string" },
+		recover: { type: "string" },
 	},
 });
 const chainId: ResultsChain = chainFrom(values.chain);
@@ -68,13 +79,18 @@ const xlayer = defineChain({
 const xlayerRpc = process.env.XLAYER_RPC_URL ?? XLAYER_RPC[chainId];
 const xlayerClient = createPublicClient({
 	chain: xlayer,
-	transport: http(xlayerRpc, { retryCount: 3, batch: { batchSize: 50 } }),
+	// X Layer's public RPCs refuse more than 10 calls in one batch (measured 21 Nov 2026)
+	transport: http(xlayerRpc, { retryCount: 3, batch: { batchSize: 10 } }),
 });
 
 const pool = new pg.Pool({ connectionString: DATABASE_URL });
 try {
 	await migrate(pool);
-	if (values.send) await send(values.send);
+	if (values.recover) {
+		if (!values.send)
+			throw new Error("--recover needs the plan file, as --send");
+		await recover(values.send, values.recover);
+	} else if (values.send) await send(values.send);
 	else await dryRun();
 } finally {
 	await pool.end();
@@ -122,14 +138,14 @@ async function dryRun() {
 			functionName: "publisher",
 		});
 		gas = [];
-		for (let i = 0; i < plan.entries.length; i += batchSize) {
+		for (const batch of batchEntries(plan.entries, { maxEntries: batchSize })) {
 			gas.push(
 				await xlayerClient.estimateContractGas({
 					address: contractAddress,
 					abi: foremanResultsAbi,
 					functionName: "publish",
 					args: [
-						plan.entries.slice(i, i + batchSize).map((e) => ({
+						batch.map((e) => ({
 							processor: e.processor,
 							circuitId: e.id,
 							kind: e.kind,
@@ -163,7 +179,7 @@ async function dryRun() {
 
 	console.log(`plan written to ${path.pathname}`);
 	console.log(
-		`  ${plan.entries.length} to publish in ${Math.ceil(plan.entries.length / batchSize)} batches of up to ${batchSize}; ${plan.unchanged} unchanged; ${skipped.length} skipped`,
+		`  ${plan.entries.length} to publish in ${batchEntries(plan.entries, { maxEntries: batchSize }).length} batches of up to ${batchSize}, each under ${MAX_BATCH_CALLDATA} bytes; ${plan.unchanged} unchanged; ${skipped.length} skipped`,
 	);
 	console.log(`  by verdict: ${JSON.stringify(wire.byVerdict)}`);
 	console.log(
@@ -188,12 +204,7 @@ async function send(planPath: string) {
 			`no results contract on chain ${chainId} yet: deploy it and list it in On-chain facts first`,
 		);
 	}
-	const file = parsePlanFile(JSON.parse(readFileSync(planPath, "utf8")));
-	if (file.chainId !== chainId || file.contract !== contractAddress) {
-		throw new Error(
-			`the plan was made for chain ${file.chainId}, contract ${file.contract ?? "none"}; make a new plan for chain ${chainId}, contract ${contractAddress}`,
-		);
-	}
+	const file = loadPlan(planPath);
 	const key = process.env.PUBLISHER_KEY;
 	if (!key || !/^0x[0-9a-fA-F]{64}$/.test(key)) {
 		throw new Error("PUBLISHER_KEY is not set, or isn't a 32-byte hex key");
@@ -221,7 +232,9 @@ async function send(planPath: string) {
 	});
 	switch (report.status) {
 		case "done":
-			console.log(`done: ${report.sent.length} batches sent and recorded`);
+			console.log(
+				`done: ${report.sent.length} batches sent and recorded; ${report.alreadyPublished} already published, skipped`,
+			);
 			return;
 		case "refused":
 			console.error(`refused: ${report.detail}`);
@@ -238,8 +251,15 @@ async function send(planPath: string) {
 			break;
 		case "failed":
 			console.error(
-				`stopped at batch ${report.failedBatch + 1}: ${report.detail}. ${report.sent.length} batch(es) before it were sent and recorded; run a new dry run before sending again`,
+				`stopped at batch ${report.failedBatch + 1}: ${report.detail}. ${report.sent.length} batch(es) before it were sent and recorded.`,
 			);
+			if (report.pendingTx) {
+				console.error(
+					`That batch was sent as ${report.pendingTx} and may still land. Once it has, record it with:\n  pnpm --filter @foreman/api publish-results --chain ${values.chain} --send ${planPath} --recover ${report.pendingTx}\nthen run this send again to carry on.`,
+				);
+			} else {
+				console.error("Run this send again to carry on.");
+			}
 			break;
 	}
 	process.exitCode = 1;
@@ -255,4 +275,44 @@ function largest(values: bigint[]): bigint {
 	let most = 0n;
 	for (const v of values) if (v > most) most = v;
 	return most;
+}
+
+/** The plan file, checked to be for this chain's contract. */
+function loadPlan(planPath: string): PlanFile {
+	if (!contractAddress) {
+		throw new Error(
+			`no results contract on chain ${chainId} yet: deploy it and list it in On-chain facts first`,
+		);
+	}
+	// pnpm runs this from apps/api; a relative path means the folder the command was typed in
+	const fullPath = resolve(process.env.INIT_CWD ?? process.cwd(), planPath);
+	const file = parsePlanFile(JSON.parse(readFileSync(fullPath, "utf8")));
+	if (file.chainId !== chainId || file.contract !== contractAddress) {
+		throw new Error(
+			`the plan was made for chain ${file.chainId}, contract ${file.contract ?? "none"}; make a new plan for chain ${chainId}, contract ${contractAddress}`,
+		);
+	}
+	return file;
+}
+
+async function recover(planPath: string, tx: string) {
+	const file = loadPlan(planPath);
+	const report = await recoverBatch({
+		pool,
+		publicClient: xlayerClient,
+		contract: {
+			chainId,
+			address: file.contract as NonNullable<PlanFile["contract"]>,
+		},
+		plan: { entries: file.entries, unchanged: file.unchanged },
+		tx: parseHex32(tx, "--recover"),
+	});
+	if (report.recovered) {
+		console.log(
+			`recorded ${report.entries} results from ${report.tx}, block ${report.block}`,
+		);
+	} else {
+		console.error(`not recovered: ${report.detail}`);
+		process.exitCode = 1;
+	}
 }
