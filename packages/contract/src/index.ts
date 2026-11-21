@@ -31,12 +31,18 @@ export {
 	type TapePoolReason,
 	type Venue,
 } from "./offer.ts";
-export type {
-	CantMineReason,
-	CircuitRef,
-	Originality,
-	OriginalityFact,
-	OriginalityVerdict,
+export {
+	type CantMineReason,
+	type CircuitRef,
+	designedEarlier,
+	type Originality,
+	type OriginalityFact,
+	type OriginalityVerdict,
+	parseCircuitRef,
+	parseOriginality,
+	STOP_COOLDOWN_BLOCKS,
+	serialiseOriginality,
+	WRAPPER_STEP_LIMIT,
 } from "./originality.ts";
 export { type Payback, parsePayback, serialisePayback } from "./payback.ts";
 export { type Price, parsePrice, serialisePrice } from "./price.ts";

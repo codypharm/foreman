@@ -13,8 +13,8 @@
 | `Price` | Settled; display only. BNB against BEM is `BemPrice` (in `Payback`); OKB against BEM is still open | API job | App |
 | `Payback` | Settled (`2026-11-20-payback-and-bem-price.md`) | Valuation engine, from the market index and the BEM/WBNB pool | API, app |
 | `Offer` | Settled (`2026-11-19-offer-shape.md`) | Readers (BNB market, TapePool) + comparables rule | API, app |
-| `CircuitRef` | Provisional: storage known (`docs/notes/2026-11-20-netlist-storage.md`), times decided (`2026-11-20-originality-result.md`); waits for the result to be built | Circuit index | Originality, API, app |
-| `Originality` | Provisional: rules decided (`2026-11-20-copy-and-wrapper-rules.md`, `2026-11-20-verdict-scope-and-earliest-design.md`, `2026-11-20-size-floor.md`, `2026-11-20-originality-result.md`); waits for the result to be built | Originality check | API, app, publish job |
+| `CircuitRef` | Settled 21 Nov 2026: storage from `docs/notes/2026-11-20-netlist-storage.md`, times from `2026-11-20-originality-result.md`; built by the circuit index, parsed by `parseCircuitRef` | Circuit index | Originality, API, app |
+| `Originality` | Settled 21 Nov 2026: rules from `2026-11-20-copy-and-wrapper-rules.md`, `2026-11-20-verdict-scope-and-earliest-design.md`, `2026-11-20-size-floor.md`, `2026-11-20-originality-result.md`; built by `packages/originality`, parsed by `parseOriginality` and written by `serialiseOriginality` | Originality check | API, app, publish job |
 | `PublishedResult` | Settled (`2026-11-21-results-contract.md`); its `originality` follows `Originality` | Publish job | App, markets, lenders |
 | ~~`Policy`, `TapeOutResult`, `AgentKey`, `ActionLogEntry`~~ | **Withdrawn** 20 Nov 2026 with autopilot (`2026-11-20-scope-and-team.md`). Parsers removed in a later commit | — | — |
 
@@ -223,7 +223,7 @@ type LendNoneReason =
 - **Hold is not an offer:** it comes from the `Valuation`.
 - **Unclaimed rewards move with the NFT when it's sold:** a Sell is always shown with "claim first".
 
-### `CircuitRef` (provisional)
+### `CircuitRef`
 
 ```ts
 interface CircuitRef {
@@ -242,7 +242,7 @@ interface CircuitRef {
 - **Miner link:** a miner's key is `keccak256(abi.encodePacked(processor, tokenId))` (`docs/notes/2026-11-18-mining-contract-findings.md`).
 - **Where it comes from:** `tapedOutAt` and `tapedOutBy` come from the processor's `TapedOut(uint256 indexed id, address indexed owner, uint32, uint32)` event (`docs/notes/2026-11-20-netlist-storage.md`). `designCommittedAt` comes from `getMiner(key).commitBlock` on the mining contract, re-checkable against the `DesignCommitted` event in that block (`docs/notes/2026-11-20-what-can-mine.md`).
 
-### `Originality` (provisional)
+### `Originality`
 
 ```ts
 type OriginalityVerdict =
