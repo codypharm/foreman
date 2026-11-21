@@ -136,7 +136,7 @@ Each item gets 2–3 options, William chooses, it gets an ADR in `docs/decisions
 | Circuit index and originality check | TypeScript in `packages/originality`; every BNB Chain processor, tape-outs from one `TapedOut` scan with a per-processor count check, stored in Postgres (local until hosting is chosen), followed every 5 minutes: `2026-11-20-circuit-index.md` |
 | Valuation | TypeScript; token amounts as `bigint`, never `number`: `2026-11-18-language.md`, `2026-11-18-valuation-model.md` |
 | API and job runner | Hono on Node, Postgres, pg-boss: `2026-11-18-api-and-jobs.md`. Database access: `pg` with plain SQL, numbered SQL migrations, the index's storage in `packages/index`, local Postgres from `docker-compose.yml`: `2026-11-20-database-access.md`. Hosting open |
-| Results contract on X Layer | Open: shape, tooling, and who holds the publisher key |
+| Results contract on X Layer | Solidity with Foundry in `contracts/`; not upgradeable; one publisher address, replaceable by William's separate owner wallet; a short verdict per circuit in storage, the full `Originality` JSON in the event log, tied by its hash; originality only; testnet (chain 1952) first: `2026-11-21-results-contract.md` |
 | Frontend | Vite, React, wagmi and viem; static build for DeWEB, OKX Wallet first: `2026-11-18-frontend.md` |
 | Package manager and layout | pnpm workspaces: `2026-11-18-package-layout.md` |
 
@@ -154,7 +154,7 @@ pnpm workspaces (`docs/decisions/2026-11-18-package-layout.md`). Everything is W
 | `packages/originality` | Netlist reader, hashing, copy and wrapper checks, the tape-out scan. No database |
 | `packages/index` | The circuit index's storage: SQL migrations, saving a scan, reading the index back (`pg`) |
 | `packages/chain-xlayer` | X Layer reader: RIG vouchers and TapePool Lend offers (live quote or no offer with its reason; the live quote tested on a local copy of X Layer). Planned: the results contract |
-| `contracts/` | Planned: the X Layer results contract |
+| `contracts/` | Planned: the X Layer results contract (Foundry, `2026-11-21-results-contract.md`) |
 | `apps/api` | Planned: Hono API and jobs |
 | `apps/web` | Planned: web app (Vite, React) |
 | `scripts/` | One-off checks (`check_pod_mining.py`) |
@@ -264,7 +264,7 @@ The `grill-me` queue. Strike an item when an ADR settles it.
 - ~~Can a REF-only wrapper or an exact copy mine, and with what weight?~~ Settled: `docs/notes/2026-11-20-what-can-mine.md` and `docs/decisions/2026-11-20-verdict-scope-and-earliest-design.md`.
 - ~~How to index every circuit since launch: tape-out events, archive node limits, and X Layer circuits.~~ Settled: `docs/decisions/2026-11-20-circuit-index.md` (BNB Chain only for the MVP).
 - Is OCCC deployed anywhere, and how is its status read?
-- The results contract on X Layer: its shape, tooling, and who holds the publisher key.
+- ~~The results contract on X Layer: its shape, tooling, and who holds the publisher key.~~ Settled: `docs/decisions/2026-11-21-results-contract.md`.
 - Price conversion: ~~BNB against BEM~~ settled by `docs/decisions/2026-11-20-payback-and-bem-price.md` (the BEM/WBNB pool's 30-minute average). Still open: OKB against BEM, for RIG vouchers priced on X Layer.
 - Hosting for the API, the jobs and Postgres.
 - Furqaan's agreement to reuse his code in the submission, and how he's credited.

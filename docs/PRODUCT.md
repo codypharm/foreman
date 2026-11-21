@@ -110,6 +110,6 @@ Mirrors "Still open" in `CLAUDE.md`. Strike an item when a decision settles it.
 - ~~Can a REF-only wrapper or an exact copy mine, and with what weight?~~ Settled: `docs/notes/2026-11-20-what-can-mine.md`, `docs/decisions/2026-11-20-verdict-scope-and-earliest-design.md`.
 - ~~How to index every circuit since launch: tape-out events, archive node limits.~~ Settled: `docs/decisions/2026-11-20-circuit-index.md`.
 - Is OCCC deployed anywhere, and how is its status read?
-- Results contract on X Layer: its shape, and who holds the publisher key.
+- ~~Results contract on X Layer: its shape, and who holds the publisher key.~~ Settled: `docs/decisions/2026-11-21-results-contract.md`.
 - Price conversion: `Price` is USD per BEM only; showing a BNB ask next to a BEM value needs BNB and OKB prices.
 - Hosting for the API, the jobs and Postgres.

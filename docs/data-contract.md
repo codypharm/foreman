@@ -15,7 +15,7 @@
 | `Offer` | Settled (`2026-11-19-offer-shape.md`) | Readers (BNB market, TapePool) + comparables rule | API, app |
 | `CircuitRef` | Provisional: storage known (`docs/notes/2026-11-20-netlist-storage.md`), times decided (`2026-11-20-originality-result.md`); waits for the result to be built | Circuit index | Originality, API, app |
 | `Originality` | Provisional: rules decided (`2026-11-20-copy-and-wrapper-rules.md`, `2026-11-20-verdict-scope-and-earliest-design.md`, `2026-11-20-size-floor.md`, `2026-11-20-originality-result.md`); waits for the result to be built | Originality check | API, app, publish job |
-| `PublishedResult` | Provisional: waits for the results contract design | Publish job | App, markets, lenders |
+| `PublishedResult` | Settled (`2026-11-21-results-contract.md`); its `originality` follows `Originality` | Publish job | App, markets, lenders |
 | ~~`Policy`, `TapeOutResult`, `AgentKey`, `ActionLogEntry`~~ | **Withdrawn** 20 Nov 2026 with autopilot (`2026-11-20-scope-and-team.md`). Parsers removed in a later commit | — | — |
 
 ---
@@ -296,16 +296,30 @@ interface Originality {
 - **Facts are not verdicts:** an `OriginalityFact` adds context ("taped out by the same address", "1,204 of its 1,209 gates come from other circuits") and never changes the verdict.
 - **Value is separate:** an `Originality` never changes a `Valuation`. There is no copy discount.
 
-### `PublishedResult` (provisional)
+### `PublishedResult`
+
+*Decided in `docs/decisions/2026-11-21-results-contract.md`.*
 
 ```ts
+type PublishedKind = "no-earlier-copy" | "copy" | "too-small-to-tell" | "wrapper" | "cant-check"; // on chain 1 to 5
+type PublishedCanMine = "mining" | "cant-mine" | "stopped" | "not-started";                    // on chain 1 to 4
+
 interface PublishedResult {
-  originality: Originality;
-  publishedAt: { chainId: 196; block: bigint; tx: Hex32 };
-  contract: Address;         // Foreman's results contract on X Layer, once deployed and listed in "On-chain facts"
+  originality: Originality;  // decoded from the log's bytes
+  verdict: {                 // the short verdict in contract storage
+    kind: PublishedKind;
+    canMine: PublishedCanMine;
+    indexBlock: bigint;      // = originality.index.upToBlock.block
+    resultHash: Hex32;       // keccak256 of the log's bytes
+  };
+  publishedAt: { chainId: 196 | 1952; block: bigint; tx: Hex32 }; // X Layer mainnet or testnet
+  contract: Address;         // Foreman's results contract, once deployed and listed in "On-chain facts"
 }
 ```
 
-- **Only miners and listed circuits:** a result with `scope: "pasted"` is never published.
-- **Reproducible:** what is written on chain includes the verdict, its evidence, `ruleVersion` and `index.upToBlock`, so anyone can recompute it.
-- **The on-chain encoding** is decided with the results contract.
+- **Only miners and listed circuits:** a result with `scope: "pasted"` is never published. A "Can't check" error (outside the index, a failed read) is not a result and is never published; a complete `cant-check` result is.
+- **On chain:** storage holds the short verdict per circuit, keyed by `keccak256(abi.encodePacked(processor, circuitId))` (a miner's key). The `Published` event in the same transaction carries the full result: the `Originality` as this contract's wire JSON (bigints as decimal strings), as bytes. BNB Chain circuits only.
+- **The hash ties them:** `resultHash` is `keccak256` of the logged bytes, computed by the contract. A reader decodes the bytes with `parseOriginality` and refuses a `PublishedResult` whose `verdict` disagrees with them: `kind` with `originality.result.verdict`, `canMine` with its can-mine fact, `indexBlock` with `originality.index.upToBlock.block`.
+- **Reproducible:** the logged result includes the verdict, its evidence, `ruleVersion` and `index.upToBlock`, so anyone can recompute it.
+- **When:** every miner and listed circuit once, then again only when its verdict, its evidence or its can-mine state changes. A newer publish replaces the short verdict; every earlier one stays in the log.
+- **Originality only:** no `Valuation` is published.
