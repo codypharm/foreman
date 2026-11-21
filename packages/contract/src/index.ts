@@ -1,7 +1,15 @@
 // The data contract's types and parsers. Shapes: docs/data-contract.md (owned by Furqaan).
 
 export {
+	API_ERRORS,
+	type ApiError,
+	parseApiError,
+	serialiseApiError,
+} from "./api-error.ts";
+export {
 	type ListingAsk,
+	MULTIPLIERS,
+	type Multiplier,
 	type Published,
 	type PublishedAt,
 	parseListingAsk,
@@ -21,12 +29,19 @@ export {
 export type { BnbRead } from "./bnb.ts";
 export {
 	type CircuitPage,
-	MULTIPLIERS,
-	type Multiplier,
 	parseCircuitPage,
 	serialiseCircuitPage,
 } from "./circuit-page.ts";
 export { ContractParseError } from "./errors.ts";
+export {
+	LISTING_VERDICTS,
+	LISTINGS_PAGE_SIZE,
+	type ListingRow,
+	type ListingsPage,
+	type ListingVerdict,
+	parseListingsPage,
+	serialiseListingsPage,
+} from "./listings-page.ts";
 export { type Miner, parseMiner, serialiseMiner } from "./miner.ts";
 export {
 	type NetworkState,
@@ -78,6 +93,15 @@ export {
 	serialiseValuation,
 	type Valuation,
 } from "./valuation.ts";
+export {
+	type CopyAlert,
+	type CopyListing,
+	JUST_LISTED_SECONDS,
+	parseWalletMiners,
+	serialiseWalletMiners,
+	type WalletMiner,
+	type WalletMiners,
+} from "./wallet-miners.ts";
 export {
 	type Address,
 	type Hex32,

@@ -5,11 +5,14 @@
 
 import {
 	type ListingAsk,
+	type Multiplier,
 	type Published,
 	parseListingAsk,
+	parseMultiplier,
 	parsePublished,
 	parseStoredCheck,
 	type StoredCheck,
+	sameWire,
 	serialiseListingAsk,
 	serialisePublished,
 	serialiseStoredCheck,
@@ -45,10 +48,6 @@ import {
 	parseText,
 	parseUint,
 } from "./wire.ts";
-
-/** The two eligible processors' multipliers, and 0 for every other; the sealed mining contract can't add one. */
-export const MULTIPLIERS = [0, 1, 6] as const;
-export type Multiplier = (typeof MULTIPLIERS)[number];
 
 export interface CircuitPage {
 	circuit: CircuitRef;
@@ -281,10 +280,6 @@ function checkOneCircuit(page: CircuitPage, field: string): void {
 	}
 }
 
-function sameWire(a: unknown, b: unknown): boolean {
-	return JSON.stringify(toWire(a, "")) === JSON.stringify(toWire(b, ""));
-}
-
 /** A circuit page for the wire. Parses its own output, so it never sends what the app would refuse. */
 export function serialiseCircuitPage(
 	page: CircuitPage,
@@ -328,17 +323,6 @@ export function serialiseCircuitPage(
 	};
 	parseCircuitPage(wire, field);
 	return wire;
-}
-
-function parseMultiplier(wire: unknown, field: string): Multiplier {
-	if (!(MULTIPLIERS as readonly unknown[]).includes(wire)) {
-		throw new ContractParseError(
-			field,
-			"6, 1 or 0 (the processor's multiplier in the mining contract)",
-			wire,
-		);
-	}
-	return wire as Multiplier;
 }
 
 function parseVoucher(

@@ -27,6 +27,10 @@ import {
 	serialiseUint,
 } from "./wire.ts";
 
+/** The two eligible processors' multipliers, and 0 for every other; the sealed mining contract can't add one. */
+export const MULTIPLIERS = [0, 1, 6] as const;
+export type Multiplier = (typeof MULTIPLIERS)[number];
+
 /** A circuit's stored result, read from the results table, never built on request. */
 export type StoredCheck =
 	| { state: "checked"; originality: Originality }
@@ -56,6 +60,17 @@ export type Published =
 			resultHash: Hex32;
 	  }
 	| { state: "not-published"; reason: "pasted" | "not-yet" };
+
+export function parseMultiplier(wire: unknown, field: string): Multiplier {
+	if (!(MULTIPLIERS as readonly unknown[]).includes(wire)) {
+		throw new ContractParseError(
+			field,
+			"6, 1 or 0 (the processor's multiplier in the mining contract)",
+			wire,
+		);
+	}
+	return wire as Multiplier;
+}
 
 export function parseStoredCheck(wire: unknown, field: string): StoredCheck {
 	const w = parseObject(wire, field);
@@ -171,4 +186,17 @@ export function toWire(value: unknown, field: string): unknown {
 		);
 	}
 	return value;
+}
+
+/** The same value once on the wire: for comparing two parsed parts, such as two CircuitRefs. */
+export function sameWire(a: unknown, b: unknown): boolean {
+	return JSON.stringify(toWire(a, "")) === JSON.stringify(toWire(b, ""));
+}
+
+/** a was listed after b: a later Listed block, or the same block and a higher listing number. Lists run newest first. */
+export function listedAfter(a: ListingAsk, b: ListingAsk): boolean {
+	return (
+		a.listedAt.block > b.listedAt.block ||
+		(a.listedAt.block === b.listedAt.block && a.listingId > b.listingId)
+	);
 }
