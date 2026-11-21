@@ -1,0 +1,24 @@
+{
+	"name": "@foreman/api",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"typecheck": "tsc -p .",
+		"publish-results": "node --env-file-if-exists=../../.env scripts/publish.ts"
+	},
+	"dependencies": {
+		"@foreman/chain-bnb": "workspace:*",
+		"@foreman/contract": "workspace:*",
+		"@foreman/index": "workspace:*",
+		"@foreman/originality": "workspace:*",
+		"pg": "^8.23.1",
+		"viem": "2.57.16"
+	},
+	"devDependencies": {
+		"@types/node": "24.19.2",
+		"@types/pg": "^8.23.1",
+		"vitest": "^5.1.0"
+	}
+}

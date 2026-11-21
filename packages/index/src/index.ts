@@ -43,6 +43,13 @@ export {
 	saveNetworkDays,
 } from "./network-days.ts";
 export {
+	type PublishedEntry,
+	type PublishedRow,
+	type ResultsContract,
+	readPublished,
+	recordPublished,
+} from "./published.ts";
+export {
 	type CompleteScan,
 	readIndex,
 	type StoredIndex,
