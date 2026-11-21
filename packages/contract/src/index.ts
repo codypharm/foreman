@@ -1,12 +1,31 @@
 // The data contract's types and parsers. Shapes: docs/data-contract.md (owned by Furqaan).
 
 export {
+	type ListingAsk,
+	type Published,
+	type PublishedAt,
+	parseListingAsk,
+	parsePublished,
+	parseStoredCheck,
+	type StoredCheck,
+	serialiseListingAsk,
+	serialisePublished,
+	serialiseStoredCheck,
+} from "./api-shared.ts";
+export {
 	BEM_PRICE_AVERAGED_OVER,
 	type BemPrice,
 	parseBemPrice,
 	serialiseBemPrice,
 } from "./bem-price.ts";
 export type { BnbRead } from "./bnb.ts";
+export {
+	type CircuitPage,
+	MULTIPLIERS,
+	type Multiplier,
+	parseCircuitPage,
+	serialiseCircuitPage,
+} from "./circuit-page.ts";
 export { ContractParseError } from "./errors.ts";
 export { type Miner, parseMiner, serialiseMiner } from "./miner.ts";
 export {

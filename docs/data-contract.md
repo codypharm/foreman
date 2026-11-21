@@ -16,6 +16,7 @@
 | `CircuitRef` | Settled 21 Nov 2026: storage from `docs/notes/2026-11-20-netlist-storage.md`, times from `2026-11-20-originality-result.md`; built by the circuit index, parsed by `parseCircuitRef` | Circuit index | Originality, API, app |
 | `Originality` | Settled 21 Nov 2026: rules from `2026-11-20-copy-and-wrapper-rules.md`, `2026-11-20-verdict-scope-and-earliest-design.md`, `2026-11-20-size-floor.md`, `2026-11-20-originality-result.md`; built by `packages/originality`, parsed by `parseOriginality` and written by `serialiseOriginality` | Originality check | API, app, publish job |
 | `PublishedResult` | Settled (`2026-11-21-results-contract.md`); its `originality` follows `Originality` | Publish job | App, markets, lenders |
+| `ListingsPage`, `CircuitPage`, `WalletMiners`, `ApiError` | Provisional, approved by William 21 Nov 2026 (`2026-11-21-api-endpoints.md`); fields may change when the market follow stores listing times and weight without the bonus | API | App, markets, lenders |
 | ~~`Policy`, `TapeOutResult`, `AgentKey`, `ActionLogEntry`~~ | **Withdrawn** 20 Nov 2026 with autopilot (`2026-11-20-scope-and-team.md`). Parsers removed in a later commit | — | — |
 
 ---
@@ -323,3 +324,154 @@ interface PublishedResult {
 - **Reproducible:** the logged result includes the verdict, its evidence, `ruleVersion` and `index.upToBlock`, so anyone can recompute it.
 - **When:** every miner and listed circuit once, then again only when its verdict, its evidence or its can-mine state changes. A newer publish replaces the short verdict; every earlier one stays in the log.
 - **Originality only:** no `Valuation` is published.
+
+---
+
+## API responses
+
+*Proposed and approved by William on 21 November 2026 (`docs/decisions/2026-11-21-api-endpoints.md`). Provisional: the shape holds, and parsers and tests go in `packages/contract`. The API is public and read-only; the web app, markets and lenders read the same responses.*
+
+| Endpoint | Returns | For |
+| --- | --- | --- |
+| `GET /listings?set=mining\|all&verdict=…&cursor=…` | `ListingsPage` | Live listings (the landing page) |
+| `GET /check?q=…` | `{ processor, tokenId }` or `ApiError` | The Check box: resolves a listing number, miner key, processor and id, or RIG voucher number |
+| `GET /circuit/:processor/:tokenId` | `CircuitPage` | The result page |
+| `GET /wallet/:address/miners` | `WalletMiners` | Your miners and copy alerts |
+
+Every response follows the wire format above. Counts of things (listings, circuits, copies) are JSON numbers, as in `Offer` and `Originality`.
+
+### Shared pieces
+
+```ts
+type StoredCheck =                       // a circuit's stored result (decision 2): read from the results table, never built on request
+  | { state: "checked"; originality: Originality }
+  | { state: "not-checked"; detail: string }; // no stored result yet: shown as "Can't check", never as a verdict
+
+type ListingAsk = {
+  listingId: bigint;
+  seller: Address;
+  ask: Amount;                           // BNB on TapeOut's BNB market
+  listedAt: { block: bigint; time: bigint }; // the Listed event's block and its timestamp
+  buyable: boolean;                      // false when a buy would revert (e.g. approval revoked)
+  readAt: ChainRead;                     // chain 56
+};
+
+type Published =                         // from Foreman's record of what it published
+  | { state: "current"; publishedAt: { chainId: 196 | 1952; block: bigint; tx: Hex32 }; contract: Address; resultHash: Hex32 }
+  | { state: "older"; publishedAt: { chainId: 196 | 1952; block: bigint; tx: Hex32 }; contract: Address; resultHash: Hex32 } // the result has changed since; the next publish replaces it
+  | { state: "not-published"; reason: "pasted" | "not-yet" };
+```
+
+- **`StoredCheck` is never a verdict by default:** `not-checked` is "Can't check" on screen, with its detail. It is never counted as "No earlier copy found".
+- **`Published` compares hashes:** `current` when the stored result's hash equals the published `resultHash`, otherwise `older`. The page's "read it back" reads X Layer itself; the API doesn't vouch for the chain.
+
+### `ListingsPage`
+
+```ts
+interface ListingRow {
+  listing: ListingAsk;
+  circuit: CircuitRef;
+  multiplier: number;                    // the processor's processorMultiplier: 6, 1, or 0 when it isn't eligible
+  check: StoredCheck;
+  value30d:                              // Hold over 30 days, from the weight stored with the listing; no live read
+    | { state: "shown"; valuation: Valuation }   // window.label "30d"
+    | { state: "not-mining" }
+    | { state: "not-read"; detail: string };     // the listing's miner state hasn't been read yet
+}
+
+interface ListingsPage {
+  set: "mining" | "all";                 // mining: buyable listings whose miner is active; all: every open listing
+  verdict: PublishedKind | "not-checked" | null; // the filter applied, null for none
+  market: { venue: "bnb-market"; upTo: ChainRead };
+  index: Originality["index"];
+  counts: {
+    open: number; buyable: number; sellers: number;
+    bySet: { mining: number; all: number };
+    byVerdict: Record<PublishedKind | "not-checked", number>; // within the chosen set, before the verdict filter
+  };
+  rows: ListingRow[];                    // newest listing first, at most 50
+  next: string | null;                   // cursor for the next 50
+}
+```
+
+- **Counts add up:** the parser refuses a page whose `byVerdict` doesn't sum to the chosen set's count.
+- **The fact line** ("82 of the 294 mining miners for sale are copies of an earlier circuit") is built from `counts`, never stored as text.
+
+### `CircuitPage`
+
+```ts
+interface CircuitPage {
+  circuit: CircuitRef;
+  multiplier: number;
+  check: StoredCheck;
+  published: Published;
+  miner: Miner | null;                   // live read; null when the circuit has never started mining
+  listing: ListingAsk | null;            // its open listing on TapeOut's BNB market, if any
+  voucher: { voucherId: bigint; holder: Address; readAt: ChainRead } | null; // when the rig vault holds it (chain 196)
+  hold:                                  // the estimated value
+    | { state: "shown"; thirtyDays: Valuation; toHalving: Valuation }
+    | { state: "not-mining" };
+  payback: Payback;                      // has its own not-listed, no-price and not-mining states
+  options: {
+    sell: Extract<Offer, { option: "sell" }>;
+    lend: [Extract<Offer, { option: "lend" }>, Extract<Offer, { option: "lend" }>]; // 7 days, then 14
+    rent: Extract<Offer, { option: "rent" }>;
+  };
+  bemPrice: BemPrice | { state: "no-price"; reason: string }; // for "≈ X BNB" beside BEM figures
+}
+```
+
+- **Live reads state their blocks:** `miner`, `listing`, `voucher`, `bemPrice` and the Lend offers each carry their own read; the page shows them. They may be a block or two apart, and each is labelled with its own.
+- **Hold needs a mining miner:** `hold` is `shown` only when `miner.status` is `active`; both windows use the same `miner` read.
+- **One circuit, one page:** the page exists for every indexed circuit. A circuit outside the index is an `ApiError` (`unknown-circuit`), never an empty page.
+
+### `WalletMiners`
+
+```ts
+interface CopyListing {
+  listing: ListingAsk;
+  circuit: CircuitRef;                   // a later identical circuit (same netlist hash, later design time)
+  sameAddress: boolean;                  // taped out by the same address as your miner
+  justListed: boolean;                   // listed within 7 days of the response's market read
+}
+
+interface CopyAlert {
+  netlistHash: Hex32;
+  copies: CopyListing[];                 // newest listing first; every one, the screen shows the first 3 and "Show all"
+  rule: string;                          // shown on screen: "Open listings of later identical circuits, at or above 4 gates, not listed by this wallet"
+}
+
+interface WalletMiner {
+  circuit: CircuitRef;
+  minerKey: Hex32;
+  heldAs: { kind: "nft"; ownerSince: bigint } | { kind: "voucher"; voucherId: bigint }; // ownerSince: the block of its last Transfer to this wallet
+  multiplier: number;
+  check: StoredCheck;
+  alert: CopyAlert | null;               // null when no copy is listed
+}
+
+interface WalletMiners {
+  wallet: Address;
+  owners: { chainId: 56; upToBlock: bigint };   // the owner follow's block
+  vouchers: ChainRead;                          // the live RIG read, chain 196
+  market: { venue: "bnb-market"; upTo: ChainRead };
+  miners: WalletMiner[];                        // miners with an alert first, then by circuit
+}
+```
+
+- **Only later circuits:** an alert lists circuits whose design time is later than this miner's, by the earliest-design rule. An earlier identical circuit is never in an alert. It shows up in this miner's own verdict ("Copy of circuit #X").
+- **Below the floor, no alert:** a design under 4 gates never raises one.
+- **The wallet's own listings are left out,** and so are listings that aren't open.
+- **Facts, never accusations:** shown as "1 copy listed", "Identical to your miner, designed 22 hours later". Never "stolen" or "fake".
+
+### `ApiError`
+
+```ts
+interface ApiError {
+  error: "not-recognised" | "unknown-circuit" | "unknown-wallet-input" | "read-failed" | "not-ready";
+  detail: string;                        // plain words, shown on screen
+  accepted?: string[];                   // with not-recognised: what the Check box accepts
+}
+```
+
+- **Never a crash, never a silent zero:** an RPC failure is `read-failed` with its detail. An index that isn't loaded is `not-ready`. A partial page is never returned.

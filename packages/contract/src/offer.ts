@@ -516,7 +516,8 @@ export function parseAmount(
 	return { currency, value };
 }
 
-function parseChainRead(
+/** A read on one chain; a read from any other chain is refused. */
+export function parseChainRead(
 	wire: unknown,
 	field: string,
 	chainId: 56 | 196,

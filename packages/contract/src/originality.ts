@@ -10,6 +10,7 @@ import {
 	type Hex32,
 	parseAddress,
 	parseBoolean,
+	parseCount,
 	parseHex32,
 	parseObject,
 	parseOneOf,
@@ -523,14 +524,6 @@ function parseChain(wire: unknown, field: string): 56 | 196 {
 		throw new ContractParseError(field, "56 or 196", wire);
 	}
 	return wire;
-}
-
-/** A small whole number (a count, an index) as a JSON number. */
-function parseCount(wire: unknown, field: string): number {
-	if (!Number.isSafeInteger(wire) || (wire as number) < 0) {
-		throw new ContractParseError(field, "a whole number of zero or more", wire);
-	}
-	return wire as number;
 }
 
 /** bigints become decimal strings; everything else is already the wire shape. */

@@ -116,6 +116,14 @@ export function parseBoolean(wire: unknown, field: string): boolean {
 	return wire;
 }
 
+/** A small whole number (a count, an index) as a JSON number. */
+export function parseCount(wire: unknown, field: string): number {
+	if (!Number.isSafeInteger(wire) || (wire as number) < 0) {
+		throw new ContractParseError(field, "a whole number of zero or more", wire);
+	}
+	return wire as number;
+}
+
 /** Digits only, no sign, no padding, no leading zeros: one way to write each number. */
 const DECIMAL = /^(0|[1-9][0-9]*)$/;
 
