@@ -1,0 +1,26 @@
+{
+	"name": "@foreman/chain-xlayer",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./fixtures/*": "./fixtures/*"
+	},
+	"scripts": {
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"typecheck": "tsc -p .",
+		"record:lend": "node --env-file-if-exists=../../.env scripts/record-lend-fixture.ts",
+		"record:lend-fork": "node scripts/record-lend-fork-fixture.ts",
+		"record:lend-live-fork": "node scripts/record-lend-live-fork-fixture.ts"
+	},
+	"dependencies": {
+		"@foreman/chain-bnb": "workspace:*",
+		"@foreman/contract": "workspace:*",
+		"viem": "2.57.16"
+	},
+	"devDependencies": {
+		"@types/node": "24.19.2",
+		"vitest": "^5.1.0"
+	}
+}

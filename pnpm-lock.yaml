@@ -31,6 +31,25 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0(@types/node@24.19.2)(vite@8.3.8(@types/node@24.19.2))
 
+  packages/chain-xlayer:
+    dependencies:
+      '@foreman/chain-bnb':
+        specifier: workspace:*
+        version: link:../chain-bnb
+      '@foreman/contract':
+        specifier: workspace:*
+        version: link:../contract
+      viem:
+        specifier: 2.57.16
+        version: 2.57.16(typescript@7.0.2)
+    devDependencies:
+      '@types/node':
+        specifier: 24.19.2
+        version: 24.19.2
+      vitest:
+        specifier: ^5.1.0
+        version: 5.1.0(@types/node@24.19.2)(vite@8.3.8(@types/node@24.19.2))
+
   packages/contract:
     devDependencies:
       vitest:

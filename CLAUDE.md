@@ -132,7 +132,7 @@ Each item gets 2–3 options, William chooses, it gets an ADR in `docs/decisions
 
 | Job | Status |
 | --- | --- |
-| Reading BNB Chain and X Layer | TypeScript with viem 2.57.16; `packages/chain-bnb`, later `packages/chain-xlayer`; tests on saved RPC responses: `2026-11-19-chain-readers.md` |
+| Reading BNB Chain and X Layer | TypeScript with viem 2.57.16; `packages/chain-bnb` and `packages/chain-xlayer`; tests on saved RPC responses: `2026-11-19-chain-readers.md` |
 | Circuit index and originality check | TypeScript in `packages/originality`; every BNB Chain processor, tape-outs from one `TapedOut` scan with a per-processor count check, stored in Postgres (local until hosting is chosen), followed every 5 minutes: `2026-11-20-circuit-index.md` |
 | Valuation | TypeScript; token amounts as `bigint`, never `number`: `2026-11-18-language.md`, `2026-11-18-valuation-model.md` |
 | API and job runner | Hono on Node, Postgres, pg-boss: `2026-11-18-api-and-jobs.md`. Database access: `pg` with plain SQL, numbered SQL migrations, the index's storage in `packages/index`, local Postgres from `docker-compose.yml`: `2026-11-20-database-access.md`. Hosting open |
@@ -153,7 +153,7 @@ pnpm workspaces (`docs/decisions/2026-11-18-package-layout.md`). Everything is W
 | `packages/valuation` | Valuation engine and backtests |
 | `packages/originality` | Netlist reader, hashing, copy and wrapper checks, the tape-out scan. No database |
 | `packages/index` | The circuit index's storage: SQL migrations, saving a scan, reading the index back (`pg`) |
-| `packages/chain-xlayer` | Planned: RIG vouchers, TapePool, the results contract |
+| `packages/chain-xlayer` | X Layer reader: RIG vouchers and TapePool Lend offers (live quote or no offer with its reason; the live quote tested on a local copy of X Layer). Planned: the results contract |
 | `contracts/` | Planned: the X Layer results contract |
 | `apps/api` | Planned: Hono API and jobs |
 | `apps/web` | Planned: web app (Vite, React) |
