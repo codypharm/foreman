@@ -1,0 +1,270 @@
+<!--
+  Live listings with the 30-day estimated value as a range, chosen by William on 22 November 2026 (option A
+  of three: low to high; low · base · high with a key; low to high with a small range bar). It refines the
+  live listings mock chosen on 21 November (2026-11-21-live-listings.html, layout A "Feed"), whose rows
+  showed one figure against the trust rule "Ranges, not prices". Only each row's value line changes, to
+  "low–high BEM / 30 days"; the base and the inputs are on the result page.
+  - Rounding: three significant figures, low rounded down and high rounded up, so the shown range always
+    contains the estimate.
+  - A row with no range says why, in the same place and secondary ink: "Not valued · unverified pool",
+    "Not mining", "Not read yet" (ListingRow.value30d). Never a zero.
+  Static mock: real rows from Foreman's local API on 22 Nov 2026 (GET /listings?set=mining, the first ten,
+  newest first), market at BNB block 135,141,389, verdicts from the index up to block 135,135,809 (80,348
+  circuits). Build to this; a layout or flow change is a new mock and a new choice.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foreman · Live listings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --raise:#F5F5F5; --ink:#000000; --ink-2:#6B6B6B; --ink-3:#9A9A9A; --line:#EBEBEB;
+  --accent:#C2F24B; --on-accent:#000000; --live:#14A44D; --stale:#C4231B; --stale-bg:#FDECEA;
+  --btn:#000000; --on-btn:#FFFFFF; --track:#E6E6E6; --span:#BDBDBD;
+  --sans:"Geist",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+    --live:#3DDC84; --stale:#FF7A6B; --stale-bg:#2A1210;
+    --btn:#FFFFFF; --on-btn:#000000; --track:#262626; --span:#4A4A4A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+  --live:#3DDC84; --stale:#FF7A6B; --stale-bg:#2A1210;
+  --btn:#FFFFFF; --on-btn:#000000; --track:#262626; --span:#4A4A4A;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{background:var(--bg)}
+::selection{background:var(--accent);color:var(--on-accent)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+button{font:inherit;color:inherit}
+a{color:inherit}
+
+/* top bar */
+.top{display:grid;grid-template-columns:auto minmax(0,480px) auto;justify-content:space-between;align-items:center;gap:24px;height:64px;padding:0 32px;border-bottom:1px solid var(--line)}
+.mark{display:flex;align-items:center;gap:9px;font:700 18px/1 var(--sans);letter-spacing:-.02em}
+.mark svg{display:block}
+.search{display:flex;align-items:center;gap:10px;height:40px;padding:0 6px 0 14px;border-radius:999px;background:var(--raise)}
+.search svg{flex:none;color:var(--ink-2)}
+.search input{all:unset;flex:1;min-width:0;font:500 14px/1 var(--sans)}
+.search input::placeholder{color:var(--ink-2)}
+.search button{all:unset;cursor:pointer;font:600 13px/1 var(--sans);padding:8px 12px;border-radius:999px;background:var(--btn);color:var(--on-btn)}
+.right{display:flex;align-items:center;gap:6px}
+.right nav{display:flex;gap:2px;margin-right:8px}
+.right nav a{font:500 14px/1 var(--sans);color:var(--ink-2);text-decoration:none;padding:9px 12px;border-radius:999px}
+.right nav a:hover{color:var(--ink)}
+.right nav a[aria-current=page]{color:var(--ink);background:var(--raise)}
+.icon{all:unset;cursor:pointer;display:grid;place-items:center;width:36px;height:36px;border-radius:999px;color:var(--ink-2)}
+.icon:hover{background:var(--raise);color:var(--ink)}
+.lang{font:600 13px/1 var(--sans);color:var(--ink-2);padding:0 6px}
+.wallet{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;font:600 13px/1 var(--sans);padding:10px 14px;border-radius:999px;background:var(--raise);white-space:nowrap;margin-left:4px}
+.wallet i{width:7px;height:7px;border-radius:50%;background:var(--live)}
+
+.page{max-width:1200px;margin:0 auto;padding:36px 32px 56px;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:56px;align-items:start}
+
+/* miner header */
+.who{display:flex;align-items:center;gap:14px}
+.badge{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:999px;background:var(--ink);color:var(--bg);font:700 14px/1 var(--sans);letter-spacing:.02em}
+.who h1{font:600 22px/1.2 var(--sans);letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.copy{all:unset;cursor:pointer;color:var(--ink-3);display:grid;place-items:center}
+.copy:hover{color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{font:500 12px/1 var(--sans);padding:5px 8px;border-radius:6px;background:var(--raise);color:var(--ink-2)}
+.chip.ok{color:var(--ink)} .chip.ok::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--live);margin-right:6px;vertical-align:1px}
+.chip.sample{background:none;box-shadow:inset 0 0 0 1px var(--line)}
+
+/* horizon */
+.seg{display:inline-flex;gap:2px;margin-top:32px;padding:3px;border-radius:999px;background:var(--raise)}
+.seg button{all:unset;cursor:pointer;font:500 13px/1 var(--sans);color:var(--ink-2);padding:9px 14px;border-radius:999px;white-space:nowrap}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-selected=true]{background:var(--btn);color:var(--on-btn);font-weight:600}
+
+/* the estimate */
+.est{margin-top:24px}
+.est .lbl{font:500 14px/1.3 var(--sans);color:var(--ink-2)}
+.est .num{display:flex;align-items:baseline;gap:12px;margin-top:6px}
+.est .num strong{font:600 72px/1 var(--sans);letter-spacing:-.035em}
+.est .num span{font:600 22px/1 var(--sans);color:var(--ink-2)}
+.est .usd{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;margin-top:10px;font:500 15px/1.3 var(--sans);color:var(--ink-2)}
+.tag{font:600 12px/1 var(--sans);padding:5px 8px;border-radius:6px;background:var(--stale-bg);color:var(--stale);white-space:nowrap}
+
+.range{margin-top:28px}
+.bar{position:relative;height:28px}
+.bar .t{position:absolute;left:0;right:0;top:12px;height:4px;border-radius:2px;background:var(--track)}
+.bar .s{position:absolute;top:12px;height:4px;border-radius:2px;background:var(--span);transition:left .4s cubic-bezier(.16,1,.3,1),width .4s cubic-bezier(.16,1,.3,1)}
+.bar .b{position:absolute;top:4px;width:20px;height:20px;margin-left:-10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--bg);transition:left .4s cubic-bezier(.16,1,.3,1)}
+.ends{display:flex;justify-content:space-between;gap:24px;margin-top:10px}
+.ends div{max-width:48%}
+.ends div+div{text-align:right}
+.ends span{font:500 13px/1.3 var(--sans);color:var(--ink-2)}
+.ends b{display:block;font:600 20px/1.2 var(--sans);margin-top:2px}
+.ends small{display:block;font-size:13px;line-height:1.4;color:var(--ink-2)}
+
+.cta{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:32px;height:52px;padding:0 28px;border-radius:999px;background:var(--btn);color:var(--on-btn);font:600 16px/1 var(--sans)}
+.cta:hover{opacity:.88}
+
+/* inputs */
+.inputs{margin-top:48px}
+.sec{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.sec h2{font:600 17px/1.2 var(--sans)}
+.key{display:flex;gap:14px;font:500 12px/1 var(--sans);color:var(--ink-2)}
+.key span{display:flex;align-items:center;gap:6px}
+.d{flex:none;width:7px;height:7px;border-radius:50%;background:var(--live)}
+.d.a{background:var(--ink-3)}
+.d.x{background:none;box-shadow:inset 0 0 0 1.5px var(--stale)}
+.inputs ul{list-style:none;padding:0}
+.inputs li{display:grid;grid-template-columns:7px 1fr auto;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.inputs li span{color:var(--ink-2);font-size:14px}
+.inputs li b{text-align:right;font:600 15px/1.3 var(--sans)}
+.inputs li b small{display:block;font:400 12px/1.4 var(--sans);color:var(--ink-2)}
+.inputs li.x span,.inputs li.x b{color:var(--stale)}
+.legal{margin-top:16px;font-size:12px;color:var(--ink-2)}
+
+/* your miners */
+.mine{position:sticky;top:24px}
+.mine .total{margin:14px 0 4px;font:500 13px/1.3 var(--sans);color:var(--ink-2)}
+.mine .total b{display:block;font:600 26px/1.15 var(--sans);color:var(--ink);letter-spacing:-.02em;margin-top:4px}
+.mine ul{list-style:none;padding:0;margin-top:12px}
+.mine li a{display:grid;grid-template-columns:36px 1fr auto;align-items:center;gap:12px;padding:12px 10px;margin:0 -10px;border-radius:12px;text-decoration:none}
+.mine li a:hover{background:var(--raise)}
+.mine li a[aria-current=true]{background:var(--raise)}
+.mine .badge{width:36px;height:36px;font-size:12px}
+.mine .badge.g{background:var(--raise);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.mine li a[aria-current=true] .badge.g{background:var(--bg)}
+.mine .k{font:600 15px/1.25 var(--sans)}
+.mine .k small{display:block;font:400 13px/1.35 var(--sans);color:var(--ink-2)}
+.mine .v{text-align:right;font:600 15px/1.25 var(--sans)}
+.mine .v small{display:block;font:400 13px/1.35 var(--sans);color:var(--ink-2)}
+.add{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:44px;margin-top:12px;border-radius:999px;font:600 14px/1 var(--sans);box-shadow:inset 0 0 0 1px var(--line)}
+.add:hover{background:var(--raise)}
+
+@media (max-width:1040px){ .right nav{display:none} .page{grid-template-columns:minmax(0,1fr) 300px;gap:40px} }
+@media (max-width:760px){
+  .top{grid-template-columns:auto auto;height:auto;padding:12px 16px;gap:12px}
+  .search{grid-column:1/-1;grid-row:2}
+  .lang{display:none}
+  .page{grid-template-columns:minmax(0,1fr);padding:20px 16px 40px;gap:40px}
+  .mine{position:static}
+  .seg{display:grid;grid-template-columns:repeat(5,auto);width:100%;margin-top:24px}
+  .seg button{padding:9px 4px;text-align:center}
+  .seg .lg{display:none}
+  .est .num strong{font-size:56px}
+  .cta{display:flex;width:100%}
+  .ends b{font-size:18px}
+}
+
+
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:13px;font-weight:500}
+.intro h1{font:600 28px/1.15 var(--sans);letter-spacing:-.02em}
+.intro p{margin-top:6px;font-size:14px;color:var(--ink-2)}
+.seg{margin-top:20px}
+.filters{display:flex;gap:6px;margin-top:14px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.filters button{all:unset;cursor:pointer;flex:none;font:500 13px/1 var(--sans);padding:9px 12px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--line);color:var(--ink-2);white-space:nowrap}
+.filters button b{font-weight:600;color:var(--ink);margin-left:4px}
+.filters button[aria-pressed=true]{background:var(--btn);color:var(--on-btn);box-shadow:none}
+.filters button[aria-pressed=true] b{color:var(--on-btn)}
+.fact{margin-top:18px;font:500 15px/1.45 var(--sans)}
+.fact b{font-weight:600}
+.rows{list-style:none;padding:0;margin-top:8px}
+.rows li a{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:12px;padding:13px 10px;margin:0 -10px;border-radius:12px;text-decoration:none;color:inherit;border-bottom:1px solid var(--line)}
+.rows li a:hover{background:var(--raise)}
+.rows .badge{width:40px;height:40px;font-size:12px}
+.rows .badge.g{background:var(--raise);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.rows .k{font:600 15px/1.25 var(--sans)}
+.rows .k small{display:block;font:400 13px/1.35 var(--sans);color:var(--ink-2);margin-top:2px}
+.rows .k small b{font-weight:600;color:var(--ink)}
+.rows .v{text-align:right;font:600 15px/1.25 var(--sans);white-space:nowrap}
+.rows .v small{display:block;font:400 13px/1.35 var(--sans);color:var(--ink-2)}
+.rows .v small.none{font-style:normal}
+.limit{margin-top:16px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.group{margin-top:36px}
+.group .sec h2 b{color:var(--ink-2);font-weight:500;margin-left:6px}
+.group .sec .meta{font:500 12px/1.3 var(--sans);color:var(--ink-2)}
+.note{margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--raise);font-size:13px;line-height:1.45;color:var(--ink-2)}
+.note b{color:var(--ink);font-weight:600}
+.market dl{display:grid;grid-template-columns:1fr auto;gap:0;margin-top:6px}
+.market dt,.market dd{padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+.market dt{color:var(--ink-2)}
+.market dd{text-align:right;font-weight:600}
+.market .sub{margin:22px 0 0;font:600 15px/1.2 var(--sans)}
+.market .pubbox{margin-top:24px;padding:14px 16px;border-radius:14px;background:var(--raise);font-size:13px;line-height:1.45;color:var(--ink-2)}
+.market .pubbox b{display:block;font:600 15px/1.3 var(--sans);color:var(--ink);margin-bottom:2px}
+@media (max-width:760px){ .seg{grid-template-columns:repeat(2,auto)} .intro h1{font-size:24px} }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="mark"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="9" height="9" rx="2" fill="currentColor"/><rect x="12" y="1" width="9" height="9" rx="2" fill="currentColor" opacity=".35"/><rect x="1" y="12" width="9" height="9" rx="2" fill="currentColor" opacity=".35"/><rect x="12" y="12" width="9" height="9" rx="2" fill="#C2F24B"/></svg>Foreman</div>
+  <form class="search" role="search" onsubmit="return false">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <input aria-label="Listing, miner or RIG voucher" placeholder="Paste a listing, miner or RIG voucher" value=""><button>Check</button>
+  </form>
+  <div class="right">
+    <nav><a href="#" aria-current="page">Live listings</a><a href="#">Check</a></nav>
+    <button class="icon" id="theme" aria-label="Switch light or dark"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M3.7 14.3l1.4-1.4M12.9 5.1l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button class="wallet">Connect wallet</button>
+  </div>
+</header>
+
+<div class="page">
+  <main>
+    <section class="intro">
+      <h1>Today’s listings, checked</h1>
+      <p>Every open listing on TapeOut’s circuit market, BNB block 135,141,389</p>
+    </section>
+    <div class="seg" role="tablist" aria-label="Which listings"><button role="tab" aria-selected="true">Mining miners · 300</button><button role="tab">All listings · 6,182</button></div>
+    <div class="filters" aria-label="Verdict"><button aria-pressed="true">All<b>300</b></button><button aria-pressed="false">Copy<b>86</b></button><button aria-pressed="false">No earlier copy found<b>48</b></button><button aria-pressed="false">Too small to tell<b>166</b></button></div>
+    <p class="fact"><b>86 of the 300</b> mining miners for sale are copies of an earlier circuit.</p>
+    <ul class="rows">
+      <li><a href="#"><span class="badge g" aria-hidden="true">×1</span><span class="k">Circuit #16196<small><b>Copy of #34</b></small></span><span class="v">2.85 BNB<small>9.28–9.53 BEM / 30 days</small></span></a></li>
+      <li><a href="#"><span class="badge g" aria-hidden="true">×1</span><span class="k">Circuit #7518<small><b>Copy of #5094</b></small></span><span class="v">1.4 BNB<small>5.15–5.30 BEM / 30 days</small></span></a></li>
+      <li><a href="#"><span class="badge g" aria-hidden="true">×1</span><span class="k">Circuit #15218<small><b>Copy of #34</b></small></span><span class="v">2.51 BNB<small>9.28–9.53 BEM / 30 days</small></span></a></li>
+      <li><a href="#"><span class="badge g" aria-hidden="true">×1</span><span class="k">Circuit #15720<small>No earlier copy found</small></span><span class="v">2.93 BNB<small>10.8–11.2 BEM / 30 days</small></span></a></li>
+      <li><a href="#"><span class="badge g" aria-hidden="true">×1</span><span class="k">Circuit #16995<small>No earlier copy found</small></span><span class="v">3.81 BNB<small>14.8–15.3 BEM / 30 days</small></span></a></li>
+      <li><a href="#"><span class="badge g" aria-hidden="true">×1</span><span class="k">Circuit #12751<small><b>Copy of #34</b></small></span><span class="v">2.618 BNB<small>9.28–9.53 BEM / 30 days</small></span></a></li>
+      <li><a href="#"><span class="badge g" aria-hidden="true">×1</span><span class="k">Circuit #7300<small>Too small to tell · identical to 6,310 earlier</small></span><span class="v">0.12 BNB<small>0.386–0.397 BEM / 30 days</small></span></a></li>
+      <li><a href="#"><span class="badge g" aria-hidden="true">×1</span><span class="k">Circuit #13931<small><b>Copy of #6774</b></small></span><span class="v">2.36 BNB<small>7.86–8.08 BEM / 30 days</small></span></a></li>
+      <li><a href="#"><span class="badge g" aria-hidden="true">×1</span><span class="k">Circuit #13338<small><b>Copy of #6774</b></small></span><span class="v">2.36 BNB<small>7.86–8.08 BEM / 30 days</small></span></a></li>
+      <li><a href="#"><span class="badge g" aria-hidden="true">×1</span><span class="k">Circuit #18313<small><b>Copy of #6774</b></small></span><span class="v">2.36 BNB<small>7.86–8.08 BEM / 30 days</small></span></a></li>
+    </ul>
+    <p class="limit">Each verdict checked against 80,348 circuits up to BNB block 135,135,809. The earliest proven design is the original. Checks identical netlists, including swapped gate inputs. A copy with its gates reordered isn’t detected. Values are estimated ranges under stated assumptions, not financial advice.</p>
+  </main>
+  <aside class="mine market" aria-label="Market today">
+    <div class="sec"><h2>Market today</h2></div>
+    <dl>
+      <dt>Open listings</dt><dd>6,182</dd>
+      <dt>Buyable now</dt><dd>5,906</dd>
+      <dt>Sellers</dt><dd>382</dd>
+      <dt>Mining miners for sale</dt><dd>300</dd>
+    </dl>
+    <p class="sub">All listings, by verdict</p>
+    <dl>
+      <dt>Too small to tell</dt><dd>5,262</dd>
+      <dt>Copy</dt><dd>544</dd>
+      <dt>Wrapper</dt><dd>272</dd>
+      <dt>No earlier copy found</dt><dd>104</dd>
+      <dt>Can’t check</dt><dd>0</dd>
+    </dl>
+    <div class="pubbox"><b>Published on X Layer testnet</b>26,741 results, one per miner and listed circuit, each with its evidence and the block it was read at.</div>
+  </aside>
+</div>
+<script>
+document.getElementById("theme").addEventListener("click",()=>{
+  const r=document.documentElement;
+  const dark=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme=dark?"light":"dark";
+});
+</script>
+</body>
+</html>
