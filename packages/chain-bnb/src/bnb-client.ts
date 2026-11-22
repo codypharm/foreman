@@ -16,6 +16,7 @@ import {
 	type Transport,
 } from "viem";
 import { bsc } from "viem/chains";
+import { MULTICALL3 } from "./abi.ts";
 
 /**
  * Reads this close to the head go to the recent node. On 21 Nov 2026 publicnode served state up to
@@ -29,6 +30,25 @@ export const ARCHIVE_LOG_BLOCKS = 10n;
 const ARCHIVE_PARALLEL = 10;
 /** The head is read again when this old: 30 s moves the 5,000-block line by about 60 blocks. */
 const HEAD_MAX_AGE_MS = 30_000;
+
+/**
+ * BNB Smart Chain with Multicall3 pinned to its confirmed address (CLAUDE.md "On-chain facts"), so
+ * bundled reads never use an address from anywhere else.
+ */
+export const BNB_CHAIN: Chain = {
+	...bsc,
+	contracts: {
+		...bsc.contracts,
+		multicall3: { address: MULTICALL3, blockCreated: 15_921_452 },
+	},
+};
+
+/**
+ * Bundling for a client whose reads come many at once (the results job): reads at one block made
+ * within 16 ms go in one Multicall3 call, up to 4 kB of call data, about 100 reads
+ * (docs/decisions/2026-11-22-results-reads-multicall.md).
+ */
+export const MULTICALL_BATCH = { batchSize: 4_096, wait: 16 } as const;
 
 /** publicnode: state about 10,000 blocks back, logs in 200-block chunks, no key. */
 export const PUBLIC_RECENT_RPC = "https://bsc-rpc.publicnode.com";
@@ -178,6 +198,8 @@ export function bnbClient(urls: {
 	batch?: boolean;
 	/** Blocks per log read on the archive node: BNB_ARCHIVE_LOG_BLOCKS, 10 when not set. */
 	archiveLogBlocks?: string | undefined;
+	/** Bundle reads made together at one block into Multicall3 calls (MULTICALL_BATCH). */
+	multicall?: boolean;
 }): PublicClient {
 	const archiveLogBlocks =
 		urls.archiveLogBlocks === undefined || urls.archiveLogBlocks === ""
@@ -187,7 +209,8 @@ export function bnbClient(urls: {
 		throw new Error("BNB_ARCHIVE_LOG_BLOCKS must be a whole number above 0");
 	}
 	return createPublicClient({
-		chain: bsc,
+		chain: BNB_CHAIN,
+		...(urls.multicall ? { batch: { multicall: MULTICALL_BATCH } } : {}),
 		transport: bnbTransport({
 			recent: http(urls.recent ?? PUBLIC_RECENT_RPC, {
 				retryCount: 5,

@@ -18,7 +18,10 @@ export interface PlanFile {
 	chainId: 196 | 1952;
 	/** The contract the plan was compared against; null when none is deployed on that chain yet. */
 	contract: Address | null;
-	/** The index block every result was read at. */
+	/**
+	 * The newest index block among the results. Each entry keeps its own, which goes on chain with
+	 * it: stored results mix blocks between full rebuilds (2026-11-22-publish-from-stored-results.md).
+	 */
 	indexBlock: bigint;
 	unchanged: number;
 	skipped: Skipped[];
@@ -84,10 +87,10 @@ export function parsePlanFile(wire: unknown): PlanFile {
 				r.result,
 			);
 		}
-		if (entry.indexBlock !== indexBlock) {
+		if (entry.indexBlock > indexBlock) {
 			throw new ContractParseError(
 				`${field}.result`,
-				`read at the plan's block ${indexBlock}`,
+				`read at or before the plan's newest block ${indexBlock}`,
 				entry.indexBlock,
 			);
 		}

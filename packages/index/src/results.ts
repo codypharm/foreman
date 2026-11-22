@@ -3,6 +3,7 @@
 // or not at all; a circuit whose build failed keeps its last complete row.
 
 import {
+	type Address,
 	type Originality,
 	parseOriginality,
 	serialiseOriginality,
@@ -135,6 +136,31 @@ export async function readStoredResult(
 		indexBlock: BigInt(row.index_block),
 		builtAt: BigInt(row.built_at),
 	};
+}
+
+/** Every stored result with its circuit, in circuit order: what the publish job publishes. */
+export async function readAllStoredResults(
+	pool: pg.Pool,
+): Promise<(StoredResult & { circuit: CircuitId })[]> {
+	const { rows } = await pool.query<{
+		processor: string;
+		id: string;
+		originality: string;
+		index_block: string;
+		built_at: string;
+	}>(
+		`select processor, id::text, originality, index_block::text, built_at::text
+		 from circuit_results order by processor, id`,
+	);
+	return rows.map((r) => {
+		const circuit = { processor: r.processor as Address, id: BigInt(r.id) };
+		return {
+			circuit,
+			originality: parseOriginality(JSON.parse(r.originality), name(circuit)),
+			indexBlock: BigInt(r.index_block),
+			builtAt: BigInt(r.built_at),
+		};
+	});
 }
 
 /**

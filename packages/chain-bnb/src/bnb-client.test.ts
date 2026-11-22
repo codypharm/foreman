@@ -1,6 +1,7 @@
 import { createPublicClient, custom, numberToHex } from "viem";
 import { describe, expect, test } from "vitest";
-import { bnbTransport } from "./index.ts";
+import { MULTICALL3 } from "./abi.ts";
+import { bnbClient, bnbTransport } from "./index.ts";
 
 // The BNB client's routing (docs/decisions/2026-11-21-bnb-nodes.md): reads and logs within 5,000
 // blocks of the head go to the recent node (logs in 200-block chunks); older ones go to the archive
@@ -217,5 +218,16 @@ describe("the BNB client", () => {
 	test("a failed chunk fails the whole read, never a partial list", async () => {
 		const { getLogs } = setUp({ recentFailAt: HEAD - 100n });
 		await expect(getLogs(HEAD - 449n, HEAD)).rejects.toThrow("recent failed");
+	});
+});
+
+describe("the BNB client with bundling", () => {
+	test("bundles through Multicall3 at its confirmed address only, and only when asked", () => {
+		// docs/decisions/2026-11-22-results-reads-multicall.md; the URLs are never called here
+		const archive = "http://127.0.0.1:9";
+		const bundled = bnbClient({ archive, multicall: true });
+		expect(bundled.chain?.contracts?.multicall3?.address).toBe(MULTICALL3);
+		expect(bundled.batch?.multicall).toBeTruthy();
+		expect(bnbClient({ archive }).batch?.multicall).toBeFalsy();
 	});
 });

@@ -1,4 +1,5 @@
 import { replayClient } from "@foreman/chain-bnb/fixture";
+import { readStoredResult } from "@foreman/index";
 import {
 	fixtureIndexedDatabase,
 	TEST_DATABASE_URL,
@@ -8,8 +9,8 @@ import circuits from "@foreman/originality/fixtures/bnb-circuits-134673279.json"
 };
 import type pg from "pg";
 import { afterEach, describe, expect, test } from "vitest";
-import { loadResultContext } from "../result.ts";
-import { circuitsToPublish, collectResults } from "./collect.ts";
+import { refreshResults } from "../results/refresh.ts";
+import { circuitsToPublish, storedResultsToPublish } from "./collect.ts";
 
 // Which circuits get a result (docs/decisions/2026-11-21-publish-job.md, "Which circuits"): every
 // miner, and every circuit with an open listing that isn't a miner. The fixture database has 16
@@ -62,27 +63,47 @@ describe.skipIf(!TEST_DATABASE_URL)("the circuits to publish", () => {
 		]);
 	});
 
-	test("a circuit whose result can't be built is skipped with its reason, never published", async () => {
+	test("publishes each miner's and listed circuit's stored result, exactly as stored, and skips one with none, never building it (2026-11-21-stored-results.md)", async () => {
 		pool = await fixtureIndexedDatabase();
 		await list(pool, 1, { processor: P0, tokenId: 6534n });
-		const loaded = await loadResultContext(pool, replayClient(circuits));
-		if (!loaded.ready) throw new Error(loaded.detail);
+		// MINE6/1965 is revoked, and the fixture database holds no Revoked event for it: no stored result
+		const run = await refreshResults(pool, replayClient(circuits), {
+			mode: "full",
+			now: 1_795_200_000n,
+		});
+		if (!run.refreshed) throw new Error("the results didn't build");
 
-		const { results, skipped } = await collectResults(
-			loaded.context,
-			await circuitsToPublish(pool),
-			{ concurrency: 4 },
-		);
-		// MINE6/1965 is revoked, and the fixture database holds no Revoked event for it
+		const { results, skipped } = await storedResultsToPublish(pool);
 		expect(skipped).toEqual([
 			{
 				circuit: { processor: MINE6, id: 1965n },
-				detail: expect.stringContaining("revoked"),
+				detail: "no stored result yet: run the results job",
 			},
 		]);
 		expect(results).toHaveLength(16);
+		for (const o of results) {
+			const stored = await readStoredResult(pool, {
+				processor: o.circuit.processor,
+				id: o.circuit.tokenId,
+			});
+			expect(o).toEqual(stored?.originality);
+		}
 		expect(results.find((o) => o.circuit.tokenId === 6534n)?.scope).toBe(
 			"listed",
 		);
+	});
+
+	test("leaves out a stored result whose circuit is no longer a miner or listed", async () => {
+		pool = await fixtureIndexedDatabase();
+		await list(pool, 1, { processor: P0, tokenId: 6534n });
+		await refreshResults(pool, replayClient(circuits), {
+			mode: "full",
+			now: 1_795_200_000n,
+		});
+		await pool.query(
+			"update market_listings set open = false, seller = null, processor = null, token_id = null, price_wei = null, fee_bps = null",
+		);
+		const { results } = await storedResultsToPublish(pool);
+		expect(results.map((o) => o.circuit.tokenId)).not.toContain(6534n);
 	});
 });

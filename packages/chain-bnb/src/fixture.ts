@@ -2,7 +2,16 @@
 // The recorder saves every call a read makes; the replay client answers only those calls
 // and fails loudly on anything else, so a test can never quietly reach the network.
 
-import { createPublicClient, custom, type PublicClient } from "viem";
+import {
+	createPublicClient,
+	custom,
+	decodeFunctionData,
+	encodeFunctionResult,
+	type Hex,
+	type PublicClient,
+} from "viem";
+import { MULTICALL3, multicall3Abi } from "./abi.ts";
+import { BNB_CHAIN, MULTICALL_BATCH } from "./bnb-client.ts";
 
 export interface RpcCall {
 	method: string;
@@ -20,21 +29,68 @@ export interface Fixture {
 const callKey = (method: string, params: unknown) =>
 	JSON.stringify([method, params ?? []]);
 
-/** A client that answers from a fixture; an unrecorded call throws. */
-export function replayClient(fixture: Fixture): PublicClient {
+/**
+ * A client that answers from a fixture; an unrecorded call throws. With `multicall`, the client
+ * bundles reads made together, as the results job's does, and a Multicall3 bundle is answered from
+ * the recorded single reads inside it, as the contract would; a bundle holding any unrecorded read
+ * throws. Without it, a bundle is answered only when it was recorded whole. `asked` collects each call's method and target.
+ */
+export function replayClient(
+	fixture: Fixture,
+	options: { multicall?: boolean; asked?: string[] } = {},
+): PublicClient {
 	const answers = new Map(
 		fixture.calls.map((c) => [callKey(c.method, c.params), c.result]),
 	);
+	const single = (to: string, data: string, block: unknown) =>
+		`${to.toLowerCase()}|${data}|${JSON.stringify(block)}`;
+	const singles = new Map<string, unknown>();
+	for (const c of fixture.calls) {
+		if (c.method !== "eth_call") continue;
+		const [p, block] = c.params as [{ to?: string; data?: string }, unknown];
+		if (p?.to && p.data) singles.set(single(p.to, p.data, block), c.result);
+	}
 	return createPublicClient({
+		...(options.multicall
+			? { chain: BNB_CHAIN, batch: { multicall: MULTICALL_BATCH } }
+			: {}),
 		transport: custom({
 			async request({ method, params }) {
 				const k = callKey(method, params);
-				if (!answers.has(k)) {
-					throw new Error(
-						`No saved response for ${k}. Record it: pnpm --filter @foreman/chain-bnb record`,
-					);
+				const [p, block] = (params ?? []) as [
+					{ to?: string; data?: Hex } | undefined,
+					unknown,
+				];
+				options.asked?.push(`${method}:${p?.to?.toLowerCase() ?? ""}`);
+				if (answers.has(k)) return answers.get(k);
+				if (
+					options.multicall &&
+					method === "eth_call" &&
+					p?.to?.toLowerCase() === MULTICALL3 &&
+					p.data
+				) {
+					const { args } = decodeFunctionData({
+						abi: multicall3Abi,
+						data: p.data,
+					});
+					const result = args[0].map((call) => {
+						const s = single(call.target, call.callData, block);
+						if (!singles.has(s)) {
+							throw new Error(
+								`No saved response for the bundled read ${call.target} ${call.callData.slice(0, 10)} at ${JSON.stringify(block)}`,
+							);
+						}
+						return { success: true, returnData: singles.get(s) as Hex };
+					});
+					return encodeFunctionResult({
+						abi: multicall3Abi,
+						functionName: "aggregate3",
+						result,
+					});
 				}
-				return answers.get(k);
+				throw new Error(
+					`No saved response for ${k}. Record it: pnpm --filter @foreman/chain-bnb record`,
+				);
 			},
 		}),
 	});

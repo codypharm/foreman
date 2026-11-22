@@ -1,8 +1,8 @@
 // The publish job (docs/decisions/2026-11-21-publish-job.md). A command William runs.
 //
-// Dry run (no key): builds every miner's and listed circuit's result from the index, works out what
-// changed since the last publish, and writes the plan to data/. Needs DATABASE_URL and
-// BNB_ARCHIVE_RPC_URL.
+// Dry run (no key): takes every miner's and listed circuit's stored result (the results job's, which
+// the pages read), works out what changed since the last publish, and writes the plan to data/.
+// Needs DATABASE_URL; run the results job first.
 //
 //   pnpm --filter @foreman/api publish-results --chain testnet [--batch 100]
 //
@@ -21,7 +21,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { bnbClient } from "@foreman/chain-bnb";
 import { parseHex32 } from "@foreman/contract";
 import { migrate, readPublished } from "@foreman/index";
 import pg from "pg";
@@ -35,7 +34,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { foremanResultsAbi } from "../src/publish/abi.ts";
 import { batchEntries, MAX_BATCH_CALLDATA } from "../src/publish/batch.ts";
-import { circuitsToPublish, collectResults } from "../src/publish/collect.ts";
+import { storedResultsToPublish } from "../src/publish/collect.ts";
 import {
 	DEFAULT_BATCH_SIZE,
 	RESULTS_CONTRACTS,
@@ -50,7 +49,6 @@ import {
 } from "../src/publish/plan-file.ts";
 import { recoverBatch } from "../src/publish/recover.ts";
 import { sendPlan } from "../src/publish/send.ts";
-import { loadResultContext } from "../src/result.ts";
 
 const { values } = parseArgs({
 	options: {
@@ -97,32 +95,19 @@ try {
 }
 
 async function dryRun() {
-	const rpc = process.env.BNB_ARCHIVE_RPC_URL;
-	if (!rpc)
-		throw new Error("BNB_ARCHIVE_RPC_URL is not set (see .env.example)");
-	const bnb = bnbClient({
-		archive: rpc,
-		recent: process.env.BNB_RECENT_RPC_URL,
-		archiveLogBlocks: process.env.BNB_ARCHIVE_LOG_BLOCKS,
-		batch: true,
-	});
-	const loaded = await loadResultContext(pool, bnb);
-	if (!loaded.ready) {
-		console.error(`the index isn't ready: ${loaded.detail}`);
+	// The stored results the pages read, never built here (2026-11-22-publish-from-stored-results.md)
+	const { results, skipped } = await storedResultsToPublish(pool);
+	if (results.length === 0) {
+		console.error("no stored results to publish: run the results job");
 		process.exitCode = 1;
 		return;
 	}
-	const indexBlock = loaded.context.index.upToBlock;
-	const targets = await circuitsToPublish(pool);
+	const blocks = results.map((o) => o.index.upToBlock.block);
+	const indexBlock = blocks.reduce((a, b) => (b > a ? b : a));
+	const oldest = blocks.reduce((a, b) => (b < a ? b : a));
 	console.log(
-		`building ${targets.length} results at BNB Chain block ${indexBlock}`,
+		`${results.length} stored results, index blocks ${oldest === indexBlock ? indexBlock : `${oldest} to ${indexBlock}`}`,
 	);
-	const { results, skipped } = await collectResults(loaded.context, targets, {
-		concurrency: 50,
-		onProgress: (done, of) => {
-			if (done % 1_000 < 50 || done === of) console.log(`  ${done} / ${of}`);
-		},
-	});
 	const published = contractAddress
 		? await readPublished(pool, { chainId, address: contractAddress })
 		: new Map();

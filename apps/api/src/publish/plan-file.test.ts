@@ -76,10 +76,23 @@ describe("the plan file", () => {
 		expect(() => parsePlanFile(wire)).toThrow(/entries\[1\]/);
 	});
 
-	test("refuses an entry read at another block than the plan's", () => {
-		const wire = viaJson({
+	test("keeps entries read at different blocks, each with its own: stored results between full rebuilds (2026-11-22-publish-from-stored-results.md)", () => {
+		const mixed: PlanFile = {
 			...FILE,
 			entries: [planEntry(result(1n)), planEntry(result(2n, 134_500_000n))],
+		};
+		const read = parsePlanFile(viaJson(mixed));
+		expect(read).toEqual(mixed);
+		expect(read.entries.map((e) => e.indexBlock)).toEqual([
+			134_600_000n,
+			134_500_000n,
+		]);
+	});
+
+	test("refuses an entry read after the plan's newest block", () => {
+		const wire = viaJson({
+			...FILE,
+			entries: [planEntry(result(1n)), planEntry(result(2n, 134_700_000n))],
 		});
 		expect(() => parsePlanFile(wire)).toThrow(/entries\[1\]/);
 	});

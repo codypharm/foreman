@@ -47,6 +47,18 @@ async function listWrapper(pool: pg.Pool) {
 	);
 }
 
+/** Every stored result, in circuit order. */
+async function storedRows(pool: pg.Pool) {
+	return (
+		await pool.query(
+			"select processor, id, kind, can_mine, originality, index_block from circuit_results order by processor, id",
+		)
+	).rows;
+}
+
+/** Multicall3 on BNB Chain (CLAUDE.md "On-chain facts"). */
+const MULTICALL3 = "0xca11bde05977b3631167028862be2a173976ca11";
+
 /** A node that refuses every call: every build fails. */
 const deadClient = createPublicClient({
 	transport: custom({
@@ -94,6 +106,27 @@ describe.skipIf(!TEST_DATABASE_URL)("the results job", () => {
 			(await readStoredResult(pool, { processor: P0, id: 6534n }))?.originality
 				.scope,
 		).toBe("listed");
+	});
+
+	test("reads bundled into Multicall3 calls store the same results as reads one by one", async () => {
+		// docs/decisions/2026-11-22-results-reads-multicall.md
+		pool = await fixtureIndex();
+		await listWrapper(pool);
+		await refreshResults(pool, replayClient(circuits), {
+			mode: "full",
+			now: NOW,
+		});
+		const oneByOne = await storedRows(pool);
+		await pool.query("delete from circuit_results");
+		const asked: string[] = [];
+		const run = await refreshResults(
+			pool,
+			replayClient(circuits, { multicall: true, asked }),
+			{ mode: "full", now: NOW },
+		);
+		expect(run).toMatchObject({ refreshed: true, built: 17, skipped: [] });
+		expect(asked).toContain(`eth_call:${MULTICALL3}`);
+		expect(await storedRows(pool)).toEqual(oneByOne);
 	});
 
 	test("within the hour, a run rebuilds only what the follow touched", async () => {

@@ -31,7 +31,9 @@ try {
 		archive: RPC,
 		recent: process.env.BNB_RECENT_RPC_URL,
 		archiveLogBlocks: process.env.BNB_ARCHIVE_LOG_BLOCKS,
-		batch: true,
+		// Reads made together at one block go in Multicall3 bundles
+		// (docs/decisions/2026-11-22-results-reads-multicall.md)
+		multicall: true,
 	});
 	const started = Date.now();
 	const run = await refreshResults(pool, client, {

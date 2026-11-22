@@ -60,6 +60,7 @@ export {
 export {
 	circuitsTouchedSince,
 	type ResultsState,
+	readAllStoredResults,
 	readResultsIndex,
 	readResultsState,
 	readStoredCircuits,

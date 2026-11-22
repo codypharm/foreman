@@ -1,10 +1,16 @@
-// Which circuits get a result, and building them (docs/decisions/2026-11-21-publish-job.md, "Which
+// Which circuits get a result, and their results (docs/decisions/2026-11-21-publish-job.md, "Which
 // circuits"): every miner in the index ("miner"), and every circuit with an open listing on
-// TapeOut's circuit market that isn't a miner ("listed"). A circuit whose result can't be built is
-// skipped with its reason, never published.
+// TapeOut's circuit market that isn't a miner ("listed"). Their results are the stored ones the
+// pages read, never built here, so a page and a published result can't disagree
+// (2026-11-21-stored-results.md; 2026-11-22-publish-from-stored-results.md). A circuit with no
+// stored result is skipped with its reason, never published.
 
 import type { Originality } from "@foreman/contract";
-import { readMarketBook, readMiners } from "@foreman/index";
+import {
+	readAllStoredResults,
+	readMarketBook,
+	readMiners,
+} from "@foreman/index";
 import type { CircuitId } from "@foreman/originality";
 import type pg from "pg";
 import { buildResult, type ResultContext } from "../result.ts";
@@ -39,7 +45,30 @@ export async function circuitsToPublish(pool: pg.Pool): Promise<Target[]> {
 	return targets;
 }
 
-/** Builds every target's result, `concurrency` at a time, in the targets' order. */
+/** Each target's stored result, in the targets' order; a target with none is skipped. */
+export async function storedResultsToPublish(
+	pool: pg.Pool,
+): Promise<{ results: Originality[]; skipped: Skipped[] }> {
+	const [targets, stored] = await Promise.all([
+		circuitsToPublish(pool),
+		readAllStoredResults(pool),
+	]);
+	const byCircuit = new Map(stored.map((s) => [name(s.circuit), s]));
+	const results: Originality[] = [];
+	const skipped: Skipped[] = [];
+	for (const t of targets) {
+		const s = byCircuit.get(name(t.circuit));
+		if (s) results.push(s.originality);
+		else
+			skipped.push({
+				circuit: t.circuit,
+				detail: "no stored result yet: run the results job",
+			});
+	}
+	return { results, skipped };
+}
+
+/** Builds every target's result (the results job, which fills the stored results), `concurrency` at a time, in the targets' order. */
 export async function collectResults(
 	ctx: ResultContext,
 	targets: Target[],
