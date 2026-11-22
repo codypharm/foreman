@@ -1,0 +1,268 @@
+<!--
+  Result page for a miner held for a RIG voucher, chosen by William on 22 November 2026 (option A of three:
+  in the header, a "Where it is" section, or at the top of Options). It refines the result page chosen on
+  21 November (2026-11-21-result-page.html): a "RIG voucher #N" chip and one line under the circuit's name,
+  "Held in the rig vault for RIG voucher #N on X Layer. The holder, 0x…, gets its BEM." The vault's cell
+  is never shown as the owner (docs/notes/2026-11-22-rig-vault-cells.md). Lend names the voucher.
+  Static mock: real data for circuit 0xb102…a14c/12814 (RIG voucher #19) from Foreman's local API on
+  22 Nov 2026, BNB block 135,076,194 and X Layer block 76,581,903. Build to this; a layout or flow change
+  is a new mock and a new choice.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foreman · Circuit #12814</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --raise:#F5F5F5; --ink:#000000; --ink-2:#6B6B6B; --ink-3:#9A9A9A; --line:#EBEBEB;
+  --accent:#C2F24B; --on-accent:#000000; --live:#14A44D; --stale:#C4231B; --stale-bg:#FDECEA;
+  --btn:#000000; --on-btn:#FFFFFF; --track:#E6E6E6; --span:#BDBDBD;
+  --sans:"Geist",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+    --live:#3DDC84; --stale:#FF7A6B; --stale-bg:#2A1210;
+    --btn:#FFFFFF; --on-btn:#000000; --track:#262626; --span:#4A4A4A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+  --live:#3DDC84; --stale:#FF7A6B; --stale-bg:#2A1210;
+  --btn:#FFFFFF; --on-btn:#000000; --track:#262626; --span:#4A4A4A;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{background:var(--bg)}
+::selection{background:var(--accent);color:var(--on-accent)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+button{font:inherit;color:inherit}
+a{color:inherit}
+
+/* ---------- the result page, from the chosen mock ---------- */
+.top{display:grid;grid-template-columns:auto minmax(0,480px) auto;justify-content:space-between;align-items:center;gap:24px;height:64px;padding:0 32px;border-bottom:1px solid var(--line)}
+.mark{display:flex;align-items:center;gap:9px;font:700 18px/1 var(--sans);letter-spacing:-.02em}
+.mark svg{display:block}
+.search{display:flex;align-items:center;gap:10px;height:40px;padding:0 6px 0 14px;border-radius:999px;background:var(--raise)}
+.search svg{flex:none;color:var(--ink-2)}
+.search input{all:unset;flex:1;min-width:0;font:500 14px/1 var(--sans)}
+.search button{all:unset;cursor:pointer;font:600 13px/1 var(--sans);padding:8px 12px;border-radius:999px;background:var(--btn);color:var(--on-btn)}
+.right{display:flex;align-items:center;gap:6px}
+.right nav{display:flex;gap:2px;margin-right:8px}
+.right nav a{font:500 14px/1 var(--sans);color:var(--ink-2);text-decoration:none;padding:9px 12px;border-radius:999px}
+.right nav a[aria-current=page]{color:var(--ink);background:var(--raise)}
+.wallet{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;font:600 13px/1 var(--sans);padding:10px 14px;border-radius:999px;background:var(--raise);white-space:nowrap}
+
+.page{max-width:1200px;margin:0 auto;padding:36px 32px 56px;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:56px;align-items:start}
+.who{display:flex;align-items:center;gap:14px}
+.badge{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:999px;background:var(--ink);color:var(--bg);font:700 14px/1 var(--sans)}
+.who h1{font:600 22px/1.2 var(--sans);letter-spacing:-.01em}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{font:500 12px/1 var(--sans);padding:5px 8px;border-radius:6px;background:var(--raise);color:var(--ink-2)}
+.chip.ok{color:var(--ink)} .chip.ok::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--live);margin-right:6px;vertical-align:1px}
+
+.sec{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.sec h2{font:600 17px/1.2 var(--sans)}
+.sec .meta{font:500 12px/1.3 var(--sans);color:var(--ink-2)}
+.q{margin-top:40px}
+.q.first{margin-top:32px}
+.verdict{display:flex;align-items:flex-start;gap:12px;margin-top:18px}
+.vmark{flex:none;width:36px;height:36px;border-radius:999px;display:grid;place-items:center;box-shadow:inset 0 0 0 1.5px var(--ink);margin-top:2px}
+.verdict h3{font:600 30px/1.1 var(--sans);letter-spacing:-.025em}
+.verdict p{margin-top:6px;font:400 15px/1.45 var(--sans);color:var(--ink-2)}
+.verdict p b{color:var(--ink);font-weight:600}
+.evidence{list-style:none;padding:0;margin-top:16px}
+.evidence li{display:grid;grid-template-columns:minmax(96px,auto) minmax(0,1fr);gap:16px;padding:13px 0;border-bottom:1px solid var(--line)}
+.evidence li span{color:var(--ink-2);font-size:14px}
+.evidence li b{text-align:right;font:600 15px/1.3 var(--sans)}
+.evidence li b small{display:block;font:400 12px/1.4 var(--sans);color:var(--ink-2)}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:13px;font-weight:500;white-space:nowrap}
+.limit{margin-top:14px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.limit b{color:var(--ink);font-weight:600}
+
+.seg{display:inline-flex;gap:2px;margin-top:20px;padding:3px;border-radius:999px;background:var(--raise)}
+.seg button{all:unset;cursor:pointer;font:500 13px/1 var(--sans);color:var(--ink-2);padding:9px 14px;border-radius:999px;white-space:nowrap}
+.seg button[aria-selected=true]{background:var(--btn);color:var(--on-btn);font-weight:600}
+.lbl{margin-top:20px;font:500 14px/1.3 var(--sans);color:var(--ink-2)}
+.num{display:flex;align-items:baseline;gap:12px;margin-top:6px}
+.num strong{font:600 72px/1 var(--sans);letter-spacing:-.035em}
+.num span{font:600 22px/1 var(--sans);color:var(--ink-2)}
+.usd{margin-top:10px;font:500 15px/1.3 var(--sans);color:var(--ink-2)}
+.range{margin-top:28px}
+.bar{position:relative;height:28px}
+.bar .t{position:absolute;left:0;right:0;top:12px;height:4px;border-radius:2px;background:var(--track)}
+.bar .s{position:absolute;top:12px;height:4px;border-radius:2px;background:var(--span);transition:left .4s cubic-bezier(.16,1,.3,1),width .4s cubic-bezier(.16,1,.3,1)}
+.bar .b{position:absolute;top:4px;width:20px;height:20px;margin-left:-10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--bg);transition:left .4s cubic-bezier(.16,1,.3,1)}
+.ends{display:flex;justify-content:space-between;gap:24px;margin-top:10px}
+.ends div{max-width:48%}
+.ends div+div{text-align:right}
+.ends span{font:500 13px/1.3 var(--sans);color:var(--ink-2)}
+.ends b{display:block;font:600 20px/1.2 var(--sans);margin-top:2px}
+.ends small{display:block;font-size:13px;line-height:1.4;color:var(--ink-2)}
+.ask{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px;padding:14px 16px;border-radius:14px;background:var(--raise)}
+.ask span{font:500 14px/1.3 var(--sans);color:var(--ink-2)}
+
+.inputs{margin-top:48px}
+.key{display:flex;gap:14px;font:500 12px/1 var(--sans);color:var(--ink-2)}
+.key span{display:flex;align-items:center;gap:6px}
+.d{flex:none;width:7px;height:7px;border-radius:50%;background:var(--live)}
+.d.a{background:var(--ink-3)}
+.inputs ul{list-style:none;padding:0}
+.inputs li{display:grid;grid-template-columns:7px 1fr auto;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.inputs li span{color:var(--ink-2);font-size:14px}
+.inputs li b{text-align:right;font:600 15px/1.3 var(--sans)}
+.inputs li b small{display:block;font:400 12px/1.4 var(--sans);color:var(--ink-2)}
+.legal{margin-top:16px;font-size:12px;color:var(--ink-2)}
+
+.mine{position:sticky;top:24px}
+.opts{list-style:none;padding:0;margin-top:4px}
+.opts li{padding:14px 0;border-bottom:1px solid var(--line)}
+.opts .h{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.opts .h strong{font:600 15px/1.2 var(--sans)}
+.opts .h em{font:600 15px/1.2 var(--sans);font-style:normal;text-align:right}
+.opts .h em.none{color:var(--ink-2);font-weight:500}
+.opts p{margin-top:4px;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.opts .sales{display:flex;justify-content:space-between;margin-top:10px;font:500 12px/1.3 var(--sans);color:var(--ink-2)}
+.opts .sales b{display:block;font:600 15px/1.2 var(--sans);color:var(--ink)}
+.pub{margin-top:32px}
+.pub .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}
+.pub .net{font:600 12px/1 var(--sans);padding:5px 8px;border-radius:6px;background:var(--raise)}
+.pub .note{font:500 12px/1.3 var(--sans);color:var(--ink-2)}
+.pub dl{margin-top:10px;display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:13px}
+.pub dt{color:var(--ink-2)}
+.pub dd{text-align:right}
+.pub .readback{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:44px;margin-top:16px;border-radius:999px;font:600 14px/1 var(--sans);box-shadow:inset 0 0 0 1px var(--line)}
+.pub .readback:hover{background:var(--raise)}
+
+/* the RIG voucher, in the header (chosen 22 Nov 2026) */
+.chip.rig{background:var(--accent);color:var(--on-accent);font-weight:600}
+.held{margin-top:10px;font:400 14px/1.45 var(--sans);color:var(--ink-2)}
+.held b{color:var(--ink);font-weight:600}
+/* theme switch, as in the chosen page */
+.icon{all:unset;cursor:pointer;display:grid;place-items:center;width:36px;height:36px;border-radius:999px;color:var(--ink-2)}
+.icon:hover{background:var(--raise);color:var(--ink)}
+.right nav a:hover{color:var(--ink)}
+@media (max-width:1040px){ .right nav{display:none} .page{grid-template-columns:minmax(0,1fr) 300px;gap:40px} }
+@media (max-width:760px){
+  .top{grid-template-columns:auto auto;height:auto;padding:12px 16px;gap:12px}
+  .search{grid-column:1/-1;grid-row:2}
+  .page{grid-template-columns:minmax(0,1fr);padding:20px 16px 40px;gap:40px}
+  .mine{position:static}
+  .num strong{font-size:56px}
+  .ends b{font-size:18px}
+  .verdict h3{font-size:26px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="mark"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="9" height="9" rx="2" fill="currentColor"/><rect x="12" y="1" width="9" height="9" rx="2" fill="currentColor" opacity=".35"/><rect x="1" y="12" width="9" height="9" rx="2" fill="currentColor" opacity=".35"/><rect x="12" y="12" width="9" height="9" rx="2" fill="#C2F24B"/></svg>Foreman</div>
+  <form class="search" role="search" onsubmit="return false"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input aria-label="Listing, miner or RIG voucher" value="RIG voucher #19"><button type="button">Check</button></form>
+  <div class="right"><nav><a href="#" aria-current="page">Check</a><a href="#">Live listings</a></nav><button class="icon" id="theme" aria-label="Switch light or dark"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M3.7 14.3l1.4-1.4M12.9 5.1l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button><button class="wallet" type="button">Connect wallet</button></div>
+</header>
+<div class="page">
+  <main>
+    <div class="who">
+      <span class="badge" aria-hidden="true">#</span>
+      <div><h1>Circuit #12814</h1><div class="chips"><span class="chip ok">Mining now</span><span class="chip rig">RIG voucher #19</span><span class="chip">Doesn't hold the design bonus</span><span class="chip">Task 4</span><span class="chip">Processor ×1</span></div></div>
+    </div>
+    <p class="held">Held in the rig vault for <b>RIG voucher #19</b> on X Layer. The holder, <span class="mono">0xd7e0…a966</span>, gets its BEM.</p>
+    
+    <section class="q first" aria-label="Original?">
+      <div class="sec"><h2>Original?</h2><span class="meta">80,320 circuits checked · BNB block 135,075,848</span></div>
+      <div class="verdict">
+        <span class="vmark"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="3" y="3" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 9h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+        <div><h3>Too small to tell</h3><p>Identical to <b>460 earlier circuits</b>, below the size floor of 4 gates. The earliest is circuit #4255, taped out 20 Aug 2026.</p></div>
+      </div>
+      <ul class="evidence">
+        <li><span>This netlist</span><b>1 gate<small>size floor 4 gates</small></b></li>
+        <li><span>#4255 taped out</span><b>20 Aug 2026<small>BNB block 117,068,986 · processor 0x50a9…9dd9</small></b></li>
+        <li><span>#12814 designed</span><b>3 Sep 2026<small>BNB block 119,725,845 · design commitment</small></b></li>
+        <li><span>Netlist hash, all 461</span><b class="mono">0x73ca…ac84</b></li>
+        <li><span>Miners on this design</span><b>1,345</b></li>
+      </ul>
+      <p class="limit"><b>The earliest proven design is the original.</b> Checks identical netlists, including swapped gate inputs. A copy with its gates reordered isn't detected.</p>
+    </section>
+    <section class="q" aria-label="Worth?">
+      <div class="sec"><h2>Worth?</h2><span class="meta">From this miner's own weight</span></div>
+      <div class="seg" role="tablist" aria-label="Window"><button role="tab" data-h="30" aria-selected="true">30 days</button><button role="tab" data-h="halving" aria-selected="false">To 2030 halving</button></div>
+      <p class="lbl" data-r="lbl">Estimated output, next 30 days</p>
+      <div class="num"><strong data-r="base">0.1312</strong><span>BEM</span></div>
+      <p class="usd" data-r="bnb">≈ 0.0023 BNB at the BEM pool's 30-minute average</p>
+      <div class="range">
+        <div class="bar" aria-hidden="true"><div class="t"></div><div class="s" data-r="s"></div><div class="b" data-r="b"></div></div>
+        <div class="ends"><div><span>Low</span><b data-r="low">0.1289</b><small>Network +0.19% a day</small></div><div><span>High</span><b data-r="high">0.1323</b><small>Network +0.008% a day</small></div></div>
+      </div>
+      <div class="ask"><span>Not listed, so there's no asking price to pay back.</span></div>
+    </section>
+    <section class="inputs" aria-label="What it's based on">
+      <div class="sec"><h2>What it’s based on</h2><div class="key"><span><i class="d"></i>From chain</span><span><i class="d a"></i>Assumption</span></div></div>
+      <ul>
+        <li><i class="d"></i><span>Miner weight</span><b>1<small>no design bonus</small></b></li>
+        <li><i class="d"></i><span>Network weight</span><b>1,614,317<small>0.00006% is this miner</small></b></li>
+        <li><i class="d"></i><span>Emission to verified miners</span><b>7,127.999715 BEM a day<small>99% of 7,199.999712</small></b></li>
+        <li><i class="d a"></i><span>Network growth, low · base · high</span><b>0.19 · 0.06 · 0.008% a day<small>verified network, 23 Oct to 22 Nov</small></b></li>
+        <li><i class="d"></i><span>BEM price</span><b>0.01753 BNB<small>PancakeSwap BEM/WBNB, 30-minute average</small></b></li>
+        <li><i class="d a"></i><span>Block · model</span><b>135,076,194<small>model 2026-11-20 · backtest pending</small></b></li>
+      </ul>
+      <p class="legal">Estimated values under stated assumptions. Not financial advice.</p>
+    </section>
+  </main>
+  <aside class="mine" aria-label="Options">
+    <div class="sec"><h2>Options</h2></div>
+    
+    <ul class="opts">
+      <li><div class="h"><strong>Hold</strong><em>0.131 BEM</em></div><p>Estimated output over 30 days, range 0.1289 to 0.1323.</p></li>
+      <li><div class="h"><strong>Sell</strong><em class="none">No bid right now</em></div>
+        <p>Comparable sales: middle half of 142 sales in 14 days, scaled to this miner's weight.</p>
+        <div class="sales"><span>Low<b>0.0333 BNB</b></span><span style="text-align:center">Median<b>0.0350 BNB</b></span><span style="text-align:right">High<b>0.0386 BNB</b></span></div></li>
+      <li><div class="h"><strong>Lend</strong><em class="none">No offer</em></div><p>RIG voucher #19 isn't deposited with TapePool.</p></li>
+      <li><div class="h"><strong>Rent</strong><em class="none">No rental market yet</em></div></li>
+    </ul>
+    <div class="pub">
+      <div class="sec"><h2>Published</h2></div>
+      <div class="row"><span class="net">X Layer testnet</span><span class="note">Too small to tell · from an earlier check</span></div>
+      <dl>
+        <dt>Transaction</dt><dd class="mono">0x4168…5aea</dd>
+        <dt>X Layer block</dt><dd>46,802,272</dd>
+        <dt>Rule</dt><dd>hash 2026-11-20 · floor 4</dd>
+      </dl>
+      <button class="readback" type="button">Read it back from the contract</button>
+    </div>
+  </aside>
+</div>
+<script>
+const H = {
+  "30":{t:"next 30 days",low:0.1289,base:0.1312,high:0.1323,max:0.15,bnb:"0.0023"},
+  "halving":{t:"until the 2030 halving",low:2.178,base:4.016,high:5.703,max:6.5,bnb:"0.070"},
+};
+const fmt = (v) => v.toLocaleString("en-US",{minimumFractionDigits:v<1?4:3,maximumFractionDigits:v<1?4:3});
+
+const $=(n)=>document.querySelector(`[data-r="${n}"]`);
+function show(k){
+  const h=H[k];
+  $("lbl").textContent=`Estimated output, ${h.t}`;
+  $("base").textContent=fmt(h.base);$("low").textContent=fmt(h.low);$("high").textContent=fmt(h.high);
+  $("bnb").textContent=`≈ ${h.bnb} BNB at the BEM pool's 30-minute average`;
+  $("s").style.left=(h.low/h.max*100)+"%";$("s").style.width=((h.high-h.low)/h.max*100)+"%";
+  $("b").style.left=(h.base/h.max*100)+"%";
+  document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-selected",b.dataset.h===k));
+}
+document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",()=>show(b.dataset.h)));
+show("30");
+document.getElementById("theme").addEventListener("click",()=>{
+  const r=document.documentElement;
+  const dark=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme=dark?"light":"dark";
+});
+</script>
+</body>
+</html>
