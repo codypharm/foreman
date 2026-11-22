@@ -30,10 +30,11 @@ const callKey = (method: string, params: unknown) =>
 	JSON.stringify([method, params ?? []]);
 
 /**
- * A client that answers from a fixture; an unrecorded call throws. With `multicall`, the client
- * bundles reads made together, as the results job's does, and a Multicall3 bundle is answered from
- * the recorded single reads inside it, as the contract would; a bundle holding any unrecorded read
- * throws. Without it, a bundle is answered only when it was recorded whole. `asked` collects each call's method and target.
+ * A client that answers from a fixture; an unrecorded call throws. A Multicall3 bundle recorded
+ * whole is answered as recorded; any other bundle is answered from the recorded single reads inside
+ * it, at the same block, as the contract would, and a bundle holding any unrecorded read throws.
+ * With `multicall`, the client also bundles reads made together, as the results job's does.
+ * `asked` collects each call's method and target.
  */
 export function replayClient(
 	fixture: Fixture,
@@ -64,7 +65,6 @@ export function replayClient(
 				options.asked?.push(`${method}:${p?.to?.toLowerCase() ?? ""}`);
 				if (answers.has(k)) return answers.get(k);
 				if (
-					options.multicall &&
 					method === "eth_call" &&
 					p?.to?.toLowerCase() === MULTICALL3 &&
 					p.data

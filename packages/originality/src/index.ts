@@ -53,6 +53,7 @@ export {
 export {
 	type CountMismatch,
 	type DroppedEvent,
+	FACTORY,
 	FACTORY_FIRST_BLOCK,
 	type ListedProcessor,
 	LOG_SPAN,

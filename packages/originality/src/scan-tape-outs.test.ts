@@ -1,10 +1,20 @@
+import { MULTICALL3, multicall3Abi } from "@foreman/chain-bnb";
 import { replayClient } from "@foreman/chain-bnb/fixture";
-import type { Address } from "viem";
+import {
+	type Address,
+	createPublicClient,
+	custom,
+	decodeFunctionData,
+	decodeFunctionResult,
+	encodeFunctionResult,
+	type Hex,
+	toFunctionSelector,
+} from "viem";
 import { describe, expect, test } from "vitest";
 import fixture from "../fixtures/bnb-tape-outs-116150000.json" with {
 	type: "json",
 };
-import { scanTapeOuts } from "./index.ts";
+import { FACTORY, scanTapeOuts } from "./index.ts";
 import {
 	logsByAddressClient,
 	withoutTapeOutLog,
@@ -73,6 +83,71 @@ describe("block times", () => {
 			complete: false,
 			reason: "read-failed",
 			detail: expect.stringContaining(`${P0}/1 in block 116070652`),
+		});
+	});
+});
+
+/** The fixture's replay, with one read inside a Multicall3 bundle failing, as a revert would. */
+function failingInBundle(target: string, selector: Hex) {
+	const replay = replayClient(fixture);
+	return createPublicClient({
+		transport: custom({
+			async request(args) {
+				const answer = await replay.request(args as never);
+				const p = (args.params as [{ to?: string; data?: Hex }])?.[0];
+				if (args.method !== "eth_call" || p?.to?.toLowerCase() !== MULTICALL3)
+					return answer;
+				const calls = decodeFunctionData({
+					abi: multicall3Abi,
+					data: p.data as Hex,
+				}).args[0];
+				const results = decodeFunctionResult({
+					abi: multicall3Abi,
+					functionName: "aggregate3",
+					data: answer as Hex,
+				});
+				return encodeFunctionResult({
+					abi: multicall3Abi,
+					functionName: "aggregate3",
+					result: results.map((r, i) =>
+						calls[i]?.target.toLowerCase() === target &&
+						calls[i]?.callData.startsWith(selector)
+							? { success: false, returnData: "0x" as Hex }
+							: r,
+					),
+				});
+			},
+		}),
+	});
+}
+
+describe("listing the processors", () => {
+	// docs/decisions/2026-11-22-follow-processor-reads-multicall.md: 22 Nov 2026, the follow spent
+	// about 130 of its 170 s reading 1,496 processors 25 at a time
+	test("reads them in Multicall3 bundles, never one call each", async () => {
+		const asked: string[] = [];
+		const scan = await scanTapeOuts(replayClient(fixture, { asked }), RANGE);
+		expect(scan.complete).toBe(true);
+		if (!scan.complete) return;
+		expect(scan.processors).toHaveLength(32);
+		expect(asked).toContain(`eth_call:${MULTICALL3}`);
+		// Only cpuCount goes to the factory itself, and nothing to a processor
+		expect(asked.filter((a) => a === `eth_call:${FACTORY}`)).toHaveLength(1);
+		const processors = new Set(
+			scan.processors.map((p) => `eth_call:${p.address}`),
+		);
+		expect(asked.filter((a) => processors.has(a))).toEqual([]);
+	});
+
+	test("a processor read that fails inside its bundle stops the scan, never drops the processor", async () => {
+		const scan = await scanTapeOuts(
+			failingInBundle(MINE6, toFunctionSelector("nextId()")),
+			RANGE,
+		);
+		expect(scan).toEqual({
+			complete: false,
+			reason: "read-failed",
+			detail: expect.stringContaining(MINE6),
 		});
 	});
 });

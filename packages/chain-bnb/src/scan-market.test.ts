@@ -230,10 +230,13 @@ describe("a market scan", () => {
 	});
 
 	test("stops, never half-done, when the bundled read fails", async () => {
+		// The bundle's answer can't be decoded, as from a node that garbled or cut it short
 		const broken = {
 			...fixture,
-			calls: fixture.calls.filter(
-				(c) => (c.params as { to?: string }[])[0]?.to !== MULTICALL3,
+			calls: fixture.calls.map((c) =>
+				(c.params as { to?: string }[])[0]?.to === MULTICALL3
+					? { ...c, result: "0x" }
+					: c,
 			),
 		};
 		expect((await scan({ client: broken })).complete).toBe(false);

@@ -2,8 +2,10 @@
 // event since the factory's creation, kept only from processors the factory lists, with each
 // processor's event count checked against its nextId(). Read only.
 
+import { MULTICALL3 } from "@foreman/chain-bnb";
 import {
 	type Address,
+	type ContractFunctionParameters,
 	type Hex,
 	hexToBigInt,
 	hexToNumber,
@@ -21,8 +23,12 @@ export const TAPED_OUT =
 export const LOG_SPAN = 50_000n;
 /** The factory's first block with code; no tape-out can be earlier. */
 export const FACTORY_FIRST_BLOCK = 116_042_002n;
-/** Processors read at once when listing them. */
-const PROCESSOR_BATCH = 25n;
+/**
+ * Processors read in one Multicall3 bundle when listing them, and bundles sent at once
+ * (docs/decisions/2026-11-22-follow-processor-reads-multicall.md).
+ */
+const PROCESSORS_PER_BUNDLE = 250;
+const BUNDLES_AT_ONCE = 4;
 /** publicnode's limit on addresses in one log read, measured 21 Nov 2026 (2026-11-21-bnb-nodes.md). */
 const ADDRESSES_PER_READ = 10;
 
@@ -151,6 +157,44 @@ export async function scanTapeOuts(
 	}
 }
 
+/**
+ * View reads at one block in Multicall3 bundles, answers in the reads' order. A read that fails
+ * inside its bundle throws, naming it: the scan stops rather than drop a processor.
+ */
+async function bundled(
+	client: PublicClient,
+	contracts: readonly ContractFunctionParameters[],
+	at: { blockNumber: bigint },
+	name: (i: number) => string,
+): Promise<unknown[]> {
+	const answers: unknown[] = new Array(contracts.length);
+	const starts: number[] = [];
+	for (let s = 0; s < contracts.length; s += PROCESSORS_PER_BUNDLE)
+		starts.push(s);
+	for (let g = 0; g < starts.length; g += BUNDLES_AT_ONCE) {
+		await Promise.all(
+			starts.slice(g, g + BUNDLES_AT_ONCE).map(async (s) => {
+				const results = await client.multicall({
+					contracts: contracts.slice(s, s + PROCESSORS_PER_BUNDLE),
+					multicallAddress: MULTICALL3,
+					allowFailure: true,
+					batchSize: 0,
+					...at,
+				});
+				results.forEach((r, k) => {
+					if (r.status !== "success") {
+						// As shortMessage, the only part of an error the scan reports (no node URL in it)
+						const shortMessage = `${name(s + k)} failed inside its bundle`;
+						throw Object.assign(new Error(shortMessage), { shortMessage });
+					}
+					answers[s + k] = r.result;
+				});
+			}),
+		);
+	}
+	return answers;
+}
+
 async function scan(
 	client: PublicClient,
 	range: { fromBlock: bigint; toBlock: bigint },
@@ -164,37 +208,33 @@ async function scan(
 		functionName: "cpuCount",
 		...at,
 	});
-	const processors: ListedProcessor[] = [];
-	for (let start = 0n; start < count; start += PROCESSOR_BATCH) {
-		const end =
-			start + PROCESSOR_BATCH < count ? start + PROCESSOR_BATCH : count;
-		reading(
-			`processors ${start + 1n} to ${end} of ${count} at block ${range.toBlock}`,
-		);
-		const indexes = Array.from(
-			{ length: Number(end - start) },
-			(_, k) => start + BigInt(k),
-		);
-		const batch = await Promise.all(
-			indexes.map(async (i) => {
-				const p = await client.readContract({
-					address: FACTORY,
-					abi: factoryAbi,
-					functionName: "cpuAt",
-					args: [i],
-					...at,
-				});
-				const last = await client.readContract({
-					address: p,
-					abi: processorAbi,
-					functionName: "nextId",
-					...at,
-				});
-				return { address: p.toLowerCase() as Address, issued: last };
-			}),
-		);
-		processors.push(...batch);
-	}
+	reading(`processors 1 to ${count} at block ${range.toBlock}`);
+	const indexes = Array.from({ length: Number(count) }, (_, i) => BigInt(i));
+	const addresses = await bundled(
+		client,
+		indexes.map((i) => ({
+			address: FACTORY,
+			abi: factoryAbi,
+			functionName: "cpuAt",
+			args: [i],
+		})),
+		at,
+		(i) => `processor ${i + 1} of ${count} (cpuAt)`,
+	);
+	const issued = await bundled(
+		client,
+		addresses.map((p) => ({
+			address: p as Address,
+			abi: processorAbi,
+			functionName: "nextId",
+		})),
+		at,
+		(i) => `nextId of ${String(addresses[i]).toLowerCase()}`,
+	);
+	const processors: ListedProcessor[] = addresses.map((p, i) => ({
+		address: String(p).toLowerCase() as Address,
+		issued: issued[i] as bigint,
+	}));
 
 	const listed = new Set(processors.map((p) => p.address));
 	// A follow reads only the processors that issued new ids, a few addresses at a time: the recent
