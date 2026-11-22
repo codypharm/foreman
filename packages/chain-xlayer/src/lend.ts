@@ -196,7 +196,18 @@ export async function readLendOffers(
 	return offers;
 }
 
-/** The live voucher whose miner has this key, or null. The voucher has no lookup by key. */
+/**
+ * How many vouchers the lookup reads at once. X Layer's public node takes one request per read here
+ * and refuses bursts; 8 keeps well inside what it served on 22 Nov 2026
+ * (docs/decisions/2026-11-22-voucher-reads-in-parallel.md).
+ */
+export const VOUCHER_READS_AT_ONCE = 8;
+
+/**
+ * The live voucher whose miner has this key, or null. The voucher has no lookup by key, so every
+ * voucher is read, VOUCHER_READS_AT_ONCE at a time. Any failed read fails the lookup: a voucher
+ * that couldn't be read is never taken for "no voucher".
+ */
 async function findVoucher(
 	client: PublicClient,
 	key: Hex32,
@@ -211,20 +222,26 @@ async function findVoucher(
 		...rig,
 		functionName: "totalSupply",
 	});
-	for (let i = 0n; i < supply; i++) {
-		const id = await client.readContract({
-			...rig,
-			functionName: "tokenByIndex",
-			args: [i],
-		});
-		const [circuits, , circuitId] = await client.readContract({
-			...rig,
-			functionName: "rigs",
-			args: [id],
-		});
-		if (minerKey({ processor: circuits, id: circuitId }) === key) return id;
-	}
-	return null;
+	let next = 0n;
+	let found: bigint | null = null;
+	const worker = async () => {
+		while (found === null && next < supply) {
+			const i = next++;
+			const id = await client.readContract({
+				...rig,
+				functionName: "tokenByIndex",
+				args: [i],
+			});
+			const [circuits, , circuitId] = await client.readContract({
+				...rig,
+				functionName: "rigs",
+				args: [id],
+			});
+			if (minerKey({ processor: circuits, id: circuitId }) === key) found = id;
+		}
+	};
+	await Promise.all(Array.from({ length: VOUCHER_READS_AT_ONCE }, worker));
+	return found;
 }
 
 /** Through the contract's own parser, so a reader never returns what the app would refuse. */

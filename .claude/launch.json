@@ -4,14 +4,42 @@
     {
       "name": "backend",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@siteproof/backend", "dev"],
+      "runtimeArgs": [
+        "--filter",
+        "@siteproof/backend",
+        "dev"
+      ],
       "port": 4000
     },
     {
       "name": "studio",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@siteproof/backend", "exec", "prisma", "studio", "--browser", "none", "--port", "5555"],
+      "runtimeArgs": [
+        "--filter",
+        "@siteproof/backend",
+        "exec",
+        "prisma",
+        "studio",
+        "--browser",
+        "none",
+        "--port",
+        "5555"
+      ],
       "port": 5555
+    },
+    {
+      "name": "foreman-api",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "DATABASE_URL=postgres://foreman:foreman-local@127.0.0.1:54320/foreman",
+        "BNB_ARCHIVE_LOG_BLOCKS=50000",
+        "PORT=8787",
+        "pnpm",
+        "--filter",
+        "@foreman/api",
+        "serve"
+      ],
+      "port": 8787
     }
   ]
 }

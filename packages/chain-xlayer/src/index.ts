@@ -6,5 +6,6 @@ export {
 	type LendOffer,
 	readLendOffers,
 	readVoucher,
+	VOUCHER_READS_AT_ONCE,
 	type Voucher,
 } from "./lend.ts";
