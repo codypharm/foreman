@@ -396,6 +396,7 @@ interface ListingsPage {
 }
 ```
 
+- **The set defaults to mining:** `GET /listings` with no `set` returns the mining set, so a buyer sees first what they could buy and have mining. `set=all` shows every open listing. Added 22 Nov 2026 with William's yes.
 - **The mining set is valued or says why not:** a row in the mining set has `value30d` `shown`, or `not-valued` for an active miner in the unverified pool, which the set still counts.
 - **Counts add up:** the parser refuses a page whose `byVerdict` doesn't sum to the chosen set's count.
 - **The fact line** ("82 of the 294 mining miners for sale are copies of an earlier circuit") is built from `counts`, never stored as text.
