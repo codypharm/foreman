@@ -40,6 +40,16 @@
         "serve"
       ],
       "port": 8787
+    },
+    {
+      "name": "foreman-web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@foreman/web",
+        "dev"
+      ],
+      "port": 5173
     }
   ]
 }

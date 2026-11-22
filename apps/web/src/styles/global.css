@@ -1,0 +1,88 @@
+/* Tokens and both themes, from the chosen mocks (docs/mocks/2026-11-21-live-listings.html). */
+:root {
+	--bg: #ffffff;
+	--raise: #f5f5f5;
+	--ink: #000000;
+	--ink-2: #6b6b6b;
+	--ink-3: #9a9a9a;
+	--line: #ebebeb;
+	--accent: #c2f24b;
+	--on-accent: #000000;
+	--live: #14a44d;
+	--stale: #c4231b;
+	--stale-bg: #fdecea;
+	--btn: #000000;
+	--on-btn: #ffffff;
+	--track: #e6e6e6;
+	--span: #bdbdbd;
+	--sans: "Geist", system-ui, sans-serif;
+	--mono: ui-monospace, "SF Mono", Menlo, monospace;
+	color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) {
+		--bg: #000000;
+		--raise: #141414;
+		--ink: #ffffff;
+		--ink-2: #9a9a9a;
+		--ink-3: #6b6b6b;
+		--line: #1f1f1f;
+		--live: #3ddc84;
+		--stale: #ff7a6b;
+		--stale-bg: #2a1210;
+		--btn: #ffffff;
+		--on-btn: #000000;
+		--track: #262626;
+		--span: #4a4a4a;
+		color-scheme: dark;
+	}
+}
+:root[data-theme="dark"] {
+	--bg: #000000;
+	--raise: #141414;
+	--ink: #ffffff;
+	--ink-2: #9a9a9a;
+	--ink-3: #6b6b6b;
+	--line: #1f1f1f;
+	--live: #3ddc84;
+	--stale: #ff7a6b;
+	--stale-bg: #2a1210;
+	--btn: #ffffff;
+	--on-btn: #000000;
+	--track: #262626;
+	--span: #4a4a4a;
+	color-scheme: dark;
+}
+* {
+	box-sizing: border-box;
+	margin: 0;
+}
+html {
+	background: var(--bg);
+	color: var(--ink);
+	font: 400 15px / 1.5 var(--sans);
+	font-variant-numeric: tabular-nums;
+	-webkit-font-smoothing: antialiased;
+	scrollbar-color: var(--span) var(--bg);
+}
+body {
+	background: var(--bg);
+	min-height: 100vh;
+}
+::selection {
+	background: var(--accent);
+	color: var(--on-accent);
+}
+:focus-visible {
+	outline: 2px solid var(--ink);
+	outline-offset: 2px;
+	border-radius: 6px;
+}
+button {
+	font: inherit;
+	color: inherit;
+}
+a {
+	color: inherit;
+	text-underline-offset: 3px;
+}
