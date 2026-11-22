@@ -50,6 +50,19 @@ export {
 	saveNetworkDays,
 } from "./network-days.ts";
 export {
+	type CompleteOwnerScan,
+	followOwners,
+	type IndexedMiner,
+	isMint,
+	type OwnerFollowResult,
+	readCircuitOwners,
+	readHeldMiners,
+	readIndexedMiner,
+	type StoredOwner,
+	type StoredOwners,
+	saveOwnerScan,
+} from "./owners.ts";
+export {
 	type PublishedEntry,
 	type PublishedRow,
 	type ResultsContract,

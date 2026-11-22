@@ -1,6 +1,6 @@
 // Brings the index up to the latest finalized block: new tape-outs and their netlists, new miner
 // starts and their commitments, new revokes (docs/decisions/2026-11-20-circuit-index.md,
-// decision 5), then the market (docs/decisions/2026-11-20-market-index.md). Read only on chain; safe to stop and run again. The job runner calls the same
+// decision 5), each eligible circuit's holder (2026-11-22-wallet-miners.md), then the market (docs/decisions/2026-11-20-market-index.md). Read only on chain; safe to stop and run again. The job runner calls the same
 // function every 5 minutes once hosting is chosen. Needs BNB_ARCHIVE_RPC_URL and DATABASE_URL.
 //
 //   pnpm --filter @foreman/index follow
@@ -51,6 +51,11 @@ try {
 				: `network days not followed: ${r.network.detail}`,
 		);
 		console.log(
+			r.owners.followed
+				? `owners to block ${r.owners.toBlock}: ${r.owners.transfers} transfers`
+				: `owners not followed: ${r.owners.detail}`,
+		);
+		console.log(
 			r.market.followed
 				? `market to block ${r.market.toBlock}: ${r.market.sales} sales, ${r.market.listings} listings touched, ${r.market.open} open`
 				: `market not followed: ${r.market.detail}`,
@@ -59,6 +64,7 @@ try {
 			r.commitments.failed.length ||
 			r.netlists.failed.length ||
 			!r.network.followed ||
+			!r.owners.followed ||
 			!r.market.followed
 		)
 			process.exitCode = 1;

@@ -14,6 +14,8 @@ export const rigVoucherAbi = parseAbi([
 	"function totalSupply() view returns (uint256)",
 	"function tokenByIndex(uint256 index) view returns (uint256)",
 	"function ownerOf(uint256 id) view returns (address)",
+	"function balanceOf(address owner) view returns (uint256)",
+	"function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
 	"function rigs(uint256 id) view returns (address circuits, uint64 syncedAt, uint256 circuitId, uint256 power)",
 ]);
 

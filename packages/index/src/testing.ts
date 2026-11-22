@@ -18,6 +18,7 @@ import {
 import { backfillNetlists } from "./backfill.ts";
 import { migrate } from "./migrate.ts";
 import { backfillCommitments, saveMinerStarts } from "./miners.ts";
+import { type CompleteOwnerScan, isMint, saveOwnerScan } from "./owners.ts";
 import { type CompleteScan, saveScan } from "./store.ts";
 
 export const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -134,5 +135,65 @@ export async function fixtureIndexedDatabase(
 		starts,
 	});
 	if (!options.skipCommitments) await backfillCommitments(pool, client);
+	return pool;
+}
+
+/** The block the owners helper's made-up earlier scan starts at, and its tape-outs from. */
+const OWNERS_SEED_BLOCK = 135_000_000n;
+
+/**
+ * An index ready for `scan`, a real owner scan: its mints become tape-outs at the same place (by
+ * their receiver), and each circuit it moves without minting gets a made-up tape-out after
+ * OWNERS_SEED_BLOCK by its first sender, with a made-up owner scan up to the block before `scan`
+ * that mints it to that sender. Tape-outs are indexed up to the scan's last block. With
+ * `onlyMints`, only the scan's mints are taped out and no owner scan is saved.
+ */
+export async function ownersIndexedDatabase(
+	scan: CompleteOwnerScan,
+	options: { onlyMints?: boolean } = {},
+): Promise<pg.Pool> {
+	const pool = await freshDatabase();
+	const minted = new Set(
+		scan.transfers
+			.filter((t) => isMint(t))
+			.map((t) => `${t.processor}/${t.id}`),
+	);
+	const earlier = new Map<string, CompleteOwnerScan["transfers"][number]>();
+	for (const t of scan.transfers) {
+		const k = `${t.processor}/${t.id}`;
+		if (!minted.has(k) && !earlier.has(k)) earlier.set(k, t);
+	}
+	const seedMints = (options.onlyMints ? [] : [...earlier.values()]).map(
+		(t, i) => ({
+			processor: t.processor,
+			id: t.id,
+			from: zeroAddress as CompleteOwnerScan["transfers"][number]["from"],
+			to: t.from,
+			at: { block: OWNERS_SEED_BLOCK + BigInt(i), txIndex: 0, logIndex: 0 },
+		}),
+	);
+	const mints = [...seedMints, ...scan.transfers.filter((t) => isMint(t))];
+	const issued = new Map<Address, bigint>();
+	for (const m of mints) {
+		if ((issued.get(m.processor) ?? 0n) < m.id) issued.set(m.processor, m.id);
+	}
+	await saveScan(pool, {
+		complete: true,
+		upToBlock: scan.upToBlock,
+		processors: [...issued].map(([address, n]) => ({ address, issued: n })),
+		tapeOuts: mints.map((m) => ({
+			circuit: { processor: m.processor, id: m.id },
+			tapedOutAt: { ...m.at, time: 1_779_000_000n },
+			tapedOutBy: m.to,
+		})),
+		dropped: [],
+	});
+	if (options.onlyMints) return pool;
+	await saveOwnerScan(pool, {
+		complete: true,
+		fromBlock: OWNERS_SEED_BLOCK,
+		upToBlock: scan.fromBlock - 1n,
+		transfers: seedMints,
+	});
 	return pool;
 }

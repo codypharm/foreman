@@ -12,7 +12,8 @@
 		"typecheck": "tsc -p .",
 		"record:lend": "node --env-file-if-exists=../../.env scripts/record-lend-fixture.ts",
 		"record:lend-fork": "node scripts/record-lend-fork-fixture.ts",
-		"record:lend-live-fork": "node scripts/record-lend-live-fork-fixture.ts"
+		"record:lend-live-fork": "node scripts/record-lend-live-fork-fixture.ts",
+		"record:held-vouchers": "node scripts/record-held-vouchers-fixture.ts"
 	},
 	"dependencies": {
 		"@foreman/chain-bnb": "workspace:*",

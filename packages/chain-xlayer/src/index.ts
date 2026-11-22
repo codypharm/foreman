@@ -3,6 +3,11 @@
 
 export { RIG_VOUCHER, TAPEPOOL_FACTORY } from "./abi.ts";
 export {
+	type HeldVoucher,
+	type HeldVouchers,
+	readHeldVouchers,
+} from "./held-vouchers.ts";
+export {
 	type LendOffer,
 	readLendOffers,
 	readVoucher,

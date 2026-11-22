@@ -24,6 +24,7 @@ import {
 	followNetworkDays,
 	type NetworkDaysFollowResult,
 } from "./network-days.ts";
+import { followOwners, type OwnerFollowResult } from "./owners.ts";
 import { saveScan } from "./store.ts";
 
 export type FollowResult =
@@ -40,6 +41,11 @@ export type FollowResult =
 			netlists: BackfillResult;
 			/** One network sample a day, for the growth rates. */
 			network: NetworkDaysFollowResult;
+			/**
+			 * Each eligible circuit's holder, from its own last block: a read that stops leaves the
+			 * rest followed (docs/decisions/2026-11-22-wallet-miners.md).
+			 */
+			owners: OwnerFollowResult;
 			/**
 			 * The market, last and on its own: a market read that stops leaves the rest followed
 			 * (docs/decisions/2026-11-20-market-index.md).
@@ -145,6 +151,14 @@ export async function followIndex(
 	onProgress?.("network days");
 	const network = await followNetworkDays(pool, client, { toBlock });
 
+	// Circuit holders follow from their own last block; the first run fills them from the first
+	// tape-out
+	onProgress?.("owners");
+	const owners = await followOwners(pool, client, {
+		toBlock,
+		...(onProgress ? { onProgress } : {}),
+	});
+
 	// The market follows from its own last block; its first fill is a long run of its own
 	const marketState = await pool.query<{ market_up_to_block: string | null }>(
 		"select market_up_to_block from index_state",
@@ -171,6 +185,7 @@ export async function followIndex(
 		commitments,
 		netlists,
 		network,
+		owners,
 		market,
 	};
 }

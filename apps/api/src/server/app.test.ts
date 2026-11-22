@@ -1,12 +1,17 @@
 import { readNetworkState } from "@foreman/chain-bnb";
 import { replayClient } from "@foreman/chain-bnb/fixture";
+import held from "@foreman/chain-xlayer/fixtures/xlayer-held-vouchers.json" with {
+	type: "json",
+};
 import {
 	parseAddress,
 	parseApiError,
 	parseCircuitPage,
 	parseListingsPage,
+	parseWalletMiners,
 	serialiseCircuitPage,
 	serialiseListingsPage,
+	serialiseWalletMiners,
 } from "@foreman/contract";
 import { TEST_DATABASE_URL } from "@foreman/index/testing";
 import circuits from "@foreman/originality/fixtures/bnb-circuits-134673279.json" with {
@@ -18,6 +23,7 @@ import fixture from "../../fixtures/circuit-page.json" with { type: "json" };
 import { readCircuitPage } from "../page/circuit-page.ts";
 import { readListingsPage } from "../page/listings-page.ts";
 import { PAGE_CIRCUITS, pageIndex } from "../page/page-fixture.ts";
+import { readWalletMiners } from "../page/wallet-page.ts";
 import { loadResultContext } from "../result.ts";
 import { createApp } from "./app.ts";
 
@@ -158,5 +164,62 @@ describe.skipIf(!TEST_DATABASE_URL)("GET /circuit/:processor/:tokenId", () => {
 		expect(parseApiError(await res.json(), "error").error).toBe(
 			"not-recognised",
 		);
+	});
+});
+
+describe.skipIf(!TEST_DATABASE_URL)("GET /wallet/:address/miners", () => {
+	let pool: pg.Pool | undefined;
+	afterEach(async () => {
+		await pool?.end();
+	});
+
+	// The held-voucher fixture's wallet with no voucher, made up to hold MINE6/967
+	const WALLET = held.noVouchers;
+
+	test("sends the wallet's page as wire JSON, which parses back to the same page", async () => {
+		const set = await setUp();
+		pool = set.pool;
+		await pool.query(
+			`insert into circuit_owners (processor, id, owner, block, tx_index, log_index)
+			 values ($1, 967, $2, 130000000, 0, 0)`,
+			[PAGE_CIRCUITS.mining.processor, WALLET],
+		);
+		await pool.query("update index_state set owners_up_to_block = 134673279");
+		const deps = { ...set.deps, xlayer: replayClient(held) };
+		// A checksummed address is the same wallet
+		const res = await createApp(deps).request(
+			`/wallet/${WALLET.toUpperCase().replace("0X", "0x")}/miners`,
+		);
+		expect(res.status).toBe(200);
+		const page = parseWalletMiners(await res.json(), "page");
+		const direct = await readWalletMiners(
+			{ ...deps, xlayer: replayClient(held) },
+			parseAddress(WALLET, "wallet"),
+		);
+		if (!direct.ok) throw new Error(direct.error.detail);
+		expect(serialiseWalletMiners(page, "page")).toEqual(
+			serialiseWalletMiners(direct.page, "page"),
+		);
+		expect(page.miners.map((m) => m.circuit.tokenId)).toEqual([967n]);
+	});
+
+	test("before the owners are followed, it is not-ready, 503", async () => {
+		const set = await setUp();
+		pool = set.pool;
+		const res = await set.app.request(`/wallet/${WALLET}/miners`);
+		expect(res.status).toBe(503);
+		expect(parseApiError(await res.json(), "error").error).toBe("not-ready");
+	});
+
+	test("anything but a wallet address is unknown-wallet-input, 400", async () => {
+		const set = await setUp();
+		pool = set.pool;
+		const res = await set.app.request("/wallet/vitalik.eth/miners");
+		expect(res.status).toBe(400);
+		expect(parseApiError(await res.json(), "error")).toMatchObject({
+			error: "unknown-wallet-input",
+			detail:
+				"That isn't a wallet address: 0x followed by 40 hexadecimal characters",
+		});
 	});
 });

@@ -11,6 +11,7 @@ import {
 } from "@foreman/chain-bnb";
 import {
 	type BnbRead,
+	type Hex32,
 	type ListingAsk,
 	type NetworkState,
 	parseAddress,
@@ -130,8 +131,12 @@ export interface OpenListing {
 /**
  * Every open listing on TapeOut's BNB market as the follow last read it, newest listed first, with
  * its miner's stored state and its circuit's stored verdict: the listings page, with no live read.
+ * With `netlistHash`, only listings of circuits with that netlist hash (a wallet's copy alerts).
  */
-export async function readOpenListings(pool: pg.Pool): Promise<OpenListing[]> {
+export async function readOpenListings(
+	pool: pg.Pool,
+	filter: { netlistHash?: Hex32 } = {},
+): Promise<OpenListing[]> {
 	const at = await marketRead(pool);
 	const { rows } = await pool.query<{
 		listing_id: string;
@@ -156,8 +161,15 @@ export async function readOpenListings(pool: pg.Pool): Promise<OpenListing[]> {
 		   l.miner_weight_without_bonus::text, r.kind
 		 from market_listings l
 		 left join circuit_results r on r.processor = l.processor and r.id = l.token_id
-		 where l.open
+		 where l.open and ($1::bytea is null or exists (
+		   select 1 from circuits c
+		   where c.processor = l.processor and c.id = l.token_id and c.netlist_hash = $1))
 		 order by l.listed_block desc nulls last, l.listing_id desc`,
+		[
+			filter.netlistHash === undefined
+				? null
+				: Buffer.from(filter.netlistHash.slice(2), "hex"),
+		],
 	);
 	return rows.map((r) => {
 		if (

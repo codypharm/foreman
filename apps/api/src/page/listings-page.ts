@@ -43,7 +43,7 @@ export type ListingsRead =
 	| { ok: false; error: ApiError };
 
 /** A listing whose circuit has no stored result yet: "Can't check" on screen, never a verdict. */
-const NOT_CHECKED = "Foreman hasn't checked this circuit yet";
+export const NOT_CHECKED = "Foreman hasn't checked this circuit yet";
 
 export async function readListingsPage(
 	pool: pg.Pool,

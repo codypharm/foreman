@@ -9,12 +9,14 @@ import {
 	serialiseApiError,
 	serialiseCircuitPage,
 	serialiseListingsPage,
+	serialiseWalletMiners,
 } from "@foreman/contract";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { type PageDeps, readCircuitPage } from "../page/circuit-page.ts";
 import { readListingsPage } from "../page/listings-page.ts";
+import { readWalletMiners } from "../page/wallet-page.ts";
 
 const STATUS: Record<ApiError["error"], ContentfulStatusCode> = {
 	"not-recognised": 400,
@@ -79,6 +81,24 @@ export function createApp(deps: PageDeps): Hono {
 		});
 		return read.ok
 			? c.json(serialiseListingsPage(read.page, "page"))
+			: sendError(c, read.error);
+	});
+
+	app.get("/wallet/:address/miners", async (c) => {
+		const address = c.req.param("address");
+		if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
+			return sendError(c, {
+				error: "unknown-wallet-input",
+				detail:
+					"That isn't a wallet address: 0x followed by 40 hexadecimal characters",
+			});
+		}
+		const read = await readWalletMiners(
+			deps,
+			address.toLowerCase() as Parameters<typeof readWalletMiners>[1],
+		);
+		return read.ok
+			? c.json(serialiseWalletMiners(read.page, "page"))
 			: sendError(c, read.error);
 	});
 
