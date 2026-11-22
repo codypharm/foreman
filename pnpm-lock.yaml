@@ -20,6 +20,9 @@ importers:
       '@foreman/chain-bnb':
         specifier: workspace:*
         version: link:../../packages/chain-bnb
+      '@foreman/chain-xlayer':
+        specifier: workspace:*
+        version: link:../../packages/chain-xlayer
       '@foreman/contract':
         specifier: workspace:*
         version: link:../../packages/contract
@@ -29,6 +32,15 @@ importers:
       '@foreman/originality':
         specifier: workspace:*
         version: link:../../packages/originality
+      '@foreman/valuation':
+        specifier: workspace:*
+        version: link:../../packages/valuation
+      '@hono/node-server':
+        specifier: 1.19.18
+        version: 1.19.18(hono@4.13.16)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
       pg:
         specifier: ^8.23.1
         version: 8.23.1
@@ -229,6 +241,12 @@ packages:
 
   '@emnapi/wasi-threads@2.2.0':
     resolution: {integrity: sha512-JP7OYH38Q7+pyTAe14raZHLQIK7BDKbdwji+Xi3pcd/6QkJYQH3SX4wu6EplGrGJWRepoNzedfm0G3B9Z4e9Rw==}
+
+  '@hono/node-server@1.19.18':
+    resolution: {integrity: sha512-609kppIP9GITS+EwPyB6Kiq8z2yXONaYD1VHpo7MMP9celRJYbkFr9KakJncHwK0EK/XYtlogqmrLchDv5HX5w==}
+    engines: {node: '>=18.14.1'}
+    peerDependencies:
+      hono: ^4
 
   '@jridgewell/resolve-uri@3.1.3':
     resolution: {integrity: sha512-lhTtjtoEArWBjismtfS761S9Hlyn+nIZqOZVYoZ1Xn82PMNMVnk+jj/NhC4fAXGTs7ydONcJiR5vyQBTMDu27g==}
@@ -576,6 +594,10 @@ packages:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
+
+  hono@4.13.16:
+    resolution: {integrity: sha512-AOLOEhvrV+iH92xXCnFr/5+3KjPKcI3xP63XJtX5spAnkznPdHijlIsUTpi7/9EhWqrTCekw5c5zh1K+YsVw7A==}
+    engines: {node: '>=16.9.0'}
 
   isows@1.0.7:
     resolution: {integrity: sha512-I1fSfDCZL5P0v33sVqeTDSpcstAg/N+wF5HS033mogOVIp4B+oHC7oOCsA3axAbBSGTJ8QubbNmnIRN/h8U7hg==}
@@ -955,6 +977,10 @@ snapshots:
       tslib: 2.9.1
     optional: true
 
+  '@hono/node-server@1.19.18(hono@4.13.16)':
+    dependencies:
+      hono: 4.13.16
+
   '@jridgewell/resolve-uri@3.1.3': {}
 
   '@jridgewell/sourcemap-codec@1.6.0': {}
@@ -1169,6 +1195,8 @@ snapshots:
 
   fsevents@2.3.3:
     optional: true
+
+  hono@4.13.16: {}
 
   isows@1.0.7(ws@8.21.0):
     dependencies:

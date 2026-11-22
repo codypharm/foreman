@@ -1,4 +1,10 @@
 import { parseAddress } from "@foreman/contract";
+import {
+	decodeFunctionData,
+	decodeFunctionResult,
+	encodeFunctionResult,
+	type Hex,
+} from "viem";
 import { describe, expect, test } from "vitest";
 import fixture from "../fixtures/bnb-market-scan-134650000-134713299.json" with {
 	type: "json",
@@ -6,6 +12,7 @@ import fixture from "../fixtures/bnb-market-scan-134650000-134713299.json" with 
 import openListings from "../fixtures/market-scan-open-listings.json" with {
 	type: "json",
 };
+import { MULTICALL3, multicall3Abi } from "./abi.ts";
 import { type Fixture, replayClient } from "./fixture.ts";
 import { scanMarket } from "./index.ts";
 
@@ -24,6 +31,61 @@ const open = openListings.map((l) => ({
 }));
 /** 28,111 issued at the end block, less the range's 5 Listed events. */
 const INDEXED = 28_106n;
+
+/**
+ * The recorded scan with reads inside its Multicall3 bundle changed: `change` gets each read's
+ * target and call data and returns a new { success, returnData }, or undefined to keep it.
+ */
+function withBundled(
+	change: (
+		target: string,
+		callData: Hex,
+	) => { success: boolean; returnData: Hex } | undefined,
+	base: Fixture = fixture,
+): Fixture {
+	return {
+		...base,
+		calls: base.calls.map((c) => {
+			const p = (c.params as { to?: string; data?: Hex }[])[0];
+			if (c.method !== "eth_call" || p?.to !== MULTICALL3 || !p.data) return c;
+			const { args } = decodeFunctionData({ abi: multicall3Abi, data: p.data });
+			const answers = decodeFunctionResult({
+				abi: multicall3Abi,
+				functionName: "aggregate3",
+				data: c.result as Hex,
+			});
+			const changed = answers.map(
+				(a, i) =>
+					change(
+						(args[0][i] as { target: string }).target.toLowerCase(),
+						(args[0][i] as { callData: Hex }).callData,
+					) ?? a,
+			);
+			return {
+				...c,
+				result: encodeFunctionResult({
+					abi: multicall3Abi,
+					functionName: "aggregate3",
+					result: changed,
+				}),
+			};
+		}),
+	};
+}
+
+/** The recorded scan without its single reads of one kind (selector), as a node that won't answer them. */
+function withoutSingle(selector: string, base: Fixture): Fixture {
+	return {
+		...base,
+		calls: base.calls.filter(
+			(c) =>
+				!(
+					c.method === "eth_call" &&
+					(c.params as { data?: string }[])[0]?.data?.startsWith(selector)
+				),
+		),
+	};
+}
 
 function scan(
 	options: { indexed?: bigint; window?: bigint; client?: Fixture } = {},
@@ -75,12 +137,24 @@ describe("a market scan", () => {
 			[
 				28_107n,
 				134_671_741n,
-				{ status: 0, taskId: 0, verifWeight: 0n, unverWeight: 0n },
+				{
+					status: 0,
+					taskId: 0,
+					verifWeight: 0n,
+					unverWeight: 0n,
+					weightWithoutBonus: 0n,
+				},
 			],
 			[
 				28_108n,
 				134_688_886n,
-				{ status: 0, taskId: 0, verifWeight: 0n, unverWeight: 0n },
+				{
+					status: 0,
+					taskId: 0,
+					verifWeight: 0n,
+					unverWeight: 0n,
+					weightWithoutBonus: 0n,
+				},
 			],
 		]);
 	});
@@ -106,7 +180,44 @@ describe("a market scan", () => {
 		expect(result.states.find((s) => s.listingId === 28_111n)).toEqual({
 			listingId: 28_111n,
 			buyable: true,
-			miner: { status: 1, taskId: 220, verifWeight: 61n, unverWeight: 0n },
+			miner: {
+				status: 1,
+				taskId: 220,
+				verifWeight: 61n,
+				unverWeight: 0n,
+				weightWithoutBonus: 61n,
+			},
+		});
+	});
+
+	test("catching up, reads events on to the newer head first, then every listing at that head (22 Nov 2026: a catch-up through the archive node made the end block too old for publicnode)", async () => {
+		// Started at 134,699,999; the head is 134,713,299. The fixture answers state only at
+		// 134,713,299, so a read at the starting block would fail the scan.
+		const heads = [RANGE.toBlock, RANGE.toBlock];
+		const result = await scanMarket(replayClient(fixture), {
+			fromBlock: RANGE.fromBlock,
+			toBlock: 134_699_999n,
+			catchUpTo: async () => heads.shift() ?? RANGE.toBlock,
+			listingsIndexed: INDEXED,
+			open,
+			stateWindowSeconds: 14n * 86_400n,
+		});
+		if (!result.complete) throw new Error(result.detail);
+		const whole = await scan();
+		expect(result).toEqual(whole);
+		expect(result.upToBlock).toBe(RANGE.toBlock);
+	});
+
+	test("reads the network at the end block, so each listing's stored weight can be valued without a live read", async () => {
+		const result = await scan();
+		if (!result.complete) throw new Error(result.detail);
+		// Raw answers 0x18a1aa, 0xa151, 0x517e, 0x4ef6
+		expect(result.network).toEqual({
+			verifiedWeight: 1_614_250n,
+			unverifiedWeight: 41_297n,
+			minerCount: 20_862n,
+			verifiedMinerCount: 20_214n,
+			readAt: { chainId: 56, block: RANGE.toBlock, time: END_TIME },
 		});
 	});
 
@@ -118,28 +229,38 @@ describe("a market scan", () => {
 		});
 	});
 
-	test("stops, never half-done, when a read fails", async () => {
-		// The node doesn't answer one open listing's ownerOf
+	test("stops, never half-done, when the bundled read fails", async () => {
 		const broken = {
 			...fixture,
 			calls: fixture.calls.filter(
-				(c, i) =>
-					!(
-						c.method === "eth_call" &&
-						(c.params as { data: string }[])[0]?.data.startsWith(
-							"0x6352211e",
-						) &&
-						i ===
-							fixture.calls.findIndex((x) =>
-								(x.params as { data?: string }[])[0]?.data?.startsWith(
-									"0x6352211e",
-								),
-							)
-					),
+				(c) => (c.params as { to?: string }[])[0]?.to !== MULTICALL3,
 			),
 		};
-		const result = await scan({ client: broken });
-		expect(result.complete).toBe(false);
+		expect((await scan({ client: broken })).complete).toBe(false);
+	});
+
+	test("reads a listing again on its own when a read in its bundle fails: the same answer", async () => {
+		// Every ownerOf in the bundle fails, as a read starved of gas would
+		const failing = withBundled((_target, data) =>
+			data.startsWith("0x6352211e")
+				? { success: false, returnData: "0x" }
+				: undefined,
+		);
+		const result = await scan({ client: failing });
+		if (!result.complete) throw new Error(result.detail);
+		expect(result).toEqual(await scan());
+	});
+
+	test("stops, never half-done, when that read on its own fails too", async () => {
+		const failing = withoutSingle(
+			"0x6352211e",
+			withBundled((_target, data) =>
+				data.startsWith("0x6352211e")
+					? { success: false, returnData: "0x" }
+					: undefined,
+			),
+		);
+		expect((await scan({ client: failing })).complete).toBe(false);
 	});
 
 	test("drops a listing the index held open once the range sold it, without reading it as open", async () => {
@@ -177,17 +298,12 @@ describe("a market scan", () => {
 	])("calls a listing not buyable when %s", async (_why, selector, answer) => {
 		// Listing 28,111 (0xb102…/13,931), buyable as recorded
 		const token = 13_931n.toString(16).padStart(64, "0");
-		const changed = {
-			...fixture,
-			calls: fixture.calls.map((c) => {
-				const p = (c.params as { to?: string; data?: string }[])[0];
-				return c.method === "eth_call" &&
-					p?.to === "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c" &&
-					p.data === `${selector}${token}`
-					? { ...c, result: answer }
-					: c;
-			}),
-		};
+		const changed = withBundled((target, data) =>
+			target === "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c" &&
+			data === `${selector}${token}`
+				? { success: true, returnData: answer as Hex }
+				: undefined,
+		);
 		const result = await scan({ client: changed });
 		if (!result.complete) throw new Error(result.detail);
 		expect(result.states.find((x) => x.listingId === 28_111n)?.buyable).toBe(

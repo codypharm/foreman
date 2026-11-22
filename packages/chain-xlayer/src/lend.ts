@@ -7,14 +7,17 @@
 
 import { ChainReadError, minerKey } from "@foreman/chain-bnb";
 import {
+	type Address,
+	type ChainRead,
 	type Hex32,
 	type LendNoneReason,
 	type Offer,
+	parseAddress,
 	parseOffer,
 	serialiseOffer,
 	TAPEPOOL_REASONS,
 } from "@foreman/contract";
-import type { PublicClient } from "viem";
+import { getAddress, type PublicClient } from "viem";
 import {
 	RIG_VOUCHER,
 	rigVoucherAbi,
@@ -29,12 +32,50 @@ export type LendOffer = Extract<Offer, { option: "lend" }>;
 
 const TERMS = [7, 14] as const;
 
-/** The Lend offers for a miner at one X Layer block: 7 days, then 14. */
-export async function readLendOffers(
+/** The RIG voucher that stands for a miner held in the rig vault, and who holds it. */
+export interface Voucher {
+	voucherId: bigint;
+	holder: Address;
+	readAt: ChainRead;
+}
+
+/** The voucher naming this miner at one X Layer block, or null when no voucher names it. */
+export async function readVoucher(
 	client: PublicClient,
 	at: { minerKey: Hex32; blockNumber: bigint },
+): Promise<Voucher | null> {
+	const { blockNumber } = at;
+	const block = await client.getBlock({ blockNumber });
+	const voucherId = await findVoucher(client, at.minerKey, blockNumber);
+	if (voucherId === null) return null;
+	const holder = await client.readContract({
+		address: RIG_VOUCHER,
+		abi: rigVoucherAbi,
+		functionName: "ownerOf",
+		args: [voucherId],
+		blockNumber,
+	});
+	return {
+		voucherId,
+		holder: parseAddress(holder.toLowerCase(), "RIG.ownerOf"),
+		readAt: { chainId: 196, block: block.number, time: block.timestamp },
+	};
+}
+
+/**
+ * The Lend offers for a miner at one X Layer block: 7 days, then 14. Pass `voucher` when it was
+ * already read at this block, to save finding it again.
+ */
+export async function readLendOffers(
+	client: PublicClient,
+	at: { minerKey: Hex32; blockNumber: bigint; voucher?: Voucher | null },
 ): Promise<LendOffer[]> {
 	const { blockNumber } = at;
+	if (at.voucher && at.voucher.readAt.block !== blockNumber) {
+		throw new ChainReadError(
+			`The voucher was read at block ${at.voucher.readAt.block}, the Lend offers at ${blockNumber}`,
+		);
+	}
 	const block = await client.getBlock({ blockNumber });
 	const none = (reason: LendNoneReason) =>
 		TERMS.map((termDays) =>
@@ -48,16 +89,15 @@ export async function readLendOffers(
 			}),
 		);
 
-	const voucherId = await findVoucher(client, at.minerKey, blockNumber);
-	if (voucherId === null) return none({ kind: "not-a-voucher" });
+	const voucher =
+		at.voucher === undefined
+			? await readVoucher(client, { minerKey: at.minerKey, blockNumber })
+			: at.voucher;
+	if (voucher === null) return none({ kind: "not-a-voucher" });
+	const { voucherId } = voucher;
+	// Checksummed, as the node returned it, so calls to the holder's account read as before
+	const holder = getAddress(voucher.holder);
 
-	const holder = await client.readContract({
-		address: RIG_VOUCHER,
-		abi: rigVoucherAbi,
-		functionName: "ownerOf",
-		args: [voucherId],
-		blockNumber,
-	});
 	const deposited = await client.readContract({
 		address: TAPEPOOL_FACTORY,
 		abi: tapePoolFactoryAbi,

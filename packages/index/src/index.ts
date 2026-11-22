@@ -13,6 +13,7 @@ export {
 	fillTapeOutTimes,
 } from "./fill-times.ts";
 export { type FollowResult, followIndex } from "./follow.ts";
+export { fillListingTimes, type ListingTimesResult } from "./listing-times.ts";
 export {
 	type LoadedIndex,
 	loadCircuitIndex,
@@ -22,8 +23,14 @@ export {
 	followMarket,
 	type MarketBook,
 	type MarketFollowResult,
+	marketRead,
+	type OpenListing,
+	readCircuitListing,
 	readMarketBook,
+	readMarketNetwork,
+	readOpenListings,
 	readSellMarket,
+	type StoredListingMiner,
 } from "./market.ts";
 export { migrate } from "./migrate.ts";
 export {
@@ -47,8 +54,19 @@ export {
 	type PublishedRow,
 	type ResultsContract,
 	readPublished,
+	readPublishedRow,
 	recordPublished,
 } from "./published.ts";
+export {
+	circuitsTouchedSince,
+	type ResultsState,
+	readResultsIndex,
+	readResultsState,
+	readStoredCircuits,
+	readStoredResult,
+	type StoredResult,
+	saveResults,
+} from "./results.ts";
 export {
 	type CompleteScan,
 	readIndex,

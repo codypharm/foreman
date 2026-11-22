@@ -5,7 +5,11 @@ import fixture from "../fixtures/bnb-tape-outs-116150000.json" with {
 	type: "json",
 };
 import { scanTapeOuts } from "./index.ts";
-import { withoutTapeOutLog, withTapeOutLog } from "./testing.ts";
+import {
+	logsByAddressClient,
+	withoutTapeOutLog,
+	withTapeOutLog,
+} from "./testing.ts";
 
 // Every tape-out from the factory's first block with code (116,042,002) to block 116,150,000:
 // 32 processors listed, 95 tape-outs on 6 of them (fixtures/README.md). Expected values were
@@ -150,7 +154,7 @@ describe("following from an earlier scan", () => {
 		const { scan: first, indexed } = await firstPart();
 		expect(first.tapeOuts).toHaveLength(2);
 		const rest = await scanTapeOuts(
-			replayClient(fixture),
+			logsByAddressClient(fixture).client,
 			{ fromBlock: SPLIT + 1n, toBlock: RANGE.toBlock },
 			undefined,
 			indexed,
@@ -163,12 +167,33 @@ describe("following from an earlier scan", () => {
 		expect([...first.tapeOuts, ...rest.tapeOuts]).toEqual(whole.tapeOuts);
 	});
 
+	test("reads TapedOut only from the processors whose nextId grew, at most 10 addresses a read, and finds the same tape-outs", async () => {
+		const { scan: first, indexed } = await firstPart();
+		const { client, asked } = logsByAddressClient(fixture);
+		const rest = await scanTapeOuts(
+			client,
+			{ fromBlock: SPLIT + 1n, toBlock: RANGE.toBlock },
+			undefined,
+			indexed,
+		);
+		if (!rest.complete) throw new Error(rest.detail);
+		const whole = await scanTapeOuts(replayClient(fixture), RANGE);
+		if (!whole.complete) throw new Error(whole.detail);
+		expect([...first.tapeOuts, ...rest.tapeOuts]).toEqual(whole.tapeOuts);
+		// Only the processors that issued ids after the split: 6 tape out by 116,150,000
+		const grown = whole.processors
+			.filter((p) => p.issued > BigInt(indexed.get(p.address) ?? 0))
+			.map((p) => p.address);
+		expect(asked.every((a) => a !== undefined && a.length <= 10)).toBe(true);
+		expect(new Set(asked.flat())).toEqual(new Set(grown));
+	});
+
 	test("stops when the tape-outs already indexed don't add up, naming the processor", async () => {
 		const { indexed } = await firstPart();
 		const [processor, n] = [...indexed][0] as [Address, number];
 		const wrong = new Map(indexed).set(processor, n - 1);
 		const rest = await scanTapeOuts(
-			replayClient(fixture),
+			logsByAddressClient(fixture).client,
 			{ fromBlock: SPLIT + 1n, toBlock: RANGE.toBlock },
 			undefined,
 			wrong,

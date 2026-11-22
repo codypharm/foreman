@@ -62,6 +62,8 @@ export interface CircuitPage {
 	voucher: { voucherId: bigint; holder: Address; readAt: ChainRead } | null;
 	hold:
 		| { state: "shown"; thirtyDays: Valuation; toHalving: Valuation }
+		/** An active miner in the unverified pool (2026-11-21-circuit-page-reads.md). */
+		| { state: "not-valued"; reason: string }
 		| { state: "not-mining" };
 	payback: Payback;
 	options: {
@@ -109,15 +111,25 @@ export function parseCircuitPage(wire: unknown, field: string): CircuitPage {
 	return page;
 }
 
-/** An active miner always has a value, over 30 days and to the 2030 halving; nothing else has one. */
+/**
+ * An active miner has a value, over 30 days and to the 2030 halving, or in the unverified pool is
+ * "not valued yet"; nothing else has one.
+ */
 function checkValue(page: CircuitPage, field: string): void {
 	const active = page.miner?.status === "active";
-	if (active !== (page.hold.state === "shown")) {
+	if (active === (page.hold.state === "not-mining")) {
 		throw new ContractParseError(
 			`${field}.hold`,
 			active
 				? "a value for an active miner"
 				: "not-mining for a circuit that isn't mining now",
+			page.hold.state,
+		);
+	}
+	if (page.hold.state === "not-valued" && page.miner?.pool !== "unverified") {
+		throw new ContractParseError(
+			`${field}.hold`,
+			"a value: only the unverified pool is not valued yet",
 			page.hold.state,
 		);
 	}
@@ -146,6 +158,15 @@ function checkPayback(page: CircuitPage, field: string): void {
 		throw new ContractParseError(
 			`${field}.payback.state`,
 			active ? "a payback state for an active miner" : '"not-mining"',
+			payback.state,
+		);
+	}
+	if ((page.hold.state === "not-valued") !== (payback.state === "not-valued")) {
+		throw new ContractParseError(
+			`${field}.payback.state`,
+			page.hold.state === "not-valued"
+				? '"not-valued", as the value is'
+				: "a payback state for a valued miner",
 			payback.state,
 		);
 	}
@@ -297,17 +318,19 @@ export function serialiseCircuitPage(
 		hold:
 			page.hold.state === "not-mining"
 				? { state: page.hold.state }
-				: {
-						state: page.hold.state,
-						thirtyDays: serialiseValuation(
-							page.hold.thirtyDays,
-							`${field}.hold.thirtyDays`,
-						),
-						toHalving: serialiseValuation(
-							page.hold.toHalving,
-							`${field}.hold.toHalving`,
-						),
-					},
+				: page.hold.state === "not-valued"
+					? { state: page.hold.state, reason: page.hold.reason }
+					: {
+							state: page.hold.state,
+							thirtyDays: serialiseValuation(
+								page.hold.thirtyDays,
+								`${field}.hold.thirtyDays`,
+							),
+							toHalving: serialiseValuation(
+								page.hold.toHalving,
+								`${field}.hold.toHalving`,
+							),
+						},
 		payback: serialisePayback(page.payback, `${field}.payback`),
 		options: {
 			sell: serialiseOffer(page.options.sell, `${field}.options.sell`),
@@ -341,9 +364,13 @@ function parseHold(wire: unknown, field: string): CircuitPage["hold"] {
 	const w = parseObject(wire, field);
 	const state = parseOneOf(w.state, `${field}.state`, [
 		"shown",
+		"not-valued",
 		"not-mining",
 	] as const);
 	if (state === "not-mining") return { state };
+	if (state === "not-valued") {
+		return { state, reason: parseText(w.reason, `${field}.reason`) };
+	}
 	return {
 		state,
 		thirtyDays: parseValuation(w.thirtyDays, `${field}.thirtyDays`),

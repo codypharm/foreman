@@ -21,6 +21,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { bnbClient } from "@foreman/chain-bnb";
 import { parseHex32 } from "@foreman/contract";
 import { migrate, readPublished } from "@foreman/index";
 import pg from "pg";
@@ -32,7 +33,6 @@ import {
 	http,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { bsc } from "viem/chains";
 import { foremanResultsAbi } from "../src/publish/abi.ts";
 import { batchEntries, MAX_BATCH_CALLDATA } from "../src/publish/batch.ts";
 import { circuitsToPublish, collectResults } from "../src/publish/collect.ts";
@@ -100,13 +100,11 @@ async function dryRun() {
 	const rpc = process.env.BNB_ARCHIVE_RPC_URL;
 	if (!rpc)
 		throw new Error("BNB_ARCHIVE_RPC_URL is not set (see .env.example)");
-	const bnb = createPublicClient({
-		chain: bsc,
-		transport: http(rpc, {
-			retryCount: 5,
-			timeout: 30_000,
-			batch: { batchSize: 50 },
-		}),
+	const bnb = bnbClient({
+		archive: rpc,
+		recent: process.env.BNB_RECENT_RPC_URL,
+		archiveLogBlocks: process.env.BNB_ARCHIVE_LOG_BLOCKS,
+		batch: true,
 	});
 	const loaded = await loadResultContext(pool, bnb);
 	if (!loaded.ready) {

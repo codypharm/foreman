@@ -21,4 +21,8 @@ export { projectedOutput } from "./projection.ts";
 export { outputRange } from "./range.ts";
 export { type RentOffer, rentOffer } from "./rent-offer.ts";
 export { type SellOffer, sellOffer } from "./sell-offer.ts";
-export { MODEL_VERSION, valueMiner } from "./value-miner.ts";
+export {
+	MODEL_VERSION,
+	type ValuedMiner,
+	valueMiner,
+} from "./value-miner.ts";

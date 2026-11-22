@@ -58,6 +58,8 @@ export interface ListingRow {
 	/** Hold over 30 days, from the weight stored with the listing; no live read. */
 	value30d:
 		| { state: "shown"; valuation: Valuation }
+		/** An active miner in the unverified pool (2026-11-21-circuit-page-reads.md). */
+		| { state: "not-valued"; reason: string }
 		| { state: "not-mining" }
 		| { state: "not-read"; detail: string };
 }
@@ -210,7 +212,10 @@ function checkRows(page: ListingsPage, field: string): void {
 					false,
 				);
 			}
-			if (row.value30d.state !== "shown") {
+			if (
+				row.value30d.state !== "shown" &&
+				row.value30d.state !== "not-valued"
+			) {
 				throw new ContractParseError(
 					`${at}.value30d`,
 					"a value: the mining set is active miners",
@@ -284,12 +289,15 @@ function parseValue30d(wire: unknown, field: string): ListingRow["value30d"] {
 	const w = parseObject(wire, field);
 	const state = parseOneOf(w.state, `${field}.state`, [
 		"shown",
+		"not-valued",
 		"not-mining",
 		"not-read",
 	] as const);
 	switch (state) {
 		case "not-mining":
 			return { state };
+		case "not-valued":
+			return { state, reason: parseText(w.reason, `${field}.reason`) };
 		case "not-read":
 			return { state, detail: parseText(w.detail, `${field}.detail`) };
 		case "shown":

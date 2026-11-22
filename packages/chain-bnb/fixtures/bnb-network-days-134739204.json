@@ -5,10 +5,7 @@
 	"calls": [
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x807f504",
-				false
-			],
+			"params": ["0x807f504", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -129,10 +126,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x8081223",
-				false
-			],
+			"params": ["0x8081223", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -248,10 +242,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x8080e23",
-				false
-			],
+			"params": ["0x8080e23", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -389,10 +380,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x8080623",
-				false
-			],
+			"params": ["0x8080623", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -508,10 +496,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x807f623",
-				false
-			],
+			"params": ["0x807f623", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -628,10 +613,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x807d623",
-				false
-			],
+			"params": ["0x807d623", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -741,10 +723,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x8079623",
-				false
-			],
+			"params": ["0x8079623", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -1023,10 +1002,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x8071623",
-				false
-			],
+			"params": ["0x8071623", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -1119,10 +1095,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x8061623",
-				false
-			],
+			"params": ["0x8061623", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -1265,10 +1238,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x8041623",
-				false
-			],
+			"params": ["0x8041623", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -1517,10 +1487,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x8001623",
-				false
-			],
+			"params": ["0x8001623", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -1627,10 +1594,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x8021623",
-				false
-			],
+			"params": ["0x8021623", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -1746,10 +1710,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x8031623",
-				false
-			],
+			"params": ["0x8031623", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -1856,10 +1817,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x8029623",
-				false
-			],
+			"params": ["0x8029623", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -1933,10 +1891,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x802d623",
-				false
-			],
+			"params": ["0x802d623", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -2092,10 +2047,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x802b623",
-				false
-			],
+			"params": ["0x802b623", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -2195,10 +2147,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x802c623",
-				false
-			],
+			"params": ["0x802c623", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -2276,10 +2225,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x802ce23",
-				false
-			],
+			"params": ["0x802ce23", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -2366,10 +2312,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x802d223",
-				false
-			],
+			"params": ["0x802d223", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -2463,10 +2406,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x802d423",
-				false
-			],
+			"params": ["0x802d423", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -2558,10 +2498,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x802d523",
-				false
-			],
+			"params": ["0x802d523", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -2657,10 +2594,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x802d5a3",
-				false
-			],
+			"params": ["0x802d5a3", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -2754,10 +2688,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x802d5e3",
-				false
-			],
+			"params": ["0x802d5e3", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -2840,10 +2771,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x802d603",
-				false
-			],
+			"params": ["0x802d603", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -3000,10 +2928,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x802d5f3",
-				false
-			],
+			"params": ["0x802d5f3", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -3096,10 +3021,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x802d5fb",
-				false
-			],
+			"params": ["0x802d5fb", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -3189,10 +3111,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x802d5ff",
-				false
-			],
+			"params": ["0x802d5ff", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -3356,10 +3275,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x802d5fd",
-				false
-			],
+			"params": ["0x802d5fd", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -3450,10 +3366,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x802d5fe",
-				false
-			],
+			"params": ["0x802d5fe", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -3617,10 +3530,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x8057410",
-				false
-			],
+			"params": ["0x8057410", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -3741,10 +3651,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x806c319",
-				false
-			],
+			"params": ["0x806c319", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -3848,10 +3755,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x8061b94",
-				false
-			],
+			"params": ["0x8061b94", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -3978,10 +3882,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x805c7d2",
-				false
-			],
+			"params": ["0x805c7d2", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -4168,10 +4069,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x8059df1",
-				false
-			],
+			"params": ["0x8059df1", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -4261,10 +4159,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x805b2e1",
-				false
-			],
+			"params": ["0x805b2e1", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -4361,10 +4256,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x805bd59",
-				false
-			],
+			"params": ["0x805bd59", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -4462,10 +4354,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x805c295",
-				false
-			],
+			"params": ["0x805c295", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -4593,10 +4482,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x805c533",
-				false
-			],
+			"params": ["0x805c533", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -4718,10 +4604,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x805c3e4",
-				false
-			],
+			"params": ["0x805c3e4", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -4860,10 +4743,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x805c33c",
-				false
-			],
+			"params": ["0x805c33c", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -4964,10 +4844,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x805c390",
-				false
-			],
+			"params": ["0x805c390", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -5078,10 +4955,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x805c3ba",
-				false
-			],
+			"params": ["0x805c3ba", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -5240,10 +5114,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x805c3a5",
-				false
-			],
+			"params": ["0x805c3a5", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -5347,10 +5218,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x805c3af",
-				false
-			],
+			"params": ["0x805c3af", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -5499,10 +5367,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x805c3aa",
-				false
-			],
+			"params": ["0x805c3aa", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -5710,10 +5575,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x805c3a7",
-				false
-			],
+			"params": ["0x805c3a7", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],
@@ -5937,10 +5799,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x805c3a6",
-				false
-			],
+			"params": ["0x805c3a6", false],
 			"result": {
 				"withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 				"withdrawals": [],

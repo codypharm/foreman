@@ -1,0 +1,231 @@
+import { minerKey } from "@foreman/chain-bnb";
+import { replayClient } from "@foreman/chain-bnb/fixture";
+import { parseAddress, parseHex32 } from "@foreman/contract";
+import { readStoredResult, recordPublished } from "@foreman/index";
+import { TEST_DATABASE_URL } from "@foreman/index/testing";
+import circuits from "@foreman/originality/fixtures/bnb-circuits-134673279.json" with {
+	type: "json",
+};
+import type pg from "pg";
+import { createPublicClient, custom, type PublicClient } from "viem";
+import { afterEach, describe, expect, test } from "vitest";
+import fixture from "../../fixtures/circuit-page.json" with { type: "json" };
+import { planEntry } from "../publish/plan.ts";
+import { loadResultContext } from "../result.ts";
+import { type PageDeps, readCircuitPage } from "./circuit-page.ts";
+import { PAGE_CIRCUITS, pageIndex, TEST_LISTING } from "./page-fixture.ts";
+
+// The result page (docs/data-contract.md, CircuitPage; 2026-11-21-circuit-page-reads.md) on the
+// originality fixture's index, with the market index at BNB block 134,900,065 (21 Nov 2026),
+// recorded by scripts/record-page-fixture.ts. See fixtures/README.md.
+
+const MARKET = {
+	block: BigInt(fixture.market.block),
+	time: BigInt(fixture.market.time),
+};
+const TESTNET = {
+	chainId: 1952 as const,
+	address: parseAddress("0xe1b2343d3da66afec740c0fcaf40a701e2d513e8", "c"),
+};
+
+/** A node that refuses every call. */
+const deadClient = createPublicClient({
+	transport: custom({
+		async request() {
+			throw new Error("node down");
+		},
+	}),
+});
+
+async function setUp(bnb: PublicClient = replayClient(fixture.bnb)) {
+	const pool = await pageIndex({
+		bnb: replayClient(fixture.bnb),
+		market: MARKET,
+		networkDays: fixture.networkDays,
+	});
+	const deps: PageDeps = {
+		pool,
+		bnb,
+		xlayer: replayClient(fixture.xlayer),
+		results: TESTNET,
+		resultContext: () => loadResultContext(pool, replayClient(circuits)),
+	};
+	return { pool, deps };
+}
+
+describe.skipIf(!TEST_DATABASE_URL)("the result page", () => {
+	let pool: pg.Pool | undefined;
+	afterEach(async () => {
+		await pool?.end();
+	});
+
+	test("a mining miner with a listing: its stored result, value and payback, and every BNB part read at the market index's block", async () => {
+		const set = await setUp();
+		pool = set.pool;
+		const read = await readCircuitPage(set.deps, PAGE_CIRCUITS.mining);
+		if (!read.ok) throw new Error(read.error.detail);
+		const { page } = read;
+		const stored = await readStoredResult(pool, PAGE_CIRCUITS.mining);
+		expect(page.check).toEqual({
+			state: "checked",
+			originality: stored?.originality,
+		});
+		expect(page.multiplier).toBe(6);
+		expect(page.published).toEqual({
+			state: "not-published",
+			reason: "not-yet",
+		});
+		expect(page.miner).toMatchObject({ status: "active", pool: "verified" });
+		expect(page.listing).toMatchObject({
+			listingId: TEST_LISTING.listingId,
+			ask: { currency: "BNB", value: TEST_LISTING.priceWei },
+			buyable: true,
+		});
+		expect(page.hold.state).toBe("shown");
+		expect(page.payback).toMatchObject({
+			state: "shown",
+			listingId: TEST_LISTING.listingId,
+		});
+		// One moment on BNB Chain: the market index's block
+		const blocks = [
+			page.miner?.readAt.block,
+			page.listing?.readAt.block,
+			page.payback.readAt.block,
+			"readAt" in page.bemPrice ? page.bemPrice.readAt.block : null,
+			page.hold.state === "shown"
+				? page.hold.thirtyDays.inputs.networkWeight
+				: null,
+		];
+		expect(blocks.slice(0, 4)).toEqual(Array(4).fill(MARKET.block));
+		expect(blocks[4]).toMatchObject({ block: MARKET.block });
+		expect(page.options.sell.bid).toEqual({
+			state: "none",
+			checkedAt: MARKET.time,
+		});
+		expect(page.options.rent).toEqual({
+			option: "rent",
+			minerKey: minerKey(PAGE_CIRCUITS.mining),
+			state: "no-venue",
+		});
+		// No RIG voucher names it: Lend says so for both terms
+		expect(page.voucher).toBeNull();
+		expect(page.options.lend.map((l) => l.state)).toEqual(["none", "none"]);
+	});
+
+	test("published: current when the stored result is the one on the results contract, older when it changed since", async () => {
+		const set = await setUp();
+		pool = set.pool;
+		const stored = await readStoredResult(pool, PAGE_CIRCUITS.mining);
+		if (!stored) throw new Error("no stored result");
+		const entry = planEntry(stored.originality);
+		const at = {
+			tx: parseHex32(`0x${"52".repeat(32)}`, "tx"),
+			block: 46_803_541n,
+		};
+		await recordPublished(pool, TESTNET, [entry], at);
+		const current = await readCircuitPage(set.deps, PAGE_CIRCUITS.mining);
+		expect(current.ok && current.page.published).toEqual({
+			state: "current",
+			publishedAt: { chainId: 1952, ...at },
+			contract: TESTNET.address,
+			resultHash: entry.resultHash,
+		});
+
+		const changed = parseHex32(`0x${"cd".repeat(32)}`, "hash");
+		await recordPublished(
+			pool,
+			TESTNET,
+			[{ ...entry, resultHash: changed }],
+			at,
+		);
+		const older = await readCircuitPage(set.deps, PAGE_CIRCUITS.mining);
+		expect(older.ok && older.page.published).toMatchObject({
+			state: "older",
+			resultHash: changed,
+		});
+	});
+
+	test("a stopped miner has no value and no payback, never a zero", async () => {
+		const set = await setUp();
+		pool = set.pool;
+		const read = await readCircuitPage(set.deps, PAGE_CIRCUITS.cooling);
+		if (!read.ok) throw new Error(read.error.detail);
+		expect(read.page.miner?.status).toBe("cooling");
+		expect(read.page.listing).toBeNull();
+		expect(read.page.hold).toEqual({ state: "not-mining" });
+		expect(read.page.payback.state).toBe("not-mining");
+		expect(read.page.options.sell.sales.range).toEqual({ state: "not-mining" });
+	});
+
+	test("a circuit that is neither a miner nor listed is checked on request as pasted, and never published", async () => {
+		const set = await setUp();
+		pool = set.pool;
+		const read = await readCircuitPage(set.deps, PAGE_CIRCUITS.pasted);
+		if (!read.ok) throw new Error(read.error.detail);
+		expect(read.page.check).toMatchObject({
+			state: "checked",
+			originality: { scope: "pasted", result: { verdict: "wrapper" } },
+		});
+		expect(read.page.published).toEqual({
+			state: "not-published",
+			reason: "pasted",
+		});
+		expect(read.page.miner).toBeNull();
+		expect(read.page.multiplier).toBe(0);
+		expect(read.page.hold).toEqual({ state: "not-mining" });
+		// Building it on request stores nothing
+		expect(await readStoredResult(pool, PAGE_CIRCUITS.pasted)).toBeNull();
+	});
+
+	test("a miner with no stored result yet is 'not checked', never a verdict built in its place", async () => {
+		const set = await setUp();
+		pool = set.pool;
+		await pool.query(
+			"delete from circuit_results where processor = $1 and id = $2",
+			[PAGE_CIRCUITS.mining.processor, PAGE_CIRCUITS.mining.id.toString()],
+		);
+		const read = await readCircuitPage(set.deps, PAGE_CIRCUITS.mining);
+		if (!read.ok) throw new Error(read.error.detail);
+		expect(read.page.check).toEqual({
+			state: "not-checked",
+			detail: "Foreman hasn't checked this circuit yet",
+		});
+		expect(read.page.published).toEqual({
+			state: "not-published",
+			reason: "not-yet",
+		});
+	});
+
+	test("a circuit outside the index is unknown-circuit", async () => {
+		const set = await setUp();
+		pool = set.pool;
+		const read = await readCircuitPage(set.deps, {
+			processor: PAGE_CIRCUITS.mining.processor,
+			id: 999_999n,
+		});
+		expect(read).toMatchObject({
+			ok: false,
+			error: { error: "unknown-circuit" },
+		});
+	});
+
+	test("a failed BNB read is read-failed, never a partial page", async () => {
+		const set = await setUp(deadClient);
+		pool = set.pool;
+		const read = await readCircuitPage(set.deps, PAGE_CIRCUITS.mining);
+		expect(read).toEqual({
+			ok: false,
+			error: { error: "read-failed", detail: expect.any(String) },
+		});
+	});
+
+	test("before the market index is filled: not-ready", async () => {
+		const set = await setUp();
+		pool = set.pool;
+		await pool.query(
+			"update index_state set market_up_to_block = null, market_up_to_time = null",
+		);
+		const read = await readCircuitPage(set.deps, PAGE_CIRCUITS.mining);
+		expect(read).toMatchObject({ ok: false, error: { error: "not-ready" } });
+	});
+});

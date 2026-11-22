@@ -7,7 +7,12 @@ import openListings from "@foreman/chain-bnb/fixtures/market-scan-open-listings.
 };
 import type pg from "pg";
 import { afterEach, describe, expect, test } from "vitest";
-import { followMarket, readMarketBook, readSellMarket } from "./index.ts";
+import {
+	followMarket,
+	readMarketBook,
+	readMarketNetwork,
+	readSellMarket,
+} from "./index.ts";
 import { emptyIndexAt, TEST_DATABASE_URL } from "./testing.ts";
 
 // One follow of the market over blocks 134,650,000 to 134,713,299, from an index that holds
@@ -87,6 +92,77 @@ describe.skipIf(!TEST_DATABASE_URL)("following the market", () => {
 			miner_status: 1,
 			miner_task_id: 220,
 			miner_verif_weight: "61",
+		});
+	});
+
+	test("keeps when each new listing was listed: its Listed event's block and time", async () => {
+		pool = await marketIndexedBefore();
+		await followMarket(pool, replayClient(fixture), { toBlock: TO });
+		const listed = await pool.query(
+			`select listing_id::text, listed_block::text, listed_time::text
+			 from market_listings where listing_id > 28106 order by listing_id`,
+		);
+		expect(listed.rows).toEqual([
+			{
+				listing_id: "28107",
+				listed_block: "134671540",
+				listed_time: "1795167033",
+			},
+			{
+				listing_id: "28108",
+				listed_block: "134688713",
+				listed_time: "1795174767",
+			},
+			{
+				listing_id: "28109",
+				listed_block: "134710369",
+				listed_time: "1795184516",
+			},
+			{
+				listing_id: "28110",
+				listed_block: "134710498",
+				listed_time: "1795184574",
+			},
+			{
+				listing_id: "28111",
+				listed_block: "134710537",
+				listed_time: "1795184592",
+			},
+		]);
+	});
+
+	test("keeps each open listing's miner weight without the design bonus, for the low case", async () => {
+		pool = await marketIndexedBefore();
+		await followMarket(pool, replayClient(fixture), { toBlock: TO });
+		const weights = await pool.query(
+			`select listing_id::text, miner_verif_weight::text, miner_weight_without_bonus::text
+			 from market_listings where listing_id in (28074, 28111) order by listing_id`,
+		);
+		expect(weights.rows).toEqual([
+			// Circuit #2421 holds the bonus: bstar 55 × multiplier 6 without it
+			{
+				listing_id: "28074",
+				miner_verif_weight: "1578",
+				miner_weight_without_bonus: "330",
+			},
+			{
+				listing_id: "28111",
+				miner_verif_weight: "61",
+				miner_weight_without_bonus: "61",
+			},
+		]);
+	});
+
+	test("keeps the network at the market's block, so a listings page values each stored weight without a live read", async () => {
+		pool = await marketIndexedBefore();
+		expect(await readMarketNetwork(pool)).toBeNull();
+		await followMarket(pool, replayClient(fixture), { toBlock: TO });
+		expect(await readMarketNetwork(pool)).toEqual({
+			verifiedWeight: 1_614_250n,
+			unverifiedWeight: 41_297n,
+			minerCount: 20_862n,
+			verifiedMinerCount: 20_214n,
+			readAt: { chainId: 56, block: TO, time: 1_795_185_835n },
 		});
 	});
 

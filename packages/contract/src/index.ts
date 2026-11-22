@@ -13,6 +13,7 @@ export {
 	type Published,
 	type PublishedAt,
 	parseListingAsk,
+	parseMultiplier,
 	parsePublished,
 	parseStoredCheck,
 	type StoredCheck,

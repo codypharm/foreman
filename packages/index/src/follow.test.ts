@@ -1,4 +1,4 @@
-import { replayClient } from "@foreman/chain-bnb/fixture";
+import { type Fixture, replayClient } from "@foreman/chain-bnb/fixture";
 import { FACTORY_FIRST_BLOCK, scanTapeOuts } from "@foreman/originality";
 import starts from "@foreman/originality/fixtures/bnb-miner-starts-117268000-117271000.json" with {
 	type: "json",
@@ -6,7 +6,10 @@ import starts from "@foreman/originality/fixtures/bnb-miner-starts-117268000-117
 import tapeOuts from "@foreman/originality/fixtures/bnb-tape-outs-116150000.json" with {
 	type: "json",
 };
-import { withoutTapeOutLog } from "@foreman/originality/testing";
+import {
+	logsByAddressClient,
+	withoutTapeOutLog,
+} from "@foreman/originality/testing";
 import type pg from "pg";
 import { afterEach, describe, expect, test } from "vitest";
 import {
@@ -27,6 +30,9 @@ import { emptyIndexAt, freshDatabase, TEST_DATABASE_URL } from "./testing.ts";
 const SPLIT = 116_092_001n;
 const HEAD = 116_150_000n;
 const MINE6 = "0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c";
+
+/** The fixture as a node that answers log reads by address, as the follow now asks publicnode. */
+const follower = (f: Fixture) => logsByAddressClient(f).client;
 
 /** An index built to SPLIT: tape-outs saved, miner starts and revokes read to the same block. */
 async function indexToSplit(): Promise<pg.Pool> {
@@ -54,7 +60,7 @@ describe.skipIf(!TEST_DATABASE_URL)("following the index", () => {
 
 	test("brings tape-outs, miner starts and revokes up to the same block", async () => {
 		pool = await indexToSplit();
-		const result = await followIndex(pool, replayClient(tapeOuts), {
+		const result = await followIndex(pool, follower(tapeOuts), {
 			toBlock: HEAD,
 		});
 		expect(result).toMatchObject({
@@ -80,7 +86,7 @@ describe.skipIf(!TEST_DATABASE_URL)("following the index", () => {
 
 	test("reads every new netlist at the block it follows to", async () => {
 		pool = await indexToSplit();
-		const result = await followIndex(pool, replayClient(tapeOuts), {
+		const result = await followIndex(pool, follower(tapeOuts), {
 			toBlock: HEAD,
 		});
 		expect(result).toMatchObject({
@@ -115,7 +121,7 @@ describe.skipIf(!TEST_DATABASE_URL)("following the index", () => {
 				);
 			}),
 		};
-		const result = await followIndex(pool, replayClient(broken), {
+		const result = await followIndex(pool, follower(broken), {
 			toBlock: HEAD,
 		});
 		expect(result).toMatchObject({
@@ -136,7 +142,7 @@ describe.skipIf(!TEST_DATABASE_URL)("following the index", () => {
 		pool = await indexToSplit();
 		// MINE6/40 is taped out after the split; the node leaves it out
 		const gap = withoutTapeOutLog(tapeOuts, MINE6, 40n);
-		const result = await followIndex(pool, replayClient(gap), {
+		const result = await followIndex(pool, follower(gap), {
 			toBlock: HEAD,
 		});
 		expect(result).toEqual({
@@ -190,7 +196,7 @@ describe.skipIf(!TEST_DATABASE_URL)("following the index", () => {
 
 	test("leaves the market alone until its first fill, and says so", async () => {
 		pool = await indexToSplit();
-		const result = await followIndex(pool, replayClient(tapeOuts), {
+		const result = await followIndex(pool, follower(tapeOuts), {
 			toBlock: HEAD,
 		});
 		expect(result).toMatchObject({
@@ -209,7 +215,7 @@ describe.skipIf(!TEST_DATABASE_URL)("following the index", () => {
 			"update index_state set market_up_to_block = $1, market_up_to_time = 1",
 			[HEAD.toString()],
 		);
-		const result = await followIndex(pool, replayClient(tapeOuts), {
+		const result = await followIndex(pool, follower(tapeOuts), {
 			toBlock: HEAD,
 		});
 		expect(result).toMatchObject({

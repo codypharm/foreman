@@ -3,8 +3,11 @@
 import { type Fixture, replayClient } from "@foreman/chain-bnb/fixture";
 import {
 	type Address,
+	createPublicClient,
+	custom,
 	decodeFunctionResult,
 	type Hex,
+	type PublicClient,
 	parseAbi,
 	zeroAddress,
 } from "viem";
@@ -223,4 +226,61 @@ export function withoutTapeOutLog(
 			`expected one TapedOut log for ${processor}/${id}, found ${removed}`,
 		);
 	return { ...f, calls };
+}
+
+/**
+ * A node built from a fixture's recorded TapedOut reads: it answers any log read, filtered by
+ * block range and address list, from the logs the fixture holds, and everything else by replay.
+ * Each log read's address list is kept in `asked`. Refuses a read with more than 10 addresses, as
+ * publicnode does (docs/decisions/2026-11-21-bnb-nodes.md).
+ */
+export function logsByAddressClient(f: Fixture): {
+	client: PublicClient;
+	asked: (string[] | undefined)[];
+} {
+	type Log = { address: string; blockNumber: string };
+	const seen = new Set<string>();
+	const logs: Log[] = [];
+	for (const c of f.calls) {
+		if (c.method !== "eth_getLogs") continue;
+		for (const l of c.result as (Log & { logIndex: string })[]) {
+			const k = `${l.blockNumber}/${l.logIndex}`;
+			if (!seen.has(k)) logs.push(l);
+			seen.add(k);
+		}
+	}
+	const replay = replayClient(f);
+	const asked: (string[] | undefined)[] = [];
+	const client = createPublicClient({
+		transport: custom(
+			{
+				async request({ method, params }) {
+					if (method !== "eth_getLogs") {
+						return replay.request({ method, params } as never);
+					}
+					const [q] = params as [
+						{ fromBlock: string; toBlock: string; address?: string[] },
+					];
+					asked.push(q.address);
+					if (q.address && q.address.length > 10) {
+						throw new Error("more than 10 addresses in one log read");
+					}
+					const from = BigInt(q.fromBlock);
+					const to = BigInt(q.toBlock);
+					const wanted = q.address?.map((a) => a.toLowerCase());
+					return logs.filter((l) => {
+						const b = BigInt(l.blockNumber);
+						return (
+							b >= from &&
+							b <= to &&
+							(!wanted || wanted.includes(l.address.toLowerCase()))
+						);
+					});
+				},
+				// A missing answer fails at once, as the replay client's does
+			},
+			{ retryCount: 0 },
+		),
+	});
+	return { client, asked };
 }

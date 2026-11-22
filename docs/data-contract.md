@@ -16,7 +16,7 @@
 | `CircuitRef` | Settled 21 Nov 2026: storage from `docs/notes/2026-11-20-netlist-storage.md`, times from `2026-11-20-originality-result.md`; built by the circuit index, parsed by `parseCircuitRef` | Circuit index | Originality, API, app |
 | `Originality` | Settled 21 Nov 2026: rules from `2026-11-20-copy-and-wrapper-rules.md`, `2026-11-20-verdict-scope-and-earliest-design.md`, `2026-11-20-size-floor.md`, `2026-11-20-originality-result.md`; built by `packages/originality`, parsed by `parseOriginality` and written by `serialiseOriginality` | Originality check | API, app, publish job |
 | `PublishedResult` | Settled (`2026-11-21-results-contract.md`); its `originality` follows `Originality` | Publish job | App, markets, lenders |
-| `ListingsPage`, `CircuitPage`, `WalletMiners`, `ApiError` | Provisional, approved by William 21 Nov 2026 (`2026-11-21-api-endpoints.md`); fields may change when the market follow stores listing times and weight without the bonus | API | App, markets, lenders |
+| `ListingsPage`, `CircuitPage`, `WalletMiners`, `ApiError` | Provisional, approved by William 21 Nov 2026 (`2026-11-21-api-endpoints.md`); the market index keeps listing times and weight without the bonus since migration 009 (21 Nov 2026) | API | App, markets, lenders |
 | ~~`Policy`, `TapeOutResult`, `AgentKey`, `ActionLogEntry`~~ | **Withdrawn** 20 Nov 2026 with autopilot (`2026-11-20-scope-and-team.md`). Parsers removed in a later commit | — | — |
 
 ---
@@ -152,13 +152,14 @@ type Payback =
     }
   | { state: "not-listed"; minerKey: Hex32; readAt: { chainId: 56; block: bigint; time: bigint } }
   | { state: "no-price"; minerKey: Hex32; reason: string; readAt: { chainId: 56; block: bigint; time: bigint } }
-  | { state: "not-mining"; minerKey: Hex32; readAt: { chainId: 56; block: bigint; time: bigint } };
+  | { state: "not-mining"; minerKey: Hex32; readAt: { chainId: 56; block: bigint; time: bigint } }
+  | { state: "not-valued"; minerKey: Hex32; reason: string; readAt: { chainId: 56; block: bigint; time: bigint } };
 ```
 
 - **One block:** the miner, the network, the listing and `bemPrice` are all read at `readAt.block`. The parser refuses a `bemPrice` read at another block.
 - **Days are ordered the other way:** low ≥ base ≥ high, with `null` (not earned back by the 2030 halving) counted as the longest. A day count of 0 is refused: payback is at least day 1.
 - **No zero price:** `bnbPerBem`, `ask` and `askInBem` of 0 are refused. `ask` is BNB. `askInBem` = `ask` × 10^8 ÷ `bnbPerBem`, rounded up, and the parser checks it.
-- **Missing is missing:** no buyable listing is `not-listed`; a pool that can't give a 30-minute average is `no-price`, with the reason; a miner that isn't active is `not-mining`. None of them is a number of days.
+- **Missing is missing:** no buyable listing is `not-listed`; a pool that can't give a 30-minute average is `no-price`, with the reason; a miner that isn't active is `not-mining`; an active miner in the unverified pool is `not-valued`, with the reason (`2026-11-21-circuit-page-reads.md`). None of them is a number of days.
 - **Not counted:** unclaimed BEM, which the seller can claim before the sale.
 - **On screen:** "Payback for the asking price", the days for each case, and beside them the BEM price with its block, "30-minute average", the pool and what it holds. Never "you will earn it back".
 
@@ -375,6 +376,7 @@ interface ListingRow {
   check: StoredCheck;
   value30d:                              // Hold over 30 days, from the weight stored with the listing; no live read
     | { state: "shown"; valuation: Valuation }   // window.label "30d"
+    | { state: "not-valued"; reason: string }    // an active miner in the unverified pool
     | { state: "not-mining" }
     | { state: "not-read"; detail: string };     // the listing's miner state hasn't been read yet
 }
@@ -394,6 +396,7 @@ interface ListingsPage {
 }
 ```
 
+- **The mining set is valued or says why not:** a row in the mining set has `value30d` `shown`, or `not-valued` for an active miner in the unverified pool, which the set still counts.
 - **Counts add up:** the parser refuses a page whose `byVerdict` doesn't sum to the chosen set's count.
 - **The fact line** ("82 of the 294 mining miners for sale are copies of an earlier circuit") is built from `counts`, never stored as text.
 
@@ -410,8 +413,9 @@ interface CircuitPage {
   voucher: { voucherId: bigint; holder: Address; readAt: ChainRead } | null; // when the rig vault holds it (chain 196)
   hold:                                  // the estimated value
     | { state: "shown"; thirtyDays: Valuation; toHalving: Valuation }
+    | { state: "not-valued"; reason: string } // an active miner in the unverified pool
     | { state: "not-mining" };
-  payback: Payback;                      // has its own not-listed, no-price and not-mining states
+  payback: Payback;                      // has its own not-listed, no-price, not-mining and not-valued states
   options: {
     sell: Extract<Offer, { option: "sell" }>;
     lend: [Extract<Offer, { option: "lend" }>, Extract<Offer, { option: "lend" }>]; // 7 days, then 14
@@ -421,8 +425,9 @@ interface CircuitPage {
 }
 ```
 
-- **Live reads state their blocks:** `miner`, `listing`, `voucher`, `bemPrice` and the Lend offers each carry their own read; the page shows them. They may be a block or two apart, and each is labelled with its own.
-- **Hold needs a mining miner:** `hold` is `shown` only when `miner.status` is `active`; both windows use the same `miner` read.
+- **Live reads state their blocks:** `miner`, `listing`, `voucher`, `bemPrice` and the Lend offers each carry their own read; the page shows them. BNB Chain is read at the market index's block, so `miner`, `listing`, `bemPrice` and the Sell comparables are one moment; X Layer (`voucher`, Lend) is read at its latest block (`2026-11-21-circuit-page-reads.md`).
+- **Hold needs a mining miner:** `hold` is `shown` or `not-valued` only when `miner.status` is `active`; both windows use the same `miner` read.
+- **Not valued is the unverified pool, and only that:** `hold` is `not-valued` only for an active miner whose `pool` is `unverified`, with the reason "Foreman doesn't value the unverified pool yet". Then `payback` is `not-valued` too, and no other page has a `not-valued` payback. Never a made-up number, never "not mining".
 - **One circuit, one page:** the page exists for every indexed circuit. A circuit outside the index is an `ApiError` (`unknown-circuit`), never an empty page.
 
 ### `WalletMiners`

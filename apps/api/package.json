@@ -6,13 +6,21 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"typecheck": "tsc -p .",
-		"publish-results": "node --env-file-if-exists=../../.env scripts/publish.ts"
+		"publish-results": "node --env-file-if-exists=../../.env scripts/publish.ts",
+		"refresh-results": "node --env-file-if-exists=../../.env scripts/refresh-results.ts",
+		"circuit-page": "node --env-file-if-exists=../../.env scripts/circuit-page.ts",
+		"record:page": "node --env-file-if-exists=../../.env scripts/record-page-fixture.ts",
+		"serve": "node --env-file-if-exists=../../.env scripts/serve.ts"
 	},
 	"dependencies": {
 		"@foreman/chain-bnb": "workspace:*",
+		"@foreman/chain-xlayer": "workspace:*",
 		"@foreman/contract": "workspace:*",
 		"@foreman/index": "workspace:*",
 		"@foreman/originality": "workspace:*",
+		"@foreman/valuation": "workspace:*",
+		"@hono/node-server": "1.19.18",
+		"hono": "4.13.16",
 		"pg": "^8.23.1",
 		"viem": "2.57.16"
 	},

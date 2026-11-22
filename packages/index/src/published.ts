@@ -32,46 +32,72 @@ export interface PublishedEntry {
 
 export type PublishedRow = PublishedEntry & { tx: Hex32; block: bigint };
 
+interface PublishedColumns {
+	key: Buffer;
+	processor: string;
+	id: string;
+	kind: number;
+	can_mine: number;
+	fingerprint: Buffer;
+	result_hash: Buffer;
+	index_block: string;
+	tx: string;
+	block: string;
+}
+
+const SELECT_PUBLISHED = `select key, processor, id, kind, can_mine, fingerprint, result_hash,
+  index_block, tx, block from published_results where chain_id = $1 and contract = $2`;
+
 /** Every circuit published to this contract, by key. */
 export async function readPublished(
 	pool: pg.Pool,
 	contract: ResultsContract,
 ): Promise<Map<Hex32, PublishedRow>> {
-	const rows = await pool.query<{
-		key: Buffer;
-		processor: string;
-		id: string;
-		kind: number;
-		can_mine: number;
-		fingerprint: Buffer;
-		result_hash: Buffer;
-		index_block: string;
-		tx: string;
-		block: string;
-	}>(
-		`select key, processor, id, kind, can_mine, fingerprint, result_hash, index_block, tx, block
-		 from published_results where chain_id = $1 and contract = $2`,
-		[contract.chainId, contract.address.toLowerCase()],
-	);
-	const hex = (b: Buffer, field: string) =>
-		parseHex32(`0x${b.toString("hex")}`, field);
+	const rows = await pool.query<PublishedColumns>(SELECT_PUBLISHED, [
+		contract.chainId,
+		contract.address.toLowerCase(),
+	]);
 	return new Map(
 		rows.rows.map((r) => {
-			const row: PublishedRow = {
-				key: hex(r.key, "published_results.key"),
-				processor: parseAddress(r.processor, "published_results.processor"),
-				id: BigInt(r.id),
-				kind: r.kind,
-				canMine: r.can_mine,
-				fingerprint: hex(r.fingerprint, "published_results.fingerprint"),
-				resultHash: hex(r.result_hash, "published_results.result_hash"),
-				indexBlock: BigInt(r.index_block),
-				tx: parseHex32(r.tx, "published_results.tx"),
-				block: BigInt(r.block),
-			};
+			const row = publishedRow(r);
 			return [row.key, row];
 		}),
 	);
+}
+
+/** One circuit's row, by its miner key; null when it was never published to this contract. */
+export async function readPublishedRow(
+	pool: pg.Pool,
+	contract: ResultsContract,
+	key: Hex32,
+): Promise<PublishedRow | null> {
+	const rows = await pool.query<PublishedColumns>(
+		`${SELECT_PUBLISHED} and key = $3`,
+		[
+			contract.chainId,
+			contract.address.toLowerCase(),
+			Buffer.from(key.slice(2), "hex"),
+		],
+	);
+	const r = rows.rows[0];
+	return r ? publishedRow(r) : null;
+}
+
+function publishedRow(r: PublishedColumns): PublishedRow {
+	const hex = (b: Buffer, field: string) =>
+		parseHex32(`0x${b.toString("hex")}`, field);
+	return {
+		key: hex(r.key, "published_results.key"),
+		processor: parseAddress(r.processor, "published_results.processor"),
+		id: BigInt(r.id),
+		kind: r.kind,
+		canMine: r.can_mine,
+		fingerprint: hex(r.fingerprint, "published_results.fingerprint"),
+		resultHash: hex(r.result_hash, "published_results.result_hash"),
+		indexBlock: BigInt(r.index_block),
+		tx: parseHex32(r.tx, "published_results.tx"),
+		block: BigInt(r.block),
+	};
 }
 
 /** Records one confirmed batch in one database transaction; a republish replaces the row. */

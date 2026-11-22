@@ -49,9 +49,17 @@ export type Payback =
 	  }
 	| { state: "not-listed"; minerKey: Hex32; readAt: BnbRead }
 	| { state: "not-mining"; minerKey: Hex32; readAt: BnbRead }
-	| { state: "no-price"; minerKey: Hex32; reason: string; readAt: BnbRead };
+	| { state: "no-price"; minerKey: Hex32; reason: string; readAt: BnbRead }
+	/** An active miner the engine doesn't value yet: the unverified pool (2026-11-21-circuit-page-reads.md). */
+	| { state: "not-valued"; minerKey: Hex32; reason: string; readAt: BnbRead };
 
-const STATES = ["shown", "not-listed", "not-mining", "no-price"] as const;
+const STATES = [
+	"shown",
+	"not-listed",
+	"not-mining",
+	"no-price",
+	"not-valued",
+] as const;
 
 export function parsePayback(wire: unknown, field: string): Payback {
 	const w = parseObject(wire, field);
@@ -63,6 +71,7 @@ export function parsePayback(wire: unknown, field: string): Payback {
 		case "not-mining":
 			return { state, minerKey, readAt };
 		case "no-price":
+		case "not-valued":
 			return {
 				state,
 				minerKey,
@@ -162,6 +171,7 @@ export function serialisePayback(
 			wire = { ...base, readAt };
 			break;
 		case "no-price":
+		case "not-valued":
 			wire = { ...base, reason: payback.reason, readAt };
 			break;
 		case "shown":

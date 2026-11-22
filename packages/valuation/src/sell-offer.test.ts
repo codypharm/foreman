@@ -102,6 +102,19 @@ describe("Sell offer", () => {
 		expect(offer.sales.items).toEqual([]);
 	});
 
+	test("a circuit that has never started mining gets no comparables, and still no bid", () => {
+		const offer = sellOffer({ miner: null, minerKey: KEY, market: MARKET });
+		expect(offer).toMatchObject({
+			option: "sell",
+			minerKey: KEY,
+			bid: { state: "none", checkedAt: AT.time },
+		});
+		expect([offer.sales.range, offer.asks.range]).toEqual([
+			{ state: "not-mining" },
+			{ state: "not-mining" },
+		]);
+	});
+
 	test("an unverified miner compares only with unverified sales and asks", () => {
 		const offer = sellOffer({
 			miner: { ...MINER, pool: "unverified", taskId: null },

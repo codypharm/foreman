@@ -5,6 +5,7 @@ import {
 	type PublishedEntry,
 	type ResultsContract,
 	readPublished,
+	readPublishedRow,
 	recordPublished,
 } from "./index.ts";
 import { freshDatabase, TEST_DATABASE_URL } from "./testing.ts";
@@ -53,6 +54,18 @@ describe.skipIf(!TEST_DATABASE_URL)("the published results record", () => {
 		expect(read.size).toBe(2);
 		expect(read.get(hex32("0a"))).toEqual({ ...entry("0a", 2), ...at });
 		expect((await readPublished(pool, OTHER)).size).toBe(0);
+	});
+
+	test("one circuit's row reads back alone, and a circuit never published has none", async () => {
+		pool = await freshDatabase();
+		const at = { tx: hex32("01"), block: 1_000n };
+		await recordPublished(pool, TESTNET, [entry("0a", 2), entry("0b", 1)], at);
+		expect(await readPublishedRow(pool, TESTNET, hex32("0a"))).toEqual({
+			...entry("0a", 2),
+			...at,
+		});
+		expect(await readPublishedRow(pool, TESTNET, hex32("0c"))).toBeNull();
+		expect(await readPublishedRow(pool, OTHER, hex32("0a"))).toBeNull();
 	});
 
 	test("a republish replaces the circuit's row", async () => {

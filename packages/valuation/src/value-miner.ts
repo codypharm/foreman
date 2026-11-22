@@ -25,8 +25,14 @@ export const MODEL_VERSION = "2026-11-20";
 const INITIAL_RATE = 8_333_333n;
 const DAY = 86_400n;
 
+/** The miner fields the projection uses: a listing's stored state supplies these too. */
+export type ValuedMiner = Pick<
+	Miner,
+	"key" | "status" | "pool" | "weight" | "weightWithoutBonus" | "readAt"
+>;
+
 export function valueMiner(input: {
-	miner: Miner;
+	miner: ValuedMiner;
 	network: NetworkState;
 	days: DailySample[];
 	window: Valuation["window"]["label"];

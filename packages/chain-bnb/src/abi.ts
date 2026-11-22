@@ -5,6 +5,52 @@
 /** PoD mining contract (proxy) on BNB Smart Chain. In CLAUDE.md "On-chain facts". */
 export const POD_MINING = "0x7e2e0dc66a3bd9103e69b766afa62d9f7b697b46" as const;
 
+/** Multicall3 on BNB Smart Chain, not upgradeable. In CLAUDE.md "On-chain facts" (22 Nov 2026). */
+export const MULTICALL3 = "0xca11bde05977b3631167028862be2a173976ca11" as const;
+
+/**
+ * Multicall3's aggregate3: many view calls in one eth_call, each with its own success flag. It is
+ * payable on chain; declared view here so viem reads it with eth_call (the encoding is the same).
+ */
+export const multicall3Abi = [
+	{
+		name: "aggregate3",
+		type: "function",
+		stateMutability: "view",
+		inputs: [
+			{
+				name: "calls",
+				type: "tuple[]",
+				components: [
+					{ name: "target", type: "address" },
+					{ name: "allowFailure", type: "bool" },
+					{ name: "callData", type: "bytes" },
+				],
+			},
+		],
+		outputs: [
+			{
+				name: "returnData",
+				type: "tuple[]",
+				components: [
+					{ name: "success", type: "bool" },
+					{ name: "returnData", type: "bytes" },
+				],
+			},
+		],
+	},
+] as const;
+
+/**
+ * The two processors whose circuits can mine, with their processorMultiplier; every other
+ * processor's is 0, and the sealed mining contract can't change any (CLAUDE.md "On-chain facts",
+ * "Eligible processors", 20 Nov 2026). For pages that make no live reads.
+ */
+export const PROCESSOR_MULTIPLIERS: Readonly<Record<string, 6 | 1>> = {
+	"0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c": 6,
+	"0xb1024b89886b9a34aa4ff5f31c411d708b20a14c": 1,
+};
+
 export const podMiningAbi = [
 	{
 		name: "getMiner",

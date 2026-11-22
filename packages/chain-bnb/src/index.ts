@@ -9,10 +9,17 @@ export {
 	CIRCUIT_MARKET_IMPLEMENTATION,
 	CIRCUIT_MARKET_UPGRADES,
 	POD_MINING,
+	PROCESSOR_MULTIPLIERS,
 	podMiningAbi,
 	WBNB,
 } from "./abi.ts";
 export { type BemPriceRead, readBemPrice } from "./bem-price.ts";
+export {
+	bnbClient,
+	bnbTransport,
+	PUBLIC_RECENT_RPC,
+	RECENT_BLOCKS,
+} from "./bnb-client.ts";
 export { ChainReadError, UnknownMinerError } from "./errors.ts";
 export { blockAtOrAfter, readNetworkHistory } from "./history.ts";
 export {

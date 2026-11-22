@@ -23,6 +23,8 @@ export const LOG_SPAN = 50_000n;
 export const FACTORY_FIRST_BLOCK = 116_042_002n;
 /** Processors read at once when listing them. */
 const PROCESSOR_BATCH = 25n;
+/** publicnode's limit on addresses in one log read, measured 21 Nov 2026 (2026-11-21-bnb-nodes.md). */
+const ADDRESSES_PER_READ = 10;
 
 export const factoryAbi = [
 	{
@@ -195,6 +197,18 @@ async function scan(
 	}
 
 	const listed = new Set(processors.map((p) => p.address));
+	// A follow reads only the processors that issued new ids, a few addresses at a time: the recent
+	// node refuses a log read with no address or more than 10 (2026-11-21-bnb-nodes.md). A first
+	// scan reads every contract's TapedOut events, so it also sees the ones it drops.
+	const groups: (Address[] | null)[] =
+		indexed.size === 0
+			? [null]
+			: chunk(
+					processors
+						.filter((p) => p.issued > BigInt(indexed.get(p.address) ?? 0))
+						.map((p) => p.address),
+					ADDRESSES_PER_READ,
+				);
 	const tapeOuts: TapeOut[] = [];
 	const dropped: DroppedEvent[] = [];
 	for (let from = range.fromBlock; from <= range.toBlock; from += LOG_SPAN) {
@@ -203,16 +217,29 @@ async function scan(
 				? from + LOG_SPAN - 1n
 				: range.toBlock;
 		reading(`TapedOut read, blocks ${from} to ${to}`);
-		const logs = (await client.request({
-			method: "eth_getLogs",
-			params: [
-				{
-					topics: [TAPED_OUT],
-					fromBlock: numberToHex(from),
-					toBlock: numberToHex(to),
-				},
-			],
-		})) as RawLog[];
+		const logs: RawLog[] = [];
+		for (const group of groups) {
+			logs.push(
+				...((await client.request({
+					method: "eth_getLogs",
+					params: [
+						{
+							...(group ? { address: group } : {}),
+							topics: [TAPED_OUT],
+							fromBlock: numberToHex(from),
+							toBlock: numberToHex(to),
+						},
+					],
+				})) as RawLog[]),
+			);
+		}
+		// Reads by address group come back group by group: put them back in chain order
+		logs.sort(
+			(a, b) =>
+				compare(a.blockNumber, b.blockNumber) ||
+				compare(a.transactionIndex, b.transactionIndex) ||
+				compare(a.logIndex, b.logIndex),
+		);
 		for (const log of logs) {
 			const processor = log.address.toLowerCase() as Address;
 			const id = hexToBigInt(log.topics[1] as Hex);
@@ -271,4 +298,17 @@ async function scan(
 		tapeOuts,
 		dropped,
 	};
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+	const out: T[][] = [];
+	for (let i = 0; i < items.length; i += size)
+		out.push(items.slice(i, i + size));
+	return out;
+}
+
+function compare(a: Hex, b: Hex): number {
+	const x = hexToBigInt(a);
+	const y = hexToBigInt(b);
+	return x < y ? -1 : x > y ? 1 : 0;
 }

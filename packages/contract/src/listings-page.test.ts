@@ -263,4 +263,21 @@ describe("a listings page that doesn't hold together", () => {
 			detail: "taped out after the index",
 		});
 	});
+
+	test("a mining row in the unverified pool shows not valued yet, with the reason", () => {
+		const page = parseListingsPage(
+			wirePage({
+				rows: [
+					row("2421", "28074", "134700000", {
+						value30d: {
+							state: "not-valued",
+							reason: "Foreman doesn't value the unverified pool yet",
+						},
+					}),
+				],
+			}),
+			"page",
+		);
+		expect(page.rows[0]?.value30d.state).toBe("not-valued");
+	});
 });

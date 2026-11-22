@@ -3,6 +3,7 @@
 // comparable sales and asks the stated rule gives (2026-11-20-sell-comparables.md).
 
 import {
+	type Hex32,
 	type Miner,
 	type Offer,
 	parseOffer,
@@ -17,19 +18,23 @@ import { ValuationInputError } from "./errors.ts";
 
 export type SellOffer = Extract<Offer, { option: "sell" }>;
 
-/** `miner` must be read at the market's block, so its weight and the comparables are of one moment. */
-export function sellOffer(input: {
-	miner: Miner;
-	market: SellMarket;
-}): SellOffer {
+/**
+ * `miner` must be read at the market's block, so its weight and the comparables are of one moment.
+ * A circuit that has never started mining has no miner: pass `miner: null` with its miner key.
+ */
+export function sellOffer(
+	input:
+		| { miner: Miner; market: SellMarket }
+		| { miner: null; minerKey: Hex32; market: SellMarket },
+): SellOffer {
 	const { miner, market } = input;
-	if (miner.readAt.block !== market.at.block) {
+	if (miner && miner.readAt.block !== market.at.block) {
 		throw new ValuationInputError(
 			`Miner ${miner.key} was read at block ${miner.readAt.block}, the market at block ${market.at.block}`,
 		);
 	}
 	const state: MarketMinerState =
-		miner.status === "active"
+		miner?.status === "active"
 			? { mining: true, pool: miner.pool, weight: miner.weight }
 			: { mining: false };
 	const { sales, asks } = sellComparables({
@@ -40,7 +45,7 @@ export function sellOffer(input: {
 	});
 	const offer: SellOffer = {
 		option: "sell",
-		minerKey: miner.key,
+		minerKey: miner ? miner.key : input.minerKey,
 		bid: { state: "none", checkedAt: market.at.time },
 		sales,
 		asks,

@@ -56,7 +56,12 @@ export type FollowResult =
 export async function followIndex(
 	pool: pg.Pool,
 	client: PublicClient,
-	options: { toBlock: bigint; onProgress?: (stage: string) => void },
+	options: {
+		toBlock: bigint;
+		onProgress?: (stage: string) => void;
+		/** The head the market catches up to before reading its listings (scanMarket's catchUpTo). */
+		marketCatchUpTo?: () => Promise<bigint>;
+	},
 ): Promise<FollowResult> {
 	const { toBlock, onProgress } = options;
 	const state = await pool.query<{
@@ -151,7 +156,12 @@ export async function followIndex(
 					followed: false,
 					detail: "not filled yet: run the market's first fill",
 				}
-			: await followMarket(pool, client, { toBlock });
+			: await followMarket(pool, client, {
+					toBlock,
+					...(options.marketCatchUpTo
+						? { catchUpTo: options.marketCatchUpTo }
+						: {}),
+				});
 	return {
 		followed: true,
 		toBlock,

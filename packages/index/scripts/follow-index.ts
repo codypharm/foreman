@@ -5,9 +5,8 @@
 //
 //   pnpm --filter @foreman/index follow
 
+import { bnbClient } from "@foreman/chain-bnb";
 import pg from "pg";
-import { createPublicClient, http } from "viem";
-import { bsc } from "viem/chains";
 import { followIndex, migrate } from "../src/index.ts";
 
 const RPC = process.env.BNB_ARCHIVE_RPC_URL;
@@ -20,14 +19,11 @@ const pool = new pg.Pool({ connectionString: DATABASE_URL });
 try {
 	const applied = await migrate(pool);
 	if (applied.length) console.log(`migrations applied: ${applied.join(", ")}`);
-	const client = createPublicClient({
-		chain: bsc,
-		// Batched, so the market's per-listing reads go as one request per group
-		transport: http(RPC, {
-			retryCount: 5,
-			timeout: 30_000,
-			batch: { batchSize: 50 },
-		}),
+	const client = bnbClient({
+		archive: RPC,
+		recent: process.env.BNB_RECENT_RPC_URL,
+		archiveLogBlocks: process.env.BNB_ARCHIVE_LOG_BLOCKS,
+		batch: true,
 	});
 	const { number: toBlock } = await client.getBlock({ blockTag: "finalized" });
 	const started = Date.now();
@@ -36,6 +32,9 @@ try {
 	const r = await followIndex(pool, client, {
 		toBlock,
 		onProgress: (s) => console.log(`${since()}: ${s}`),
+		// A long catch-up leaves toBlock too old for publicnode: the market reads on to the head first
+		marketCatchUpTo: async () =>
+			(await client.getBlock({ blockTag: "finalized" })).number,
 	});
 	if (!r.followed) {
 		console.error(`follow stopped at ${r.stage}: ${r.detail}`);

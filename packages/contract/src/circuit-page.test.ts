@@ -432,3 +432,54 @@ describe("a circuit page that contradicts itself", () => {
 		},
 	);
 });
+
+describe("a mining miner in the unverified pool", () => {
+	const NOT_VALUED = "Foreman doesn't value the unverified pool yet";
+	const mining = wireMiningListed();
+	const unverified = {
+		...mining.miner,
+		pool: "unverified",
+		taskId: null,
+		weight: "330",
+		weightWithoutBonus: "330",
+		holdsBonus: false,
+	};
+	const notValued = {
+		miner: unverified,
+		hold: { state: "not-valued", reason: NOT_VALUED },
+		payback: {
+			state: "not-valued",
+			minerKey: KEY,
+			reason: NOT_VALUED,
+			readAt: AT_BNB,
+		},
+	};
+
+	test("is shown as not valued yet, with the reason, never as a number or as not mining", () => {
+		const page = parseCircuitPage(wireMiningListed(notValued), "page");
+		expect(page.hold).toEqual({ state: "not-valued", reason: NOT_VALUED });
+		expect(page.payback.state).toBe("not-valued");
+		const sent = JSON.parse(JSON.stringify(serialiseCircuitPage(page, "page")));
+		expect(sent).toEqual(wireMiningListed(notValued));
+	});
+
+	test.each([
+		[
+			"not valued for a verified miner, which the engine values",
+			{ hold: notValued.hold, payback: notValued.payback },
+			"page.hold",
+		],
+		[
+			"a payback for a miner that isn't valued",
+			{ miner: unverified, hold: notValued.hold },
+			"page.payback.state",
+		],
+	] as [string, Record<string, unknown>, string][])(
+		"is refused: %s",
+		(_why, overrides, field) => {
+			expect(() =>
+				parseCircuitPage(wireMiningListed(overrides), "page"),
+			).toThrow(expect.objectContaining({ name: "ContractParseError", field }));
+		},
+	);
+});

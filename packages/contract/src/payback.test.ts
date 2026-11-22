@@ -151,16 +151,24 @@ describe("payback on the wire", () => {
 				readAt: READ_AT,
 			},
 		],
+		[
+			{
+				state: "not-valued",
+				minerKey: KEY,
+				reason: "Foreman doesn't value the unverified pool yet",
+				readAt: READ_AT,
+			},
+		],
 	])("a missing payback is a state, never a number of days: %j", (wire) => {
 		const payback = parsePayback(wire, "payback");
 		expect(payback).not.toHaveProperty("days");
 		expect(serialisePayback(payback, "payback")).toEqual(wire);
 	});
 
-	test("no price needs its reason", () => {
+	test.each(["no-price", "not-valued"])("%s needs its reason", (state) => {
 		expect(() =>
 			parsePayback(
-				{ state: "no-price", minerKey: KEY, reason: "", readAt: READ_AT },
+				{ state, minerKey: KEY, reason: "", readAt: READ_AT },
 				"payback",
 			),
 		).toThrow(
