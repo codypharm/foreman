@@ -95,7 +95,10 @@ export {
 	saveScan,
 } from "./store.ts";
 export {
+	type PublisherBalance,
+	readPublisherBalance,
 	readStages,
+	recordPublisherBalance,
 	recordStage,
 	type StageEvent,
 	type StageRecord,

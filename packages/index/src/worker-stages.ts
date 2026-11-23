@@ -78,3 +78,49 @@ export async function readStages(pool: pg.Pool): Promise<StageState[]> {
 		};
 	});
 }
+
+/**
+ * The publisher wallet's balance as last read (docs/decisions/2026-11-23-low-balance-warning.md),
+ * in wei, with the chain, the address and when (unix seconds).
+ */
+export interface PublisherBalance {
+	chainId: number;
+	address: string;
+	wei: bigint;
+	at: bigint;
+}
+
+export async function recordPublisherBalance(
+	pool: pg.Pool,
+	b: PublisherBalance,
+): Promise<void> {
+	await pool.query(
+		`insert into publisher_balance (chain_id, address, balance_wei, read_at) values ($1, $2, $3, $4)
+		 on conflict (chain_id) do update set address = excluded.address,
+		   balance_wei = excluded.balance_wei, read_at = excluded.read_at`,
+		[b.chainId, b.address, b.wei.toString(), b.at.toString()],
+	);
+}
+
+/** The most recent read on any chain; null when it was never read, never a zero balance. */
+export async function readPublisherBalance(
+	pool: pg.Pool,
+): Promise<PublisherBalance | null> {
+	const rows = await pool.query<{
+		chain_id: number;
+		address: string;
+		balance_wei: string;
+		read_at: string;
+	}>(
+		"select chain_id, address, balance_wei, read_at from publisher_balance order by read_at desc limit 1",
+	);
+	const r = rows.rows[0];
+	return r
+		? {
+				chainId: r.chain_id,
+				address: r.address,
+				wei: BigInt(r.balance_wei),
+				at: BigInt(r.read_at),
+			}
+		: null;
+}

@@ -5,12 +5,17 @@
 // needs a new decision, so it isn't reachable from here.
 
 import { bnbClient } from "@foreman/chain-bnb";
-import { followIndex, readPublished } from "@foreman/index";
+import {
+	followIndex,
+	readPublished,
+	recordPublisherBalance,
+} from "@foreman/index";
 import type pg from "pg";
 import {
 	createPublicClient,
 	createWalletClient,
 	defineChain,
+	formatUnits,
 	type Hex,
 	http,
 	type PublicClient,
@@ -26,6 +31,7 @@ import { planPublish } from "../publish/plan.ts";
 import { recoverBatch } from "../publish/recover.ts";
 import { sendPlan } from "../publish/send.ts";
 import { refreshResults } from "../results/refresh.ts";
+import { LOW_BALANCE_WEI } from "../server/health.ts";
 import type { Stage, StageName } from "./cycle.ts";
 
 /** The worker publishes here and nowhere else (hosting ADR, decision 4). */
@@ -128,21 +134,6 @@ export function workerStages(
 			}
 			const contract = { chainId: PUBLISH_CHAIN, address };
 
-			const { results, skipped } = await storedResultsToPublish(pool);
-			if (results.length === 0) {
-				return {
-					status: "failed",
-					detail: "no stored results to publish: the results job hasn't run",
-				};
-			}
-			const plan = planPublish(results, await readPublished(pool, contract));
-			if (plan.entries.length === 0) {
-				return {
-					status: "done",
-					summary: `nothing changed: ${plan.unchanged} published results still current`,
-				};
-			}
-
 			const rpc = env.XLAYER_RPC_URL ?? XLAYER_RPC[PUBLISH_CHAIN];
 			const chain = defineChain({
 				id: PUBLISH_CHAIN,
@@ -161,6 +152,48 @@ export function workerStages(
 				transport: http(rpc, { retryCount: 3 }),
 			});
 
+			// The publisher's balance, read on every run so GET /health can warn before the wallet is
+			// empty (docs/decisions/2026-11-23-low-balance-warning.md). A failed read never stops the
+			// publish: the send itself finds out whether there's enough gas.
+			const balanceWarnings: string[] = [];
+			try {
+				const wei = await publicClient.getBalance({
+					address: wallet.account.address,
+				});
+				await recordPublisherBalance(pool, {
+					chainId: PUBLISH_CHAIN,
+					address: wallet.account.address.toLowerCase(),
+					wei,
+					at: BigInt(Math.floor(Date.now() / 1000)),
+				});
+				if (wei < LOW_BALANCE_WEI) {
+					balanceWarnings.push(
+						`publisher ${wallet.account.address} holds ${formatUnits(wei, 18)} OKB, under ${formatUnits(LOW_BALANCE_WEI, 18)}: top it up`,
+					);
+					log(`  publish: ${balanceWarnings[0]}`);
+				}
+			} catch (error) {
+				log(
+					`  publish: couldn't read the publisher's balance: ${error instanceof Error ? error.message : String(error)}`,
+				);
+			}
+
+			const { results, skipped } = await storedResultsToPublish(pool);
+			if (results.length === 0) {
+				return {
+					status: "failed",
+					detail: "no stored results to publish: the results job hasn't run",
+				};
+			}
+			const plan = planPublish(results, await readPublished(pool, contract));
+			if (plan.entries.length === 0) {
+				return {
+					status: "done",
+					summary: `nothing changed: ${plan.unchanged} published results still current`,
+					warnings: balanceWarnings,
+				};
+			}
+
 			const report = await sendPlan({
 				pool,
 				publicClient,
@@ -178,9 +211,12 @@ export function workerStages(
 					return {
 						status: "done",
 						summary: `${plan.entries.length} results in ${report.sent.length} transactions on X Layer testnet; ${plan.unchanged} unchanged; ${report.alreadyPublished} already published`,
-						warnings: skipped.length
-							? [`${skipped.length} circuits without a stored result yet`]
-							: [],
+						warnings: [
+							...balanceWarnings,
+							...(skipped.length
+								? [`${skipped.length} circuits without a stored result yet`]
+								: []),
+						],
 					};
 				case "refused":
 					return { status: "failed", detail: `refused: ${report.detail}` };

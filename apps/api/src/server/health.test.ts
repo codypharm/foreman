@@ -1,9 +1,13 @@
-import { recordStage, type StageState } from "@foreman/index";
+import {
+	recordPublisherBalance,
+	recordStage,
+	type StageState,
+} from "@foreman/index";
 import { freshDatabase, TEST_DATABASE_URL } from "@foreman/index/testing";
 import type pg from "pg";
 import { afterEach, describe, expect, test } from "vitest";
 import { createApp } from "./app.ts";
-import { BEHIND_AFTER_SECONDS, healthOf } from "./health.ts";
+import { BEHIND_AFTER_SECONDS, healthOf, LOW_BALANCE_WEI } from "./health.ts";
 
 // Whether the hosted worker is keeping up (docs/decisions/2026-11-23-hosting.md, decision 7).
 
@@ -104,6 +108,74 @@ describe("healthOf", () => {
 	});
 });
 
+// The publisher wallet's balance (docs/decisions/2026-11-23-low-balance-warning.md)
+describe("healthOf with the publisher's balance", () => {
+	const fresh = [
+		state("follow", { lastDone: done(3) }),
+		state("refresh", { lastDone: done(3) }),
+		state("publish", { lastDone: done(3) }),
+	];
+	const balance = (wei: bigint) => ({
+		chainId: 1952,
+		address: "0x2ef2fed3f9b3d5385499008051031320b1fb49ef",
+		wei,
+		at: ago(3),
+	});
+
+	test("a balance under the threshold is low, and so is the whole", () => {
+		const h = healthOf(fresh, NOW, balance(LOW_BALANCE_WEI - 1n));
+		expect(h.status).toBe("low-balance");
+		expect(h.stages[2]?.health).toBe("low-balance");
+	});
+
+	test("a balance at the threshold is ok", () => {
+		const h = healthOf(fresh, NOW, balance(LOW_BALANCE_WEI));
+		expect(h.status).toBe("ok");
+		expect(h.stages[2]?.health).toBe("ok");
+	});
+
+	test("an empty wallet whose publish keeps failing shows as low balance at once, not after 30 minutes", () => {
+		const h = healthOf(
+			[
+				state("follow", { lastDone: done(3) }),
+				state("refresh", { lastDone: done(3) }),
+				state("publish", { lastDone: done(10), lastFailed: done(3) }),
+			],
+			NOW,
+			balance(0n),
+		);
+		expect(h.status).toBe("low-balance");
+	});
+
+	test("a stage that is behind wins over a low balance", () => {
+		const h = healthOf(
+			[
+				state("follow", { lastDone: done(45) }),
+				state("refresh", { lastDone: done(3) }),
+				state("publish", { lastDone: done(3) }),
+			],
+			NOW,
+			balance(0n),
+		);
+		expect(h.status).toBe("behind");
+		expect(h.stages[2]?.health).toBe("low-balance");
+	});
+
+	test("while publishing is off the balance isn't judged", () => {
+		const h = healthOf(
+			[
+				state("follow", { lastDone: done(3) }),
+				state("refresh", { lastDone: done(3) }),
+				state("publish", { lastDone: done(60), lastSkipped: done(3) }),
+			],
+			NOW,
+			balance(0n),
+		);
+		expect(h.status).toBe("ok");
+		expect(h.stages[2]?.health).toBe("not-publishing");
+	});
+});
+
 describe.skipIf(!TEST_DATABASE_URL)("GET /health", () => {
 	let pool: pg.Pool | undefined;
 	afterEach(async () => {
@@ -172,5 +244,35 @@ describe.skipIf(!TEST_DATABASE_URL)("GET /health", () => {
 			text: "to BNB block 135256173",
 		});
 		expect(body.stages.publish?.health).toBe("not-publishing");
+	});
+
+	test("answers 503, low balance, with the publisher's address and balance, when the wallet is nearly empty", async () => {
+		pool = await freshDatabase();
+		const at = BigInt(Math.floor(Date.now() / 1000)) - 60n;
+		for (const stage of ["follow", "refresh", "publish"] as const) {
+			await recordStage(pool, stage, { status: "done", summary: "done" }, at);
+		}
+		await recordPublisherBalance(pool, {
+			chainId: 1952,
+			address: "0x2ef2fed3f9b3d5385499008051031320b1fb49ef",
+			wei: 4n * 10n ** 16n,
+			at,
+		});
+		const res = await app(pool).request("/health");
+		expect(res.status).toBe(503);
+		const body = (await res.json()) as {
+			status: string;
+			publisher: Record<string, unknown>;
+			stages: Record<string, { health: string }>;
+		};
+		expect(body.status).toBe("low-balance");
+		expect(body.stages.publish?.health).toBe("low-balance");
+		expect(body.publisher).toMatchObject({
+			chainId: 1952,
+			address: "0x2ef2fed3f9b3d5385499008051031320b1fb49ef",
+			balanceOkb: "0.04",
+			lowBelowOkb: "0.05",
+			minutesAgo: 1,
+		});
 	});
 });

@@ -30,3 +30,6 @@ contracts/broadcast/
 
 # The publish job's dry-run plans (apps/api): large, rebuilt on every run
 data/publish-plan-*.json
+
+# Database dumps (docs/deploy.md): copies of the index, never committed
+*.dump
