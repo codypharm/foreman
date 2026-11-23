@@ -10,10 +10,7 @@
 		},
 		{
 			"method": "eth_getBlockByNumber",
-			"params": [
-				"0x4910274",
-				false
-			],
+			"params": ["0x4910274", false],
 			"result": {
 				"baseFeePerGas": "0x1312d00",
 				"blobGasUsed": "0x111570",

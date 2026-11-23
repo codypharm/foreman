@@ -60,6 +60,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@foreman/chain-xlayer':
+        specifier: workspace:*
+        version: link:../../packages/chain-xlayer
       '@foreman/contract':
         specifier: workspace:*
         version: link:../../packages/contract

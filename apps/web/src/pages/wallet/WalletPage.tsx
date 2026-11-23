@@ -14,6 +14,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { useConnection } from "wagmi";
 import { Link } from "wouter";
 import { ApiProblem, fetchWallet } from "../../api.ts";
+import { LoadingNote, RowShapes, Shape } from "../../components/Shape.tsx";
 import { VerdictLine } from "../../components/VerdictLine.tsx";
 import { WalletButton } from "../../components/WalletButton.tsx";
 import { formatAsk, formatCount, formatDate, shortHex } from "../../format.ts";
@@ -95,10 +96,15 @@ function Miners({ address }: { address: string }) {
 							</button>
 						</div>
 					) : (
-						<p className={s.waiting}>
-							Reading your miners from BNB Chain and your RIG vouchers from X
-							Layer…
-						</p>
+						<div aria-busy="true">
+							<LoadingNote>
+								Reading your miners from BNB Chain and your RIG vouchers from X
+								Layer.
+							</LoadingNote>
+							<Shape h={168} r={18} mt={20} />
+							<Shape w={140} h={18} mt={40} />
+							<RowShapes count={5} />
+						</div>
 					)}
 				</main>
 				<Watch />

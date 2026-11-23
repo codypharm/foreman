@@ -32,11 +32,6 @@
 	font: 500 15px / 1.45 var(--sans);
 	max-width: 60ch;
 }
-.waiting {
-	padding: 48px 0;
-	color: var(--ink-2);
-	font-size: 15px;
-}
 .problem {
 	margin-top: 24px;
 	padding: 14px 16px;

@@ -28,7 +28,8 @@ function slowReplay(fail?: string) {
 				seen.most = Math.max(seen.most, seen.inFlight);
 				try {
 					await new Promise((r) => setTimeout(r, 5));
-					const data = (args.params as [{ data?: string }] | undefined)?.[0]?.data;
+					const data = (args.params as [{ data?: string }] | undefined)?.[0]
+						?.data;
 					if (fail && data === fail) throw new Error("node down");
 					return await replay.request(args as never);
 				} finally {

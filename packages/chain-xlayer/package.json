@@ -4,6 +4,7 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
+		"./results": "./src/results.ts",
 		"./fixtures/*": "./fixtures/*"
 	},
 	"scripts": {
@@ -14,7 +15,8 @@
 		"record:lend-fork": "node scripts/record-lend-fork-fixture.ts",
 		"record:lend-live-fork": "node scripts/record-lend-live-fork-fixture.ts",
 		"record:held-vouchers": "node scripts/record-held-vouchers-fixture.ts",
-		"record:voucher-circuit": "node scripts/record-voucher-circuit-fixture.ts"
+		"record:voucher-circuit": "node scripts/record-voucher-circuit-fixture.ts",
+		"record:published-result": "node scripts/record-published-result-fixture.ts"
 	},
 	"dependencies": {
 		"@foreman/chain-bnb": "workspace:*",

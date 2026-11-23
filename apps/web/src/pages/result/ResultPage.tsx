@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Link } from "wouter";
 import { ApiProblem, fetchCircuit } from "../../api.ts";
+import { LoadingNote, Shape } from "../../components/Shape.tsx";
 import { formatCount, shortHex } from "../../format.ts";
 import { CAN_MINE } from "./circuit-words.ts";
 import { Options } from "./Options.tsx";
@@ -58,7 +59,7 @@ export function ResultPage({
 	}
 
 	return (
-		<div className={s.page}>
+		<div className={s.page} aria-busy={page.isPending}>
 			{page.data ? (
 				<>
 					<main>
@@ -68,7 +69,7 @@ export function ResultPage({
 					</main>
 					<Options page={page.data} />
 				</>
-			) : (
+			) : page.isError ? (
 				<main>
 					<div className={s.who}>
 						<span className={s.badge} aria-hidden="true">
@@ -76,25 +77,70 @@ export function ResultPage({
 						</span>
 						<h1>Circuit #{id}</h1>
 					</div>
-					{page.isError ? (
-						<div className={s.problem} role="alert">
-							{page.error instanceof ApiProblem
-								? page.error.problem.detail
-								: "Something went wrong reading this circuit."}
-							<br />
-							<button type="button" onClick={() => page.refetch()}>
-								Try again
-							</button>
-						</div>
-					) : (
-						<p className={s.waiting}>
-							Reading the circuit, its miner and its market from BNB Chain and X
-							Layer…
-						</p>
-					)}
+					<div className={s.problem} role="alert">
+						{page.error instanceof ApiProblem
+							? page.error.problem.detail
+							: "Something went wrong reading this circuit."}
+						<br />
+						<button type="button" onClick={() => page.refetch()}>
+							Try again
+						</button>
+					</div>
 				</main>
+			) : (
+				<PageShape id={id} />
 			)}
 		</div>
+	);
+}
+
+/** Loading A: the page's shape while its live reads arrive, the circuit number shown at once. */
+function PageShape({ id }: { id: string }) {
+	return (
+		<>
+			<main>
+				<LoadingNote>
+					Reading circuit #{id}, its miner and its market from BNB Chain and X
+					Layer.
+				</LoadingNote>
+				<div className={s.who}>
+					<span className={s.badge} aria-hidden="true">
+						#
+					</span>
+					<div>
+						<h1>Circuit #{id}</h1>
+						<Shape w={180} h={20} mt={6} />
+					</div>
+				</div>
+				<section className={`${s.q} ${s.first}`}>
+					<div className={s.sec}>
+						<h2>Original?</h2>
+					</div>
+					<Shape w="70%" h={22} mt={20} />
+					<Shape w="90%" h={14} mt={12} />
+					<Shape w="60%" h={14} mt={8} />
+				</section>
+				<section className={s.q}>
+					<div className={s.sec}>
+						<h2>Worth?</h2>
+					</div>
+					<Shape w={240} h={36} r={999} mt={16} />
+					<Shape w="55%" h={64} r={12} mt={20} />
+					<Shape h={4} mt={24} />
+				</section>
+			</main>
+			<aside className={s.side}>
+				<div className={s.sec}>
+					<h2>Options</h2>
+				</div>
+				{["Hold", "Sell", "Lend", "Rent"].map((o) => (
+					<div key={o} className={s.shapeRow}>
+						<Shape w={56} h={16} />
+						<Shape w="80%" h={12} mt={10} />
+					</div>
+				))}
+			</aside>
+		</>
 	);
 }
 

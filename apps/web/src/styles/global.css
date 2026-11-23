@@ -10,6 +10,8 @@
 	--on-accent: #000000;
 	/* "Just listed" as text: deep lemon in light for contrast (5.0:1 on --raise), lemon in dark */
 	--new: #567300;
+	--skel: #efefef;
+	--skel-hi: #f7f7f7;
 	--live: #14a44d;
 	--stale: #c4231b;
 	--stale-bg: #fdecea;
@@ -31,6 +33,8 @@
 		--line: #1f1f1f;
 		--live: #3ddc84;
 		--new: #c2f24b;
+		--skel: #161616;
+		--skel-hi: #222222;
 		--stale: #ff7a6b;
 		--stale-bg: #2a1210;
 		--btn: #ffffff;
@@ -49,6 +53,8 @@
 	--line: #1f1f1f;
 	--live: #3ddc84;
 	--new: #c2f24b;
+	--skel: #161616;
+	--skel-hi: #222222;
 	--stale: #ff7a6b;
 	--stale-bg: #2a1210;
 	--btn: #ffffff;
@@ -97,7 +103,7 @@ a {
 }
 @media (max-width: 760px) {
 	:root {
-		--top-h: 117px;
+		--top-h: 157px;
 	}
 }
 html {

@@ -482,11 +482,10 @@
 	color: var(--ink-2);
 }
 
-/* waiting and problems */
-.waiting {
-	padding: 48px 0;
-	color: var(--ink-2);
-	font-size: 15px;
+/* loading and problems */
+.shapeRow {
+	padding: 16px 0;
+	border-bottom: 1px solid var(--line);
 }
 .problem {
 	margin-top: 24px;

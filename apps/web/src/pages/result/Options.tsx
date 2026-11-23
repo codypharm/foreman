@@ -10,6 +10,7 @@ import {
 	formatCount,
 	shortHex,
 } from "../../format.ts";
+import { ReadBack } from "./ReadBack.tsx";
 import s from "./ResultPage.module.css";
 
 type Lend = Extract<Offer, { option: "lend" }>;
@@ -219,14 +220,7 @@ function Published({ page }: { page: CircuitPage }) {
 							</>
 						)}
 					</dl>
-					<button
-						type="button"
-						className={s.readback}
-						disabled
-						title="Reading the result back from X Layer comes with the wallet page"
-					>
-						Read it back from the contract
-					</button>
+					<ReadBack page={page} p={p} />
 				</>
 			)}
 		</div>

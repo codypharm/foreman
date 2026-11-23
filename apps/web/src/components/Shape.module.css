@@ -1,0 +1,52 @@
+/* Loading shapes: loading A in docs/mocks/2026-11-23-readback-and-loading.html. */
+.shape {
+	display: block;
+	border-radius: 8px;
+	background: linear-gradient(
+		90deg,
+		var(--skel) 0%,
+		var(--skel-hi) 50%,
+		var(--skel) 100%
+	);
+	background-size: 200% 100%;
+	animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer {
+	from {
+		background-position: 100% 0;
+	}
+	to {
+		background-position: -100% 0;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.shape {
+		animation: none;
+	}
+}
+.hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+/* a list row's shape: badge, two lines, a figure on the right (as the listings and miners rows) */
+.rows {
+	list-style: none;
+	padding: 0;
+	margin-top: 8px;
+}
+.rows li {
+	display: grid;
+	grid-template-columns: 40px minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 12px;
+	padding: 13px 0;
+	border-bottom: 1px solid var(--line);
+}
+.end {
+	display: grid;
+	justify-items: end;
+}

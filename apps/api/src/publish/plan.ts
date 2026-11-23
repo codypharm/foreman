@@ -4,6 +4,7 @@
 // keccak256 of exactly those bytes (2026-11-21-results-contract.md, decision 7).
 
 import { minerKey } from "@foreman/chain-bnb";
+import { shortVerdict } from "@foreman/chain-xlayer/results";
 import {
 	type Hex32,
 	type Originality,
@@ -12,6 +13,9 @@ import {
 import type { PublishedEntry, PublishedRow } from "@foreman/index";
 import { type Hex, keccak256, stringToHex } from "viem";
 import { changeFingerprint } from "./fingerprint.ts";
+
+/** The results contract's short verdict codes (ForemanResults.sol, Verdict). */
+export { shortVerdict };
 
 export type PlanEntry = PublishedEntry & {
 	/** The logged JSON, as bytes. */
@@ -22,31 +26,6 @@ export interface Plan {
 	entries: PlanEntry[];
 	/** Results whose fingerprint matches their last publish. */
 	unchanged: number;
-}
-
-const KIND: Record<Originality["result"]["verdict"], number> = {
-	"no-earlier-copy": 1,
-	copy: 2,
-	"too-small-to-tell": 3,
-	wrapper: 4,
-	"cant-check": 5,
-};
-
-const CAN_MINE = {
-	mining: 1,
-	"cant-mine": 2,
-	stopped: 3,
-	"not-started": 4,
-} as const;
-
-/** The results contract's short verdict codes (ForemanResults.sol, Verdict). */
-export function shortVerdict(o: Originality): {
-	kind: number;
-	canMine: number;
-} {
-	const fact = o.facts.find((f) => f.fact === "can-mine");
-	if (!fact) throw new Error("a result carries exactly one can-mine fact");
-	return { kind: KIND[o.result.verdict], canMine: CAN_MINE[fact.state] };
 }
 
 export function planPublish(

@@ -1,0 +1,265 @@
+<!--
+  The result page's read-back panel and loading screen. Chosen by William on 23 November 2026: read-back A
+  ("a checklist of what was read") and loading A ("the page's shape, filling in"). B and C of each are kept
+  below for the record. Refines the chosen result page mock (2026-11-21-result-page.html), which showed the
+  "Read it back from the contract" button but not what follows, and a plain loading line.
+  Read-back: the browser reads X Layer itself (docs/decisions/2026-11-23-read-back.md), then lists each check
+  in plain words, ticked or crossed: found the publish; the contract stores this result (its hash); same as
+  this page (verdict, evidence, rule, BNB block). One line says it came straight from X Layer.
+  Loading: grey shapes where the header, verdict and estimate will be, with the circuit number at once.
+  Static, real data: circuit 0xb102…a14c/18387, published on X Layer testnet in 0x19a2…af2a at block
+  46,918,536 and read back at block 46,958,546 on 23 Nov 2026; its page takes about 7 seconds to load.
+  Build to this; a layout or flow change is a new mock and a new choice.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foreman · Read-back and loading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --raise:#F5F5F5; --ink:#000000; --ink-2:#6B6B6B; --ink-3:#9A9A9A; --line:#EBEBEB;
+  --accent:#C2F24B; --on-accent:#000000; --live:#14A44D; --stale:#C4231B; --stale-bg:#FDECEA; --new:#567300;
+  --btn:#000000; --on-btn:#FFFFFF; --frame:#FAFAFA; --skel:#EFEFEF; --skel-hi:#F7F7F7;
+  --sans:"Geist",system-ui,sans-serif; --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+    --live:#3DDC84; --stale:#FF7A6B; --stale-bg:#2A1210; --new:#C2F24B;
+    --btn:#FFFFFF; --on-btn:#000000; --frame:#0A0A0A; --skel:#161616; --skel-hi:#222222;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+  --live:#3DDC84; --stale:#FF7A6B; --stale-bg:#2A1210; --new:#C2F24B;
+  --btn:#FFFFFF; --on-btn:#000000; --frame:#0A0A0A; --skel:#161616; --skel-hi:#222222;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--frame);color:var(--ink);font:400 15px/1.5 var(--sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{padding:32px 16px 64px}
+button{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-size:12.5px;font-weight:500}
+
+.head{max-width:1560px;margin:0 auto 20px}
+.head h1{font:600 22px/1.2 var(--sans);letter-spacing:-.01em}
+.head p{margin-top:6px;max-width:80ch;font-size:14px;color:var(--ink-2)}
+.part{max-width:1560px;margin:36px auto 14px;font:600 13px/1 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.opts{max-width:1560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:start}
+.opt{background:var(--bg);border-radius:20px;box-shadow:0 1px 2px rgb(0 0 0 / .04),0 8px 28px rgb(0 0 0 / .06);overflow:hidden}
+.opt>header{padding:16px 20px;border-bottom:1px solid var(--line)}
+.opt>header h2{font:600 16px/1.25 var(--sans)}
+.opt>header p{margin-top:4px;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.screen{padding:22px 20px 26px}
+.cap{margin:22px 0 8px;font:600 12px/1 var(--sans);color:var(--ink-3)}
+@media (max-width:1180px){ .opts{grid-template-columns:minmax(0,1fr);max-width:560px} }
+
+/* the Published panel, as on the result page */
+.sec{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.sec h3{font:600 17px/1.2 var(--sans)}
+.row{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:14px}
+.net{font:600 12px/1 var(--sans);padding:5px 8px;border-radius:6px;background:var(--raise)}
+.row .note{color:var(--ink-2)}
+.row .note b{color:var(--ink);font-weight:600}
+dl.facts{display:grid;grid-template-columns:1fr auto;margin-top:8px}
+dl.facts dt,dl.facts dd{padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+dl.facts dt{color:var(--ink-2)}
+dl.facts dd{text-align:right;font-weight:600}
+.readback{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:44px;margin-top:16px;border-radius:999px;font:600 14px/1 var(--sans);box-shadow:inset 0 0 0 1px var(--line)}
+.readback.busy{color:var(--ink-2)}
+.spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--ink);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* A: checklist */
+.checks{list-style:none;padding:0;margin-top:16px}
+.checks li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:14px;line-height:1.4}
+.checks li:first-child{border-top:0}
+.checks .ok{color:var(--live)} .checks .no{color:var(--stale)}
+.checks b{font-weight:600}
+.checks small{display:block;margin-top:2px;font-size:12.5px;color:var(--ink-2)}
+.src{margin-top:12px;font-size:12.5px;line-height:1.45;color:var(--ink-2)}
+.verdict-ok{display:flex;align-items:center;gap:8px;margin-top:16px;padding:12px 14px;border-radius:14px;background:var(--raise);font:600 15px/1.3 var(--sans)}
+.verdict-ok i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--live)}
+.verdict-no{margin-top:16px;padding:12px 14px;border-radius:14px;background:var(--stale-bg);color:var(--stale);font:500 14px/1.45 var(--sans)}
+.verdict-no b{font-weight:600}
+
+/* B: compare */
+table.cmp{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
+table.cmp th{font:600 12px/1.2 var(--sans);color:var(--ink-2);text-align:left;padding:0 0 8px}
+table.cmp th:last-child,table.cmp td:last-child{text-align:right}
+table.cmp td{padding:10px 0;border-top:1px solid var(--line);vertical-align:top;line-height:1.35}
+table.cmp td:first-child{color:var(--ink-2);padding-right:10px;white-space:nowrap}
+table.cmp td b{font-weight:600}
+table.cmp .m{color:var(--live);font-weight:600}
+
+/* C: one line + details */
+.oneline{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;padding:12px 14px;border-radius:14px;background:var(--raise)}
+.oneline span{display:flex;align-items:center;gap:8px;font:600 14px/1.3 var(--sans)}
+.oneline span i{width:8px;height:8px;border-radius:50%;background:var(--live)}
+.oneline small{font:500 12px/1.2 var(--sans);color:var(--ink-2);white-space:nowrap}
+details{margin-top:10px}
+summary{cursor:pointer;font:600 13px/1.3 var(--sans);padding:6px 0;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:" ↓";color:var(--ink-3)}
+details[open] summary::after{content:" ↑"}
+pre{margin-top:8px;padding:12px;border-radius:12px;background:var(--raise);font:500 11.5px/1.5 var(--mono);color:var(--ink-2);white-space:pre-wrap;word-break:break-all;max-height:200px;overflow:auto}
+
+/* loading frames */
+.frame{border-radius:14px;box-shadow:inset 0 0 0 1px var(--line);padding:18px;overflow:hidden}
+.sk{background:linear-gradient(90deg,var(--skel) 0%,var(--skel-hi) 50%,var(--skel) 100%);background-size:200% 100%;animation:sh 1.4s ease-in-out infinite;border-radius:8px}
+@keyframes sh{from{background-position:100% 0}to{background-position:-100% 0}}
+@media (prefers-reduced-motion:reduce){ .sk,.spin,.bar i{animation:none} }
+.who{display:flex;align-items:center;gap:12px}
+.badge{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:999px;background:var(--ink);color:var(--bg);font:700 14px/1 var(--sans)}
+.who h4{font:600 22px/1.2 var(--sans);letter-spacing:-.01em}
+.lbl{margin-top:22px;font:600 15px/1.2 var(--sans)}
+.reads{list-style:none;padding:0;margin-top:14px}
+.reads li{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.reads li small{font-size:12px;color:var(--ink-2)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--line);justify-self:center}
+.bar{position:relative;height:3px;border-radius:2px;background:var(--line);margin-top:18px;overflow:hidden}
+.bar i{position:absolute;top:0;bottom:0;width:30%;border-radius:2px;background:var(--ink);animation:slide 1.6s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes slide{from{left:-30%}to{left:100%}}
+.hint{margin-top:12px;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.v{display:flex;gap:12px;margin-top:20px}
+.v .mk{flex:none;width:34px;height:34px;border-radius:10px;background:var(--raise);display:grid;place-items:center}
+.v h5{font:600 18px/1.25 var(--sans)}
+.v p{margin-top:4px;font-size:14px;color:var(--ink-2)}
+.tag{display:inline-block;margin-top:14px;font:500 12px/1 var(--sans);padding:5px 8px;border-radius:6px;background:var(--raise);color:var(--ink-2)}
+</style>
+</head>
+<body>
+<div class="head">
+  <h1>Read it back from the contract, and the loading screens</h1>
+  <p>Part 1: what the result page’s Published panel shows after the button is pressed. The browser reads X Layer itself, then checks that the logged result’s hash is the one the contract stores and that it matches the result on the page. Real data: circuit #18387, read back from X Layer testnet on 23 Nov 2026. Part 2: what shows while a page loads; #18387’s page takes about 7 seconds. Pick one from each part, or ask for changes.</p>
+</div>
+
+<div class="part">Part 1 · After “Read it back from the contract”</div>
+<div class="opts">
+
+<section class="opt" aria-label="Read-back option A">
+  <header><h2>A · A checklist of what was read</h2><p>Each check on its own line, in plain words, ticked or crossed. One line at the end says it came straight from X Layer, not from Foreman.</p></header>
+  <div class="screen">
+    <div class="sec"><h3>Published</h3></div>
+    <div class="row"><span class="net">X Layer testnet</span><span class="note"><b>Too small to tell</b> · identical to 2,862 earlier</span></div>
+    <ul class="checks">
+      <li><svg class="ok" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 9.5l3.2 3L14 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Found the publish</b><small>Transaction <span class="mono">0x19a2…af2a</span>, X Layer testnet block 46,918,536</small></span></li>
+      <li><svg class="ok" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 9.5l3.2 3L14 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>The contract stores this result</b><small>Hash <span class="mono">0x2dae…c9f4</span> of the logged result is the one in storage</small></span></li>
+      <li><svg class="ok" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 9.5l3.2 3L14 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Same as this page</b><small>Verdict, evidence, rule (hash 2026-11-20, floor 4, chain 10) and BNB block 135,135,809</small></span></li>
+    </ul>
+    <p class="src">Read from X Layer testnet at block 46,958,546, straight from the chain, not through Foreman.</p>
+    <button class="readback" type="button">Read it again</button>
+
+    <p class="cap">When it doesn’t match</p>
+    <ul class="checks">
+      <li><svg class="ok" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 9.5l3.2 3L14 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Found the publish</b><small>Transaction <span class="mono">0x19a2…af2a</span></small></span></li>
+      <li><svg class="no" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M5 5l8 8M13 5l-8 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span><b>Differs from this page</b><small>This page shows a newer check that isn’t published yet</small></span></li>
+    </ul>
+  </div>
+</section>
+
+<section class="opt" aria-label="Read-back option B">
+  <header><h2>B · This page beside X Layer</h2><p>A small table: each part of the result as this page shows it and as X Layer holds it, with a match mark per row. Then one line for the stored hash.</p></header>
+  <div class="screen">
+    <div class="sec"><h3>Published</h3></div>
+    <div class="row"><span class="net">X Layer testnet</span><span class="note"><b>Too small to tell</b> · identical to 2,862 earlier</span></div>
+    <table class="cmp">
+      <thead><tr><th></th><th>On X Layer</th><th>Matches</th></tr></thead>
+      <tbody>
+        <tr><td>Verdict</td><td><b>Too small to tell</b><br>2,862 earlier, floor 4 gates</td><td class="m">Yes</td></tr>
+        <tr><td>Netlist hash</td><td><span class="mono">0x7e15…77c7</span></td><td class="m">Yes</td></tr>
+        <tr><td>Rule</td><td>hash 2026-11-20, floor 4, chain 10</td><td class="m">Yes</td></tr>
+        <tr><td>Read at</td><td>BNB block 135,135,809</td><td class="m">Yes</td></tr>
+        <tr><td>Stored hash</td><td><span class="mono">0x2dae…c9f4</span></td><td class="m">Yes</td></tr>
+      </tbody>
+    </table>
+    <p class="src">Read from X Layer testnet at block 46,958,546 · transaction <span class="mono">0x19a2…af2a</span></p>
+    <button class="readback" type="button">Read it again</button>
+
+    <p class="cap">When it doesn’t match</p>
+    <table class="cmp"><tbody>
+      <tr><td>Verdict</td><td><b>Too small to tell</b></td><td style="color:var(--stale);font-weight:600">No</td></tr>
+    </tbody></table>
+    <p class="src">This page shows a newer check that isn’t published yet.</p>
+  </div>
+</section>
+
+<section class="opt" aria-label="Read-back option C">
+  <header><h2>C · One line, details on request</h2><p>One answer: matches or not, with the block. “Show what was read” opens the hashes and the logged result itself, for anyone who wants to check by hand.</p></header>
+  <div class="screen">
+    <div class="sec"><h3>Published</h3></div>
+    <div class="row"><span class="net">X Layer testnet</span><span class="note"><b>Too small to tell</b> · identical to 2,862 earlier</span></div>
+    <div class="oneline"><span><i aria-hidden="true"></i>Matches X Layer</span><small>block 46,958,546</small></div>
+    <details open>
+      <summary>Show what was read</summary>
+      <dl class="facts">
+        <dt>Transaction</dt><dd class="mono">0x19a2…af2a</dd>
+        <dt>Logged result’s hash</dt><dd class="mono">0x2dae…c9f4</dd>
+        <dt>Stored hash</dt><dd class="mono">0x2dae…c9f4</dd>
+      </dl>
+      <pre>{"circuit":{"chainId":56,"processor":"0xb1024b89886b9a34aa4ff5f31c411d708b20a14c","tokenId":"18387",…},"scope":"miner","result":{"verdict":"too-small-to-tell","sameAs":2862,"floor":4,…},"ruleVersion":"hash 2026-11-20, floor 4, chain 10","index":{"circuitsChecked":"80348","upToBlock":{"chainId":56,"block":"135135809"}}}</pre>
+    </details>
+    <button class="readback" type="button">Read it again</button>
+
+    <p class="cap">When it doesn’t match</p>
+    <div class="verdict-no"><b>Differs from X Layer.</b> This page shows a newer check that isn’t published yet.</div>
+  </div>
+</section>
+
+</div>
+
+<div class="part">Part 2 · While a page loads (about 7 seconds for a result page)</div>
+<div class="opts">
+
+<section class="opt" aria-label="Loading option A">
+  <header><h2>A · The page’s shape, filling in</h2><p>Grey blocks where the header, verdict, estimate and options will be, with a soft shimmer. The circuit number shows at once. No words to read; the layout doesn’t jump when it arrives.</p></header>
+  <div class="screen"><div class="frame">
+    <div class="who"><span class="badge" aria-hidden="true">#</span><div><h4>Circuit #18387</h4><div class="sk" style="width:180px;height:20px;margin-top:6px"></div></div></div>
+    <div class="lbl">Original?</div>
+    <div class="sk" style="height:18px;width:70%;margin-top:12px"></div>
+    <div class="sk" style="height:14px;width:90%;margin-top:10px"></div>
+    <div class="sk" style="height:14px;width:60%;margin-top:8px"></div>
+    <div class="lbl">Worth?</div>
+    <div class="sk" style="height:56px;width:55%;margin-top:12px;border-radius:12px"></div>
+    <div class="sk" style="height:4px;width:100%;margin-top:22px"></div>
+  </div></div>
+</section>
+
+<section class="opt" aria-label="Loading option B">
+  <header><h2>B · What Foreman is reading</h2><p>The reads named in plain words, with one progress bar for the whole page. Honest about why it takes seconds, without pretending to know which read finishes when (it’s one request).</p></header>
+  <div class="screen"><div class="frame">
+    <div class="who"><span class="badge" aria-hidden="true">#</span><h4>Circuit #18387</h4></div>
+    <div class="bar"><i></i></div>
+    <ul class="reads">
+      <li><span class="dot"></span>Its verdict, from the index<small>stored</small></li>
+      <li><span class="dot"></span>Its miner and weight<small>BNB Chain</small></li>
+      <li><span class="dot"></span>Its listing and recent sales<small>BNB Chain</small></li>
+      <li><span class="dot"></span>Its RIG voucher and TapePool<small>X Layer</small></li>
+      <li><span class="dot"></span>BEM’s price<small>PancakeSwap</small></li>
+    </ul>
+    <p class="hint">Live reads take a few seconds.</p>
+  </div></div>
+</section>
+
+<section class="opt" aria-label="Loading option C">
+  <header><h2>C · The verdict first, the rest filling in</h2><p>The stored verdict shows almost at once; value, market and options fill in as shapes until the live reads arrive. Needs the API split in two (a fast stored-result read, then the live reads), which is a change to the API and the data contract.</p></header>
+  <div class="screen"><div class="frame">
+    <div class="who"><span class="badge" aria-hidden="true">#</span><div><h4>Circuit #18387</h4><span class="tag">Mining now</span></div></div>
+    <div class="lbl">Original?</div>
+    <div class="v"><span class="mk"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="3" y="3" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 9h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span><div><h5>Too small to tell</h5><p>Identical to 2,862 earlier circuits, below the size floor of 4 gates.</p></div></div>
+    <div class="lbl">Worth?</div>
+    <div class="sk" style="height:56px;width:55%;margin-top:12px;border-radius:12px"></div>
+    <p class="hint">Reading its miner, market and BEM’s price…</p>
+  </div></div>
+</section>
+
+</div>
+</body>
+</html>

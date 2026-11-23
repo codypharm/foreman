@@ -11,8 +11,9 @@ import {
 	type ListingsPage as Page,
 } from "@foreman/contract";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { Link, useSearchParams } from "wouter";
+import { Link, useLocation, useSearchParams } from "wouter";
 import { ApiProblem, fetchListings } from "../api.ts";
+import { LoadingNote, RowShapes, Shape } from "../components/Shape.tsx";
 import { VerdictLine } from "../components/VerdictLine.tsx";
 import { formatAsk, formatBemRange, formatCount } from "../format.ts";
 import s from "./ListingsPage.module.css";
@@ -36,7 +37,8 @@ const SET_NOUN: Record<Page["set"], string> = {
 };
 
 export function ListingsPage() {
-	const [params, setParams] = useSearchParams();
+	const [params] = useSearchParams();
+	const [location, navigate] = useLocation();
 	const set: Page["set"] = params.get("set") === "all" ? "all" : "mining";
 	const asked = params.get("verdict");
 	const verdict = (LISTING_VERDICTS as readonly string[]).includes(asked ?? "")
@@ -65,7 +67,9 @@ export function ListingsPage() {
 		const p = new URLSearchParams();
 		if (nextSet !== "mining") p.set("set", nextSet);
 		if (nextVerdict) p.set("verdict", nextVerdict);
-		setParams(p);
+		// Always with "?": wouter's setSearchParams drops it for an empty query, and its hash navigate
+		// then leaves the old query in place, so the default set could never be chosen again
+		navigate(`${location}?${p}`);
 	};
 
 	const first = listings.data?.pages[0];
@@ -83,7 +87,14 @@ export function ListingsPage() {
 				</section>
 
 				{listings.isPending && (
-					<p className={s.waiting}>Reading today’s listings…</p>
+					<div aria-busy="true">
+						<LoadingNote>
+							Reading today’s listings from TapeOut’s circuit market.
+						</LoadingNote>
+						<Shape w={300} h={40} r={999} mt={24} />
+						<Shape w={260} h={30} r={999} mt={14} />
+						<RowShapes count={8} />
+					</div>
 				)}
 				{listings.isError && (
 					<Problem error={listings.error} retry={() => listings.refetch()} />

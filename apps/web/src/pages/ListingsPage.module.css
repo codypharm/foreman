@@ -213,11 +213,6 @@
 	background: var(--btn);
 	color: var(--on-btn);
 }
-.waiting {
-	margin-top: 24px;
-	font-size: 14px;
-	color: var(--ink-2);
-}
 
 /* market today */
 .market {
