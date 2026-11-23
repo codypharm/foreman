@@ -42,7 +42,7 @@ On 23 Nov 2026 the dump was 16 MB and took 2 seconds to write; the restore depen
 ## 3. The API service
 
 1. Add a service from the GitHub repository: **New → GitHub Repo → foreman**. Railpack builds it from the repository root with pnpm; there is no build step.
-2. Name it `api`.
+2. Name it `api`. If Railway created the service by itself from the repository, it may have guessed it was the web app and filled in **Settings → Build** with a build command (`pnpm --filter @foreman/web build`) and a watch path (`/apps/web/**`). Empty both. With the watch path, a push that doesn't touch `apps/web` is skipped, and the API stays on old code (seen on 23 Nov 2026).
 3. **Settings → Deploy → Custom Start Command:** `pnpm --filter @foreman/api serve`
 4. **Settings → Networking → Generate Domain.** This is the API's public address, used in step 5.
 5. Leave the **healthcheck path empty**, not `/health`: a fresh deploy answers 503 there until the worker's first run, and Railway would refuse a good deploy.
@@ -59,7 +59,7 @@ On 23 Nov 2026 the dump was 16 MB and took 2 seconds to write; the restore depen
 
 ## 4. The worker service
 
-1. Add a second service from the same repository; name it `worker`.
+1. Add a second service from the same repository; name it `worker`. Check **Settings → Build** as for the API: no build command, no watch paths.
 2. **Custom Start Command:** `pnpm --filter @foreman/api worker`
 3. No domain and no healthcheck: it serves nothing.
 4. **Variables:** the same four as the API, plus:
@@ -99,4 +99,5 @@ The API allows any site to read it, so no change is needed for Vercel's domain.
 
 - **A push to `main`** redeploys both Railway services and the Vercel app. The worker gets up to 2 minutes to finish a run before it stops; an interrupted run is safe, and the next one picks up.
 - **Delete `~/foreman-index.dump`** once the restore is checked.
-- **A free uptime checker** can watch `/health` later (hosting ADR, decision 7).
+- **An uptime checker watches `/health`** (hosting ADR, decision 7): an UptimeRobot HTTP monitor, "Foreman worker", on `https://<api domain>/health` every 5 minutes, emailing William when it answers anything but 200. Set up on 23 Nov 2026. The email doesn't say why; open `/health` to see `status` and `publisher`.
+- **The web app's address** on 23 Nov 2026: `https://foreman-eight-beta.vercel.app/`.
