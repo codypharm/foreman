@@ -359,12 +359,12 @@ type ListingAsk = {
 
 type Published =                         // from Foreman's record of what it published
   | { state: "current"; publishedAt: { chainId: 196 | 1952; block: bigint; tx: Hex32 }; contract: Address; resultHash: Hex32 }
-  | { state: "older"; publishedAt: { chainId: 196 | 1952; block: bigint; tx: Hex32 }; contract: Address; resultHash: Hex32 } // the result has changed since; the next publish replaces it
+  | { state: "older"; verdict: "same" | "changed"; publishedAt: { chainId: 196 | 1952; block: bigint; tx: Hex32 }; contract: Address; resultHash: Hex32 } // the result has changed since: "same" verdict, evidence and can-mine state, so it isn't published again; or "changed", and the next publish replaces it
   | { state: "not-published"; reason: "pasted" | "not-yet" };
 ```
 
 - **`StoredCheck` is never a verdict by default:** `not-checked` is "Can't check" on screen, with its detail. It is never counted as "No earlier copy found".
-- **`Published` compares hashes:** `current` when the stored result's hash equals the published `resultHash`, otherwise `older`. The page's "read it back" reads X Layer itself; the API doesn't vouch for the chain.
+- **`Published` compares hashes:** `current` when the stored result's hash equals the published `resultHash`, otherwise `older`. An `older` result's `verdict` is `same` when the stored result's change fingerprint (`changeFingerprint` in `@foreman/chain-xlayer/results`) equals the one recorded with the publish, otherwise `changed` (`2026-11-23-same-verdict-read-back.md`). The page's "read it back" reads X Layer itself; the API doesn't vouch for the chain.
 
 ### `ListingsPage`
 

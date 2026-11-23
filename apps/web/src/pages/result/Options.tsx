@@ -198,8 +198,15 @@ function Published({ page }: { page: CircuitPage }) {
 						<span className={s.note}>
 							{p.state === "current" ? (
 								<VerdictLine check={check} />
+							) : p.verdict === "same" ? (
+								// The published verdict still holds; only the index has moved on
+								// (2026-11-23-same-verdict-read-back.md, decision 2)
+								<>
+									<VerdictLine check={check} /> · published from an earlier
+									check
+								</>
 							) : (
-								"From an earlier check; this result isn’t published yet"
+								"From an earlier check; the new verdict isn’t published yet"
 							)}
 						</span>
 					</div>

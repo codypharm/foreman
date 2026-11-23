@@ -51,10 +51,22 @@ export interface ListingAsk {
 
 export type PublishedAt = { chainId: 196 | 1952; block: bigint; tx: Hex32 };
 
-/** From Foreman's record of what it published: current when the stored result's hash is the published one. */
+/**
+ * From Foreman's record of what it published: current when the stored result's hash is the published
+ * one. Older otherwise, with whether the published verdict still holds: same when the stored result's
+ * change fingerprint is the published one (its verdict, evidence and can-mine state), so it isn't
+ * published again; changed when the next publish replaces it (2026-11-23-same-verdict-read-back.md).
+ */
 export type Published =
 	| {
-			state: "current" | "older";
+			state: "current";
+			publishedAt: PublishedAt;
+			contract: Address;
+			resultHash: Hex32;
+	  }
+	| {
+			state: "older";
+			verdict: "same" | "changed";
 			publishedAt: PublishedAt;
 			contract: Address;
 			resultHash: Hex32;
@@ -157,8 +169,7 @@ export function parsePublished(wire: unknown, field: string): Published {
 			at.chainId,
 		);
 	}
-	return {
-		state,
+	const rest: Omit<Extract<Published, { state: "current" }>, "state"> = {
 		publishedAt: {
 			chainId: at.chainId,
 			block: parseUint(at.block, `${field}.publishedAt.block`),
@@ -167,6 +178,16 @@ export function parsePublished(wire: unknown, field: string): Published {
 		contract: parseAddress(w.contract, `${field}.contract`),
 		resultHash: parseHex32(w.resultHash, `${field}.resultHash`),
 	};
+	return state === "current"
+		? { state, ...rest }
+		: {
+				state,
+				verdict: parseOneOf(w.verdict, `${field}.verdict`, [
+					"same",
+					"changed",
+				] as const),
+				...rest,
+			};
 }
 
 export function serialisePublished(

@@ -265,6 +265,35 @@ describe("a circuit page on the wire", () => {
 		const sent = JSON.parse(JSON.stringify(serialiseCircuitPage(page, "page")));
 		expect(sent).toEqual(wireMiningListed());
 	});
+
+	// docs/decisions/2026-11-23-same-verdict-read-back.md, decision 2
+	test.each(["same", "changed"] as const)(
+		"a result published from an earlier check reads back with its verdict %s",
+		(verdict) => {
+			const wire = wireMiningListed({
+				published: {
+					...wireMiningListed().published,
+					state: "older",
+					verdict,
+				},
+			});
+			const page = parseCircuitPage(wire, "page");
+			expect(page.published).toMatchObject({ state: "older", verdict });
+			const sent = JSON.parse(
+				JSON.stringify(serialiseCircuitPage(page, "page")),
+			);
+			expect(sent).toEqual(wire);
+		},
+	);
+
+	test("a result published from an earlier check without saying whether its verdict holds is refused", () => {
+		const wire = wireMiningListed({
+			published: { ...wireMiningListed().published, state: "older" },
+		});
+		expect(() => parseCircuitPage(wire, "page")).toThrow(
+			"page.published.verdict",
+		);
+	});
 });
 
 describe("a circuit page about more than one circuit", () => {

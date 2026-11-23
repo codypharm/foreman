@@ -1,0 +1,187 @@
+<!--
+  Chosen by William on 23 November 2026: B (a tick for verdict and evidence, then a neutral "Checked again
+  since"). A is kept below for the record.
+  The read-back panel when the published verdict is unchanged but the page's check is newer
+  (docs/decisions/2026-11-23-read-back.md; publish-job ADR decision 6: a new index block or count isn't
+  republished). Refines the chosen read-back A (2026-11-23-readback-and-loading.html), whose third check
+  said "Differs from this page" for any difference, including a newer index block. Two directions for the
+  new state, and the state where the verdict really changed. Real data: circuit
+  0xb102…a14c/2893, published in 0xaa19…e449 at X Layer testnet block 46,799,467 on 21 Nov 2026, read at
+  46,980,453 on 23 Nov 2026. William chooses; build to the choice.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foreman · Read-back, same verdict</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --raise:#F5F5F5; --ink:#000000; --ink-2:#6B6B6B; --ink-3:#9A9A9A; --line:#EBEBEB;
+  --accent:#C2F24B; --on-accent:#000000; --live:#14A44D; --stale:#C4231B; --stale-bg:#FDECEA; --new:#567300;
+  --btn:#000000; --on-btn:#FFFFFF; --frame:#FAFAFA; --skel:#EFEFEF; --skel-hi:#F7F7F7;
+  --sans:"Geist",system-ui,sans-serif; --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+    --live:#3DDC84; --stale:#FF7A6B; --stale-bg:#2A1210; --new:#C2F24B;
+    --btn:#FFFFFF; --on-btn:#000000; --frame:#0A0A0A; --skel:#161616; --skel-hi:#222222;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+  --live:#3DDC84; --stale:#FF7A6B; --stale-bg:#2A1210; --new:#C2F24B;
+  --btn:#FFFFFF; --on-btn:#000000; --frame:#0A0A0A; --skel:#161616; --skel-hi:#222222;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--frame);color:var(--ink);font:400 15px/1.5 var(--sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{padding:32px 16px 64px}
+button{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-size:12.5px;font-weight:500}
+
+.head{max-width:1560px;margin:0 auto 20px}
+.head h1{font:600 22px/1.2 var(--sans);letter-spacing:-.01em}
+.head p{margin-top:6px;max-width:80ch;font-size:14px;color:var(--ink-2)}
+.part{max-width:1560px;margin:36px auto 14px;font:600 13px/1 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.opts{max-width:1560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:start}
+.opt{background:var(--bg);border-radius:20px;box-shadow:0 1px 2px rgb(0 0 0 / .04),0 8px 28px rgb(0 0 0 / .06);overflow:hidden}
+.opt>header{padding:16px 20px;border-bottom:1px solid var(--line)}
+.opt>header h2{font:600 16px/1.25 var(--sans)}
+.opt>header p{margin-top:4px;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.screen{padding:22px 20px 26px}
+.cap{margin:22px 0 8px;font:600 12px/1 var(--sans);color:var(--ink-3)}
+@media (max-width:1180px){ .opts{grid-template-columns:minmax(0,1fr);max-width:560px} }
+
+/* the Published panel, as on the result page */
+.sec{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.sec h3{font:600 17px/1.2 var(--sans)}
+.row{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:14px}
+.net{font:600 12px/1 var(--sans);padding:5px 8px;border-radius:6px;background:var(--raise)}
+.row .note{color:var(--ink-2)}
+.row .note b{color:var(--ink);font-weight:600}
+dl.facts{display:grid;grid-template-columns:1fr auto;margin-top:8px}
+dl.facts dt,dl.facts dd{padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+dl.facts dt{color:var(--ink-2)}
+dl.facts dd{text-align:right;font-weight:600}
+.readback{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:44px;margin-top:16px;border-radius:999px;font:600 14px/1 var(--sans);box-shadow:inset 0 0 0 1px var(--line)}
+.readback.busy{color:var(--ink-2)}
+.spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--ink);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* A: checklist */
+.checks{list-style:none;padding:0;margin-top:16px}
+.checks li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:14px;line-height:1.4}
+.checks li:first-child{border-top:0}
+.checks .ok{color:var(--live)} .checks .no{color:var(--stale)}
+.checks b{font-weight:600}
+.checks small{display:block;margin-top:2px;font-size:12.5px;color:var(--ink-2)}
+.src{margin-top:12px;font-size:12.5px;line-height:1.45;color:var(--ink-2)}
+.verdict-ok{display:flex;align-items:center;gap:8px;margin-top:16px;padding:12px 14px;border-radius:14px;background:var(--raise);font:600 15px/1.3 var(--sans)}
+.verdict-ok i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--live)}
+.verdict-no{margin-top:16px;padding:12px 14px;border-radius:14px;background:var(--stale-bg);color:var(--stale);font:500 14px/1.45 var(--sans)}
+.verdict-no b{font-weight:600}
+
+/* B: compare */
+table.cmp{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
+table.cmp th{font:600 12px/1.2 var(--sans);color:var(--ink-2);text-align:left;padding:0 0 8px}
+table.cmp th:last-child,table.cmp td:last-child{text-align:right}
+table.cmp td{padding:10px 0;border-top:1px solid var(--line);vertical-align:top;line-height:1.35}
+table.cmp td:first-child{color:var(--ink-2);padding-right:10px;white-space:nowrap}
+table.cmp td b{font-weight:600}
+table.cmp .m{color:var(--live);font-weight:600}
+
+/* C: one line + details */
+.oneline{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;padding:12px 14px;border-radius:14px;background:var(--raise)}
+.oneline span{display:flex;align-items:center;gap:8px;font:600 14px/1.3 var(--sans)}
+.oneline span i{width:8px;height:8px;border-radius:50%;background:var(--live)}
+.oneline small{font:500 12px/1.2 var(--sans);color:var(--ink-2);white-space:nowrap}
+details{margin-top:10px}
+summary{cursor:pointer;font:600 13px/1.3 var(--sans);padding:6px 0;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:" ↓";color:var(--ink-3)}
+details[open] summary::after{content:" ↑"}
+pre{margin-top:8px;padding:12px;border-radius:12px;background:var(--raise);font:500 11.5px/1.5 var(--mono);color:var(--ink-2);white-space:pre-wrap;word-break:break-all;max-height:200px;overflow:auto}
+
+/* loading frames */
+.frame{border-radius:14px;box-shadow:inset 0 0 0 1px var(--line);padding:18px;overflow:hidden}
+.sk{background:linear-gradient(90deg,var(--skel) 0%,var(--skel-hi) 50%,var(--skel) 100%);background-size:200% 100%;animation:sh 1.4s ease-in-out infinite;border-radius:8px}
+@keyframes sh{from{background-position:100% 0}to{background-position:-100% 0}}
+@media (prefers-reduced-motion:reduce){ .sk,.spin,.bar i{animation:none} }
+.who{display:flex;align-items:center;gap:12px}
+.badge{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:999px;background:var(--ink);color:var(--bg);font:700 14px/1 var(--sans)}
+.who h4{font:600 22px/1.2 var(--sans);letter-spacing:-.01em}
+.lbl{margin-top:22px;font:600 15px/1.2 var(--sans)}
+.reads{list-style:none;padding:0;margin-top:14px}
+.reads li{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.reads li small{font-size:12px;color:var(--ink-2)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--line);justify-self:center}
+.bar{position:relative;height:3px;border-radius:2px;background:var(--line);margin-top:18px;overflow:hidden}
+.bar i{position:absolute;top:0;bottom:0;width:30%;border-radius:2px;background:var(--ink);animation:slide 1.6s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes slide{from{left:-30%}to{left:100%}}
+.hint{margin-top:12px;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.v{display:flex;gap:12px;margin-top:20px}
+.v .mk{flex:none;width:34px;height:34px;border-radius:10px;background:var(--raise);display:grid;place-items:center}
+.v h5{font:600 18px/1.25 var(--sans)}
+.v p{margin-top:4px;font-size:14px;color:var(--ink-2)}
+.tag{display:inline-block;margin-top:14px;font:500 12px/1 var(--sans);padding:5px 8px;border-radius:6px;background:var(--raise);color:var(--ink-2)}
+.checks .mid{color:var(--ink-3)}
+</style>
+</head>
+<body>
+<div class="head">
+  <h1>Read it back: the published verdict still holds</h1>
+  <p>Circuit #2893 was published on 21 Nov as a copy of circuit #88. The index has moved on since (more circuits, a later block), so the page’s result isn’t byte-identical to the published one, but its verdict, evidence and can-mine state are the same, so Foreman doesn’t publish it again. Today the panel crosses this out as “Differs from this page”. Pick a direction for this state; the third column is what stays crossed: a verdict that really changed.</p>
+</div>
+<div class="opts">
+<section class="opt" aria-label="Option A">
+  <header><h2>A · One tick: “Same verdict as this page”</h2><p>The third check becomes a tick, and its small print says what moved: the block and circuit count it was published from, and the page’s.</p></header>
+  <div class="screen">
+    <div class="sec"><h3>Published</h3></div>
+    <div class="row"><span class="net">X Layer testnet</span><span class="note"><b>Copy of circuit #88</b> · published from an earlier check</span></div>
+    <dl class="facts"><dt>Transaction</dt><dd class="mono">0xaa19…e449</dd><dt>X Layer block</dt><dd>46,799,467</dd></dl>
+    <ul class="checks">
+      <li><svg class="ok" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 9.5l3.2 3L14 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Found the publish</b><small>Transaction <span class="mono">0xaa19…e449</span>, X Layer testnet block 46,799,467</small></span></li>
+      <li><svg class="ok" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 9.5l3.2 3L14 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>The contract stores this result</b><small>Hash <span class="mono">0x3b11…a2d6</span> of the logged result is the one in storage</small></span></li>
+      <li><svg class="ok" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 9.5l3.2 3L14 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Same verdict as this page</b><small>Copy of circuit #88: same evidence and the same can-mine state. Published from BNB block 134,712,080 against 80,290 circuits; this page checked again at 135,273,897 against 80,409.</small></span></li>
+    </ul>
+    <p class="src">Read from X Layer testnet at block 46,980,453, straight from the chain, not through Foreman.</p>
+    <button class="readback" type="button">Read it again</button>
+  </div>
+</section>
+<section class="opt" aria-label="Option B">
+  <header><h2>B · A tick, then a neutral “Checked again since”</h2><p>The tick covers verdict and evidence only. A grey dot, neither tick nor cross, says the page’s check is newer, and that a newer check with the same verdict isn’t published again.</p></header>
+  <div class="screen">
+    <div class="sec"><h3>Published</h3></div>
+    <div class="row"><span class="net">X Layer testnet</span><span class="note"><b>Copy of circuit #88</b> · published from an earlier check</span></div>
+    <dl class="facts"><dt>Transaction</dt><dd class="mono">0xaa19…e449</dd><dt>X Layer block</dt><dd>46,799,467</dd></dl>
+    <ul class="checks">
+      <li><svg class="ok" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 9.5l3.2 3L14 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Found the publish</b><small>Transaction <span class="mono">0xaa19…e449</span>, X Layer testnet block 46,799,467</small></span></li>
+      <li><svg class="ok" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 9.5l3.2 3L14 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>The contract stores this result</b><small>Hash <span class="mono">0x3b11…a2d6</span> of the logged result is the one in storage</small></span></li>
+      <li><svg class="ok" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 9.5l3.2 3L14 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Same verdict and evidence as this page</b><small>Copy of circuit #88, netlist hash <span class="mono">0x3766…96b2</span>, mining now</small></span></li>
+      <li><svg class="mid" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="3" fill="currentColor"/></svg><span><b>Checked again since</b><small>Published from BNB block 134,712,080 against 80,290 circuits; this page is at 135,273,897 against 80,409. A newer check with the same verdict isn’t published again.</small></span></li>
+    </ul>
+    <p class="src">Read from X Layer testnet at block 46,980,453, straight from the chain, not through Foreman.</p>
+    <button class="readback" type="button">Read it again</button>
+  </div>
+</section>
+<section class="opt" aria-label="The verdict changed">
+  <header><h2>Stays crossed · The verdict changed</h2><p>Illustration, not #2893’s real history. When the verdict, its evidence or the can-mine state differs, it’s still a cross, now saying what changed and that the next publish replaces it. Rare: the worker republishes within 5 minutes.</p></header>
+  <div class="screen">
+    <div class="sec"><h3>Published</h3></div>
+    <div class="row"><span class="net">X Layer testnet</span><span class="note">From an earlier check; the new verdict isn’t published yet</span></div>
+    <ul class="checks">
+      <li><svg class="ok" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 9.5l3.2 3L14 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Found the publish</b><small>Transaction <span class="mono">0xaa19…e449</span></small></span></li>
+      <li><svg class="no" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M5 5l8 8M13 5l-8 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span><b>The verdict changed since</b><small>Published: copy of circuit #88. This page: no earlier copy found. The worker publishes the new verdict within 5 minutes.</small></span></li>
+    </ul>
+    <p class="src">Read from X Layer testnet at block 46,980,453, straight from the chain, not through Foreman.</p>
+    <button class="readback" type="button">Read it again</button>
+  </div>
+</section>
+</div>
+</body>
+</html>

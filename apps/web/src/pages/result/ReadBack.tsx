@@ -1,7 +1,8 @@
 // "Read it back from the contract" (docs/decisions/2026-11-23-read-back.md; read-back A in
 // docs/mocks/2026-11-23-readback-and-loading.html): the browser reads ForemanResults on X Layer itself,
 // hashes the logged result, compares it with what the contract stores and with this page, and lists each
-// check in plain words. Foreman's API isn't in the path. Read only.
+// check in plain words; a published verdict that still holds is said so (2026-11-23-same-verdict-read-back.md).
+// Foreman's API isn't in the path. Read only.
 
 import {
 	type PublishedReadBack,
@@ -10,16 +11,14 @@ import {
 	readPublishedResult,
 	XLAYER_RPC,
 } from "@foreman/chain-xlayer/results";
-import {
-	type CircuitPage,
-	type Originality,
-	serialiseOriginality,
-} from "@foreman/contract";
+import type { CircuitPage, Originality } from "@foreman/contract";
 import { useState } from "react";
 import { BaseError, createPublicClient, http, type PublicClient } from "viem";
 import { xLayer, xLayerTestnet } from "viem/chains";
 import { formatCount, shortHex } from "../../format.ts";
+import { CAN_MINE } from "./circuit-words.ts";
 import s from "./ReadBack.module.css";
+import { compareWithPage, verdictWords } from "./read-back-compare.ts";
 
 type Published = Exclude<CircuitPage["published"], { state: "not-published" }>;
 
@@ -110,7 +109,7 @@ function Checks({
 }) {
 	const net = NETWORK[r.readAt.chainId];
 	const onPage = page.check.state === "checked" ? page.check.originality : null;
-	const same = onPage !== null && wire(onPage) === wire(r.logged);
+	const compared = compareWithPage(r.logged, onPage);
 	return (
 		<div aria-live="polite">
 			<ul className={s.checks}>
@@ -144,16 +143,32 @@ function Checks({
 						logged result is the one in storage
 					</Check>
 				)}
-				{same ? (
+				{compared === "identical" ? (
 					<Check ok title="Same as this page">
 						Verdict, evidence, rule ({r.logged.ruleVersion}) and BNB block{" "}
 						{formatCount(r.logged.index.upToBlock.block)}
 					</Check>
+				) : compared === "same-verdict" && onPage ? (
+					// Mock B of docs/mocks/2026-11-23-readback-same-verdict.html: the tick covers only what
+					// was compared; the newer check is a neutral fact beside it
+					<>
+						<Check ok title="Same verdict and evidence as this page">
+							{sameVerdictDetail(r.logged)}
+						</Check>
+						<Check mark="neutral" title="Checked again since">
+							Published from BNB block{" "}
+							{formatCount(r.logged.index.upToBlock.block)} against{" "}
+							{formatCount(r.logged.index.circuitsChecked)} circuits; this page
+							is at {formatCount(onPage.index.upToBlock.block)} against{" "}
+							{formatCount(onPage.index.circuitsChecked)}. A newer check with
+							the same verdict isn’t published again.
+						</Check>
+					</>
 				) : (
-					<Check ok={false} title="Differs from this page">
-						{p.state === "older"
-							? "This page shows a newer check that isn’t published yet."
-							: `The published result was read at BNB block ${formatCount(r.logged.index.upToBlock.block)}; this page shows a different one.`}
+					<Check ok={false} title="The verdict changed since">
+						{onPage
+							? `Published: ${verdictWords(r.logged)}. This page: ${verdictWords(onPage)}${p.state === "older" ? ". The worker publishes the new verdict within 5 minutes." : "."}`
+							: `Published: ${verdictWords(r.logged)}. This page has no result to compare.`}
 					</Check>
 				)}
 			</ul>
@@ -165,18 +180,41 @@ function Checks({
 	);
 }
 
+/** What the tick covers: the verdict, its evidence and the can-mine state, in the product's words. */
+function sameVerdictDetail(o: Originality): string {
+	const r = o.result;
+	const hash =
+		"netlistHash" in r ? `, netlist hash ${shortHex(r.netlistHash)}` : "";
+	const canMine = o.facts.find((f) => f.fact === "can-mine");
+	const mine = canMine ? `, ${CAN_MINE[canMine.state].toLowerCase()}` : "";
+	return `${verdictWords(o)}${hash}${mine}`;
+}
+
 function Check({
-	ok,
+	ok = false,
+	mark,
 	title,
 	children,
 }: {
-	ok: boolean;
+	ok?: boolean;
+	/** A fact beside the checks: neither tick nor cross. */
+	mark?: "neutral";
 	title: string;
 	children: React.ReactNode;
 }) {
 	return (
 		<li>
-			{ok ? (
+			{mark === "neutral" ? (
+				<svg
+					className={s.mid}
+					width="18"
+					height="18"
+					viewBox="0 0 18 18"
+					aria-hidden="true"
+				>
+					<circle cx="9" cy="9" r="3" fill="currentColor" />
+				</svg>
+			) : ok ? (
 				<svg
 					className={s.ok}
 					width="18"
@@ -217,7 +255,3 @@ function Check({
 		</li>
 	);
 }
-
-/** The data contract's wire form, so two results compare field for field. */
-const wire = (o: Originality) =>
-	JSON.stringify(serialiseOriginality(o, "originality"));

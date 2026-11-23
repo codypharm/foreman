@@ -1,4 +1,5 @@
-// What counts as a change (docs/decisions/2026-11-21-publish-job.md, decision 6). A circuit is
+// What counts as a change (docs/decisions/2026-11-21-publish-job.md, decision 6), shared by the publish
+// job, the API and the result page's read-back (2026-11-23-same-verdict-read-back.md). A circuit is
 // published again when its verdict kind, the evidence for that kind, its can-mine state or, for
 // "can't mine", its set of reasons differs from its last publish. A moved stop block, a new index
 // block or a changed count is not a change.

@@ -131,17 +131,39 @@ describe.skipIf(!TEST_DATABASE_URL)("the result page", () => {
 			resultHash: entry.resultHash,
 		});
 
-		const changed = parseHex32(`0x${"cd".repeat(32)}`, "hash");
+		// Published from an earlier check with the same verdict, evidence and can-mine state: a later
+		// index block changes the hash, not the fingerprint (2026-11-23-same-verdict-read-back.md)
+		const earlier = parseHex32(`0x${"cd".repeat(32)}`, "hash");
 		await recordPublished(
 			pool,
 			TESTNET,
-			[{ ...entry, resultHash: changed }],
+			[{ ...entry, resultHash: earlier }],
 			at,
 		);
-		const older = await readCircuitPage(set.deps, PAGE_CIRCUITS.mining);
-		expect(older.ok && older.page.published).toMatchObject({
+		const same = await readCircuitPage(set.deps, PAGE_CIRCUITS.mining);
+		expect(same.ok && same.page.published).toMatchObject({
 			state: "older",
-			resultHash: changed,
+			verdict: "same",
+			resultHash: earlier,
+		});
+
+		// A different fingerprint: the verdict changed, and the next publish replaces it
+		await recordPublished(
+			pool,
+			TESTNET,
+			[
+				{
+					...entry,
+					resultHash: earlier,
+					fingerprint: parseHex32(`0x${"ef".repeat(32)}`, "fingerprint"),
+				},
+			],
+			at,
+		);
+		const changed = await readCircuitPage(set.deps, PAGE_CIRCUITS.mining);
+		expect(changed.ok && changed.page.published).toMatchObject({
+			state: "older",
+			verdict: "changed",
 		});
 	});
 

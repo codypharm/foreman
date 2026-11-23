@@ -261,7 +261,7 @@ async function storedCheck(
 		: { state: "not-checked", detail: built.detail };
 }
 
-/** Current when the stored result's hash is the one published for this circuit. */
+/** Current when the stored result's hash is the one published for this circuit; older otherwise, saying whether its verdict holds. */
 async function publishedState(
 	deps: PageDeps,
 	check: StoredCheck,
@@ -274,11 +274,8 @@ async function publishedState(
 	if (!row || check.state !== "checked") {
 		return { state: "not-published", reason: "not-yet" };
 	}
-	return {
-		state:
-			planEntry(check.originality).resultHash === row.resultHash
-				? "current"
-				: "older",
+	const entry = planEntry(check.originality);
+	const rest = {
 		publishedAt: {
 			chainId: deps.results.chainId,
 			block: row.block,
@@ -286,6 +283,14 @@ async function publishedState(
 		},
 		contract: deps.results.address,
 		resultHash: row.resultHash,
+	};
+	if (entry.resultHash === row.resultHash) return { state: "current", ...rest };
+	// Whether the published verdict still holds: the same fingerprint means the publish job won't send
+	// it again (2026-11-23-same-verdict-read-back.md)
+	return {
+		state: "older",
+		verdict: entry.fingerprint === row.fingerprint ? "same" : "changed",
+		...rest,
 	};
 }
 

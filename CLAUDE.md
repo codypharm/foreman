@@ -130,7 +130,9 @@ Only facts confirmed on chain or on an official TapeOut page go here, each with 
 
 **BNB nodes, 21 Nov 2026** (`docs/decisions/2026-11-21-bnb-nodes.md`): NodeReal's free monthly quota ran out. Every BNB read now goes through `bnbClient` (`packages/chain-bnb`):
 - **publicnode** for reads and logs within 5,000 blocks of the head. It serves state about 10,000 blocks back and refuses older reads with an error. It refuses a log read with no address, or with more than 10 addresses, so a follow reads tape-outs only from processors whose `nextId` grew.
-- **Alchemy** (`BNB_ARCHIVE_RPC_URL`) for older reads. Its free tier allows logs 10 blocks per read, about 500 compute units a second (bursts get HTTP 429) and 30 million a month: too little for the jobs, enough for catching up and backfills.
+- **The archive node** (`BNB_ARCHIVE_RPC_URL`) for older reads. From 21 Nov 2026 that was Alchemy, whose free tier allows logs 10 blocks per read, about 500 compute units a second (bursts get HTTP 429) and 30 million a month.
+
+**Archive node, 23 Nov 2026:** NodeReal again, on a second free key that a friend of William's lent, in `.env` locally and as a sealed variable on Railway's api and worker. Set `BNB_ARCHIVE_LOG_BLOCKS=50000` with it (the default, 10, is Alchemy's limit). Its free monthly quota is the same as the one that ran out on 21 Nov, and it is shared with the key's owner, so it can run out or be withdrawn. If it does, the follow fails and `/health` turns 503; the fallback is Alchemy, with `BNB_ARCHIVE_LOG_BLOCKS` back to 10.
 
 **Tape-out scan, 20 Nov 2026:** on the archive node, `eth_getLogs` for `TapedOut` with no address filter returns every processor's tape-outs, 1 to 3 seconds per 50,000 blocks (about 372 reads since the first tape-out at block 116,070,652). Keep only factory-listed processors, and check each processor's event count against its `nextId()`, which returns the last id issued, not the next.
 

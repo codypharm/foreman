@@ -4,7 +4,7 @@
 // keccak256 of exactly those bytes (2026-11-21-results-contract.md, decision 7).
 
 import { minerKey } from "@foreman/chain-bnb";
-import { shortVerdict } from "@foreman/chain-xlayer/results";
+import { changeFingerprint, shortVerdict } from "@foreman/chain-xlayer/results";
 import {
 	type Hex32,
 	type Originality,
@@ -12,7 +12,6 @@ import {
 } from "@foreman/contract";
 import type { PublishedEntry, PublishedRow } from "@foreman/index";
 import { type Hex, keccak256, stringToHex } from "viem";
-import { changeFingerprint } from "./fingerprint.ts";
 
 /** The results contract's short verdict codes (ForemanResults.sol, Verdict). */
 export { shortVerdict };

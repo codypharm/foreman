@@ -1,10 +1,10 @@
+import { changeFingerprint } from "@foreman/chain-xlayer/results";
 import type { CircuitRef, Originality } from "@foreman/contract";
 import { parseAddress, parseHex32, parseOriginality } from "@foreman/contract";
 import type { PublishedRow } from "@foreman/index";
 import { minerKey } from "@foreman/originality";
 import { hexToString, keccak256 } from "viem";
 import { describe, expect, test } from "vitest";
-import { changeFingerprint } from "./fingerprint.ts";
 import { planPublish, shortVerdict } from "./plan.ts";
 
 // The plan (docs/decisions/2026-11-21-publish-job.md, decisions 4 and 6): every result whose

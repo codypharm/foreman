@@ -1,0 +1,134 @@
+{
+	"readAt": "46980742",
+	"tx": "0xaa19c3d6fd8633ed91db4066be1d7de8eda9e043fc51fe78a82195c1fdf5e449",
+	"logged": {
+		"circuit": {
+			"chainId": 56,
+			"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+			"tokenId": "2893",
+			"tapedOutAt": {
+				"block": "117403411",
+				"txIndex": 53,
+				"logIndex": 268,
+				"time": "1787392402"
+			},
+			"tapedOutBy": "0x451933ac3389d5b908849c8e5923598b2fac8d73",
+			"designCommittedAt": null
+		},
+		"scope": "miner",
+		"result": {
+			"verdict": "copy",
+			"of": {
+				"chainId": 56,
+				"processor": "0xf4412c52ec3ddf7caf5f518b6662f77b02bde28e",
+				"tokenId": "88",
+				"tapedOutAt": {
+					"block": "117236399",
+					"txIndex": 67,
+					"logIndex": 444,
+					"time": "1787317221"
+				},
+				"tapedOutBy": "0x09b01337511fa81e3962591f687905e6fd4c492c",
+				"designCommittedAt": null
+			},
+			"netlistHash": "0x37660c2f10742c0149f74a97af8f34425393aed43b49fa369eadc322594196b2",
+			"bytesIdentical": true,
+			"earlierBy": "tape-out"
+		},
+		"facts": [
+			{
+				"fact": "design-bonus",
+				"holds": false,
+				"bonus": "0"
+			},
+			{
+				"fact": "tape-out-address",
+				"same": false
+			},
+			{
+				"fact": "design-shared",
+				"miners": 12
+			},
+			{
+				"fact": "can-mine",
+				"state": "mining"
+			}
+		],
+		"occc": {
+			"status": "not-checked"
+		},
+		"index": {
+			"circuitsChecked": "80290",
+			"upToBlock": {
+				"chainId": 56,
+				"block": "134712080"
+			}
+		},
+		"ruleVersion": "hash 2026-11-20, floor 4, chain 10"
+	},
+	"page": {
+		"circuit": {
+			"chainId": 56,
+			"processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+			"tokenId": "2893",
+			"tapedOutAt": {
+				"block": "117403411",
+				"txIndex": 53,
+				"logIndex": 268,
+				"time": "1787392402"
+			},
+			"tapedOutBy": "0x451933ac3389d5b908849c8e5923598b2fac8d73",
+			"designCommittedAt": null
+		},
+		"scope": "miner",
+		"result": {
+			"verdict": "copy",
+			"of": {
+				"chainId": 56,
+				"processor": "0xf4412c52ec3ddf7caf5f518b6662f77b02bde28e",
+				"tokenId": "88",
+				"tapedOutAt": {
+					"block": "117236399",
+					"txIndex": 67,
+					"logIndex": 444,
+					"time": "1787317221"
+				},
+				"tapedOutBy": "0x09b01337511fa81e3962591f687905e6fd4c492c",
+				"designCommittedAt": null
+			},
+			"netlistHash": "0x37660c2f10742c0149f74a97af8f34425393aed43b49fa369eadc322594196b2",
+			"bytesIdentical": true,
+			"earlierBy": "tape-out"
+		},
+		"facts": [
+			{
+				"fact": "design-bonus",
+				"holds": false,
+				"bonus": "0"
+			},
+			{
+				"fact": "tape-out-address",
+				"same": false
+			},
+			{
+				"fact": "design-shared",
+				"miners": 12
+			},
+			{
+				"fact": "can-mine",
+				"state": "mining"
+			}
+		],
+		"occc": {
+			"status": "not-checked"
+		},
+		"index": {
+			"circuitsChecked": "80409",
+			"upToBlock": {
+				"chainId": 56,
+				"block": "135273897"
+			}
+		},
+		"ruleVersion": "hash 2026-11-20, floor 4, chain 10"
+	}
+}
