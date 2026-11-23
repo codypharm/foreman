@@ -87,7 +87,7 @@ Build so each step works end to end before the next.
 | **5 Dec** | **Feature freeze**; demo video |
 | 6 Dec | Submit, a day before the provisional 7 Dec deadline |
 
-**Cut list, in this order, if behind on 1 December:** copy alert notifications by Telegram and browser (`decisions/2026-11-23-copy-alert-notifications.md`) → OCCC status → copy alert → Lend read (show "not checked") → X Layer mainnet (publish on testnet for the demo).
+**Cut list, in this order, if behind on 1 December:** DeWEB mirror (`decisions/2026-11-23-hosting.md`) → copy alert notifications by Telegram and browser (`decisions/2026-11-23-copy-alert-notifications.md`) → OCCC status → copy alert → Lend read (show "not checked") → X Layer mainnet (publish on testnet for the demo).
 
 **Never cut:** the evidence behind every originality result, the inputs behind every value, and publishing results on X Layer (the hackathon's hard requirement).
 

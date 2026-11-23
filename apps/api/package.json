@@ -10,7 +10,8 @@
 		"refresh-results": "node --env-file-if-exists=../../.env scripts/refresh-results.ts",
 		"circuit-page": "node --env-file-if-exists=../../.env scripts/circuit-page.ts",
 		"record:page": "node --env-file-if-exists=../../.env scripts/record-page-fixture.ts",
-		"serve": "node --env-file-if-exists=../../.env scripts/serve.ts"
+		"serve": "node --env-file-if-exists=../../.env scripts/serve.ts",
+		"worker": "node --env-file-if-exists=../../.env scripts/worker.ts"
 	},
 	"dependencies": {
 		"@foreman/chain-bnb": "workspace:*",
@@ -22,6 +23,7 @@
 		"@hono/node-server": "1.19.18",
 		"hono": "4.13.16",
 		"pg": "^8.23.1",
+		"pg-boss": "12.38.1",
 		"viem": "2.57.16"
 	},
 	"devDependencies": {

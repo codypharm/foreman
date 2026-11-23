@@ -94,3 +94,12 @@ export {
 	type StoredTapeOut,
 	saveScan,
 } from "./store.ts";
+export {
+	readStages,
+	recordStage,
+	type StageEvent,
+	type StageRecord,
+	type StageState,
+	WORKER_STAGES,
+	type WorkerStage,
+} from "./worker-stages.ts";

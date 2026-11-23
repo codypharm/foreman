@@ -19,6 +19,7 @@ import { resolveCheck } from "../page/check.ts";
 import { type PageDeps, readCircuitPage } from "../page/circuit-page.ts";
 import { readListingsPage } from "../page/listings-page.ts";
 import { readWalletMiners } from "../page/wallet-page.ts";
+import { readHealth } from "./health.ts";
 
 const STATUS: Record<ApiError["error"], ContentfulStatusCode> = {
 	"not-recognised": 400,
@@ -42,6 +43,15 @@ const LISTINGS_ACCEPTS = [
 export function createApp(deps: PageDeps): Hono {
 	const app = new Hono();
 	app.use("*", cors({ origin: "*", allowMethods: ["GET"] }));
+
+	// Whether the hosted worker is keeping up (2026-11-23-hosting.md, decision 7)
+	app.get("/health", async (c) => {
+		const health = await readHealth(
+			deps.pool,
+			BigInt(Math.floor(Date.now() / 1000)),
+		);
+		return c.json(health.body, health.status);
+	});
 
 	// The Check box: what was typed, to the one circuit it names (2026-11-22-check-box-input.md)
 	app.get("/check", async (c) => {
