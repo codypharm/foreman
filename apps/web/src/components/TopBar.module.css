@@ -110,23 +110,6 @@
 	background: var(--raise);
 	color: var(--ink);
 }
-.wallet {
-	all: unset;
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	font: 600 13px / 1 var(--sans);
-	padding: 10px 14px;
-	border-radius: 999px;
-	background: var(--raise);
-	white-space: nowrap;
-	margin-left: 4px;
-}
-.wallet:disabled {
-	cursor: default;
-	color: var(--ink-2);
-}
 @media (max-width: 1040px) {
 	.nav {
 		display: none;

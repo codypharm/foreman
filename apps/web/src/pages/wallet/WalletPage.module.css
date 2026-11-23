@@ -1,0 +1,357 @@
+/* Your miners, to docs/mocks/2026-11-23-copy-alerts-by-design.html. */
+.page {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 36px 32px 56px;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 340px;
+	gap: 56px;
+	align-items: start;
+}
+.mono {
+	font-family: var(--mono);
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.intro h1 {
+	font: 600 28px / 1.15 var(--sans);
+	letter-spacing: -0.02em;
+}
+.intro p {
+	margin-top: 6px;
+	font-size: 14px;
+	color: var(--ink-2);
+	max-width: 60ch;
+}
+.connect {
+	margin-top: 20px;
+}
+.fact {
+	margin-top: 20px;
+	font: 500 15px / 1.45 var(--sans);
+	max-width: 60ch;
+}
+.waiting {
+	padding: 48px 0;
+	color: var(--ink-2);
+	font-size: 15px;
+}
+.problem {
+	margin-top: 24px;
+	padding: 14px 16px;
+	border-radius: 14px;
+	background: var(--stale-bg);
+	color: var(--stale);
+	font-size: 14px;
+	line-height: 1.45;
+}
+.problem button {
+	all: unset;
+	cursor: pointer;
+	margin-top: 8px;
+	font-weight: 600;
+	text-decoration: underline;
+}
+
+.sec {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 12px;
+	flex-wrap: wrap;
+	padding-bottom: 12px;
+	border-bottom: 1px solid var(--line);
+}
+.sec h2 {
+	font: 600 17px / 1.2 var(--sans);
+}
+.meta {
+	font: 500 12px / 1.3 var(--sans);
+	color: var(--ink-2);
+}
+
+/* one alert per design */
+.alert {
+	margin-top: 20px;
+	padding: 20px;
+	border-radius: 18px;
+	background: var(--raise);
+}
+.alert + .alert {
+	margin-top: 12px;
+}
+.when {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font: 600 13px / 1.3 var(--sans);
+	color: var(--ink-2);
+}
+.when i {
+	flex: none;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--accent);
+	box-shadow: 0 0 0 3px var(--bg);
+}
+.alert h3 {
+	margin-top: 10px;
+	font: 600 22px / 1.2 var(--sans);
+	letter-spacing: -0.02em;
+	text-wrap: balance;
+}
+.alert h3:first-child {
+	margin-top: 0;
+}
+.lead {
+	margin-top: 8px;
+	font-size: 15px;
+	line-height: 1.5;
+}
+.lead b {
+	font-weight: 600;
+}
+.own {
+	margin-top: 8px;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--ink-2);
+}
+.own b {
+	color: var(--ink);
+	font-weight: 600;
+}
+.copies {
+	list-style: none;
+	padding: 0;
+	margin-top: 12px;
+}
+.copies li a {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 12px;
+	padding: 11px 10px;
+	margin: 0 -10px;
+	border-top: 1px solid var(--line);
+	border-radius: 10px;
+	text-decoration: none;
+}
+.copies li a:hover {
+	background: var(--bg);
+}
+.copies li a > span {
+	font: 600 14px / 1.3 var(--sans);
+}
+.copies li a > b {
+	text-align: right;
+	font: 600 14px / 1.3 var(--sans);
+	white-space: nowrap;
+}
+.copies small {
+	display: block;
+	font: 400 12px / 1.4 var(--sans);
+	color: var(--ink-2);
+}
+.new {
+	color: var(--new);
+	font-weight: 600;
+}
+.more {
+	all: unset;
+	box-sizing: border-box;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 42px;
+	margin-top: 12px;
+	border-radius: 999px;
+	font: 600 14px / 1 var(--sans);
+	box-shadow: inset 0 0 0 1px var(--line);
+	background: var(--bg);
+}
+.more:hover {
+	box-shadow: inset 0 0 0 1px var(--ink-3);
+}
+.more:focus-visible {
+	outline: 2px solid var(--ink);
+	outline-offset: 2px;
+}
+.rule {
+	margin-top: 10px;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--ink-2);
+}
+.rule b {
+	color: var(--ink);
+	font-weight: 600;
+}
+
+/* every miner */
+.mine {
+	margin-top: 36px;
+}
+.rows {
+	list-style: none;
+	padding: 0;
+	margin-top: 4px;
+}
+.rows li a {
+	display: grid;
+	grid-template-columns: 40px minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 10px;
+	margin: 0 -10px;
+	border-radius: 12px;
+	text-decoration: none;
+	border-bottom: 1px solid var(--line);
+}
+.rows li a:hover {
+	background: var(--raise);
+}
+.badge {
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	border-radius: 999px;
+	background: var(--ink);
+	color: var(--bg);
+	font: 700 12px / 1 var(--sans);
+}
+.g {
+	background: var(--raise);
+	color: var(--ink);
+	box-shadow: inset 0 0 0 1px var(--line);
+}
+.k {
+	min-width: 0;
+	font: 600 15px / 1.25 var(--sans);
+}
+.k small {
+	display: block;
+	margin-top: 2px;
+	font: 400 13px / 1.35 var(--sans);
+	color: var(--ink-2);
+}
+.k small b {
+	font-weight: 400;
+}
+.flag,
+.quiet {
+	margin-left: 8px;
+	font: 600 13px / 1.25 var(--sans);
+	white-space: nowrap;
+}
+.flag {
+	color: var(--new);
+}
+.quiet {
+	font-weight: 500;
+	color: var(--ink-2);
+}
+.v {
+	text-align: right;
+	font: 600 15px / 1.25 var(--sans);
+	white-space: nowrap;
+}
+.v small {
+	display: block;
+	font: 400 13px / 1.35 var(--sans);
+	color: var(--ink-2);
+}
+.showall {
+	all: unset;
+	cursor: pointer;
+	display: block;
+	padding: 14px 0;
+	font: 600 14px / 1 var(--sans);
+}
+.showall:hover {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+.showall:focus-visible {
+	outline: 2px solid var(--ink);
+	outline-offset: 2px;
+}
+.limit {
+	margin-top: 14px;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--ink-2);
+}
+
+/* the aside */
+.watch {
+	position: sticky;
+	top: calc(var(--top-h) + 24px);
+}
+.watch dl {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	margin-top: 6px;
+}
+.watch dt,
+.watch dd {
+	padding: 12px 0;
+	border-bottom: 1px solid var(--line);
+	font-size: 14px;
+}
+.watch dt {
+	color: var(--ink-2);
+}
+.watch dd {
+	text-align: right;
+	font-weight: 600;
+}
+.watch p {
+	margin-top: 14px;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--ink-2);
+}
+.watch .rulename {
+	margin-top: 8px;
+	font-size: 12px;
+}
+
+@media (max-width: 1040px) {
+	.page {
+		grid-template-columns: minmax(0, 1fr) 300px;
+		gap: 40px;
+	}
+}
+@media (max-width: 760px) {
+	.page {
+		grid-template-columns: minmax(0, 1fr);
+		padding: 20px 16px 40px;
+		gap: 36px;
+	}
+	.watch {
+		position: static;
+	}
+	.intro h1 {
+		font-size: 24px;
+	}
+	.alert {
+		padding: 18px 16px;
+	}
+	.alert h3 {
+		font-size: 20px;
+	}
+	.flag,
+	.quiet {
+		display: block;
+		margin: 2px 0 0;
+	}
+	.connect > div > button {
+		display: flex;
+		width: 100%;
+	}
+}

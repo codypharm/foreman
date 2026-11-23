@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { ApiProblem, fetchCheck } from "../api.ts";
 import s from "./TopBar.module.css";
+import { WalletButton } from "./WalletButton.tsx";
 
 const THEME_KEY = "foreman-theme";
 
@@ -61,6 +62,12 @@ export function TopBar() {
 					<Link href="/" aria-current={location === "/" ? "page" : undefined}>
 						Live listings
 					</Link>
+					<Link
+						href="/wallet"
+						aria-current={location.startsWith("/wallet") ? "page" : undefined}
+					>
+						Your miners
+					</Link>
 				</nav>
 				<button
 					type="button"
@@ -85,10 +92,7 @@ export function TopBar() {
 						/>
 					</svg>
 				</button>
-				{/* Wallet connect comes with the "Your miners" page (wagmi, OKX Wallet first) */}
-				<button type="button" className={s.wallet} disabled>
-					Connect wallet
-				</button>
+				<WalletButton />
 			</div>
 		</header>
 	);

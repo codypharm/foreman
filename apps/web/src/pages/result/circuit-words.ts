@@ -30,3 +30,11 @@ export function designTime(c: CircuitRef): {
 }
 
 export const circuitName = (c: CircuitRef) => `#${c.tokenId.toString()}`;
+
+/** The can-mine fact in the product's words (CLAUDE.md, "Domain language"). */
+export const CAN_MINE = {
+	mining: "Mining now",
+	"cant-mine": "Can’t mine",
+	stopped: "Not mining: stopped",
+	"not-started": "Could mine: not started",
+} as const;

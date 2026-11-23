@@ -50,6 +50,21 @@
         "dev"
       ],
       "port": 5173
+    },
+    {
+      "name": "foreman-web-dev-wallet",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "VITE_DEV_WALLET=0x077ea6b4c1dfc7f7ec253d736c56898dfc192ea5",
+        "pnpm",
+        "--filter",
+        "@foreman/web",
+        "dev",
+        "--port",
+        "5174",
+        "--strictPort"
+      ],
+      "port": 5174
     }
   ]
 }

@@ -12,6 +12,7 @@ import { useEffect } from "react";
 import { Link } from "wouter";
 import { ApiProblem, fetchCircuit } from "../../api.ts";
 import { formatCount, shortHex } from "../../format.ts";
+import { CAN_MINE } from "./circuit-words.ts";
 import { Options } from "./Options.tsx";
 import { Originality } from "./Originality.tsx";
 import s from "./ResultPage.module.css";
@@ -168,13 +169,6 @@ function Header({ page }: { page: CircuitPage }) {
 		</>
 	);
 }
-
-const CAN_MINE = {
-	mining: "Mining now",
-	"cant-mine": "Can’t mine",
-	stopped: "Not mining: stopped",
-	"not-started": "Could mine: not started",
-} as const;
 
 function cantMine(r: CantMineReason): string {
 	switch (r.reason) {

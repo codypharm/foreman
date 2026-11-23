@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { WagmiProvider } from "wagmi";
 import { App } from "./App.tsx";
 import { restoreTheme } from "./components/TopBar.tsx";
 import "./styles/global.css";
+import { wagmiConfig } from "./wallet.ts";
 
 restoreTheme();
 
@@ -18,8 +20,10 @@ const root = document.getElementById("root");
 if (!root) throw new Error("No #root element in index.html");
 createRoot(root).render(
 	<StrictMode>
-		<QueryClientProvider client={queryClient}>
-			<App />
-		</QueryClientProvider>
+		<WagmiProvider config={wagmiConfig}>
+			<QueryClientProvider client={queryClient}>
+				<App />
+			</QueryClientProvider>
+		</WagmiProvider>
 	</StrictMode>,
 );

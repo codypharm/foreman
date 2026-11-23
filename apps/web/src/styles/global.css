@@ -8,6 +8,8 @@
 	--line: #ebebeb;
 	--accent: #c2f24b;
 	--on-accent: #000000;
+	/* "Just listed" as text: deep lemon in light for contrast (5.0:1 on --raise), lemon in dark */
+	--new: #567300;
 	--live: #14a44d;
 	--stale: #c4231b;
 	--stale-bg: #fdecea;
@@ -28,6 +30,7 @@
 		--ink-3: #6b6b6b;
 		--line: #1f1f1f;
 		--live: #3ddc84;
+		--new: #c2f24b;
 		--stale: #ff7a6b;
 		--stale-bg: #2a1210;
 		--btn: #ffffff;
@@ -45,6 +48,7 @@
 	--ink-3: #6b6b6b;
 	--line: #1f1f1f;
 	--live: #3ddc84;
+	--new: #c2f24b;
 	--stale: #ff7a6b;
 	--stale-bg: #2a1210;
 	--btn: #ffffff;

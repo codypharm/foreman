@@ -11,6 +11,8 @@ import {
 	parseCheckAnswer,
 	parseCircuitPage,
 	parseListingsPage,
+	parseWalletMiners,
+	type WalletMiners,
 } from "@foreman/contract";
 
 const API_URL = (
@@ -77,4 +79,9 @@ export function fetchCircuit(
 /** The Check box: what was typed, to the one circuit it names (2026-11-22-check-box-input.md). */
 export function fetchCheck(q: string): Promise<CheckAnswer> {
 	return get(`/check?${new URLSearchParams({ q })}`, parseCheckAnswer);
+}
+
+/** A wallet's miners and their copy alerts, from the owner follow and a live RIG voucher read. */
+export function fetchWallet(address: string): Promise<WalletMiners> {
+	return get(`/wallet/${address}/miners`, parseWalletMiners);
 }

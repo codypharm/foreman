@@ -6,6 +6,7 @@ import { TopBar } from "./components/TopBar.tsx";
 import { ListingsPage } from "./pages/ListingsPage.tsx";
 import { NotFound } from "./pages/NotFound.tsx";
 import { ResultPage } from "./pages/result/ResultPage.tsx";
+import { WalletPage } from "./pages/wallet/WalletPage.tsx";
 
 export function App() {
 	return (
@@ -16,6 +17,7 @@ export function App() {
 				<Route path="/circuit/:processor/:tokenId">
 					{(p) => <ResultPage key={`${p.processor}/${p.tokenId}`} {...p} />}
 				</Route>
+				<Route path="/wallet" component={WalletPage} />
 				<Route component={NotFound} />
 			</Switch>
 		</Router>
