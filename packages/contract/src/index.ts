@@ -29,6 +29,11 @@ export {
 } from "./bem-price.ts";
 export type { BnbRead } from "./bnb.ts";
 export {
+	type CheckAnswer,
+	parseCheckAnswer,
+	serialiseCheckAnswer,
+} from "./check-answer.ts";
+export {
 	type CircuitPage,
 	parseCircuitPage,
 	serialiseCircuitPage,

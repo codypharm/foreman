@@ -5,6 +5,7 @@ import { useHashLocation } from "wouter/use-hash-location";
 import { TopBar } from "./components/TopBar.tsx";
 import { ListingsPage } from "./pages/ListingsPage.tsx";
 import { NotFound } from "./pages/NotFound.tsx";
+import { ResultPage } from "./pages/result/ResultPage.tsx";
 
 export function App() {
 	return (
@@ -12,6 +13,9 @@ export function App() {
 			<TopBar />
 			<Switch>
 				<Route path="/" component={ListingsPage} />
+				<Route path="/circuit/:processor/:tokenId">
+					{(p) => <ResultPage key={`${p.processor}/${p.tokenId}`} {...p} />}
+				</Route>
 				<Route component={NotFound} />
 			</Switch>
 		</Router>

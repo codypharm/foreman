@@ -86,3 +86,16 @@ a {
 	color: inherit;
 	text-underline-offset: 3px;
 }
+
+/* The top bar's height, so sticky panels and jumps to an anchor clear it */
+:root {
+	--top-h: 65px;
+}
+@media (max-width: 760px) {
+	:root {
+		--top-h: 117px;
+	}
+}
+html {
+	scroll-padding-top: var(--top-h);
+}

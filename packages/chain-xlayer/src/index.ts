@@ -14,3 +14,4 @@ export {
 	VOUCHER_READS_AT_ONCE,
 	type Voucher,
 } from "./lend.ts";
+export { readVoucherCircuit, type VoucherCircuit } from "./voucher-circuit.ts";

@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
+import { ApiProblem, fetchCheck } from "../api.ts";
 import s from "./TopBar.module.css";
 
 const THEME_KEY = "foreman-theme";
@@ -53,37 +55,7 @@ export function TopBar() {
 				</svg>
 				Foreman
 			</Link>
-			{/* Checking a pasted listing, miner or voucher is wired with the result page */}
-			{/* biome-ignore lint/a11y/useSemanticElements: the form is the search landmark; a <search> wrapper would add a box the layout doesn't need */}
-			<form
-				className={s.search}
-				role="search"
-				onSubmit={(e) => e.preventDefault()}
-			>
-				<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-					<circle
-						cx="7"
-						cy="7"
-						r="5"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="1.6"
-					/>
-					<path
-						d="M11 11l3.5 3.5"
-						stroke="currentColor"
-						strokeWidth="1.6"
-						strokeLinecap="round"
-					/>
-				</svg>
-				<input
-					aria-label="Listing, miner or RIG voucher"
-					placeholder="Paste a listing, miner or RIG voucher"
-				/>
-				<button type="submit" disabled>
-					Check
-				</button>
-			</form>
+			<CheckBox />
 			<div className={s.right}>
 				<nav className={s.nav}>
 					<Link href="/" aria-current={location === "/" ? "page" : undefined}>
@@ -119,5 +91,80 @@ export function TopBar() {
 				</button>
 			</div>
 		</header>
+	);
+}
+
+/**
+ * The Check box: a listing number, RIG voucher, miner key or circuit, resolved by the API to one
+ * circuit, whose result page opens. What isn't found is said under the box, never guessed.
+ */
+function CheckBox() {
+	const [, navigate] = useLocation();
+	const [q, setQ] = useState("");
+	const [busy, setBusy] = useState(false);
+	const [problem, setProblem] = useState<string | null>(null);
+
+	async function check(e: React.FormEvent) {
+		e.preventDefault();
+		if (!q.trim() || busy) return;
+		setBusy(true);
+		setProblem(null);
+		try {
+			const answer = await fetchCheck(q);
+			navigate(`/circuit/${answer.processor}/${answer.tokenId}`);
+		} catch (error) {
+			setProblem(
+				error instanceof ApiProblem
+					? error.problem.error === "not-recognised"
+						? "Paste a listing number (28074), a RIG voucher (RIG voucher #19), a miner key or a circuit (its processor, then its id)."
+						: error.problem.detail
+					: "Something went wrong checking that.",
+			);
+		} finally {
+			setBusy(false);
+		}
+	}
+
+	return (
+		// biome-ignore lint/a11y/useSemanticElements: the form is the search landmark; a <search> wrapper would add a box the layout doesn't need
+		<form className={s.search} role="search" onSubmit={check}>
+			<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+				<circle
+					cx="7"
+					cy="7"
+					r="5"
+					fill="none"
+					stroke="currentColor"
+					strokeWidth="1.6"
+				/>
+				<path
+					d="M11 11l3.5 3.5"
+					stroke="currentColor"
+					strokeWidth="1.6"
+					strokeLinecap="round"
+				/>
+			</svg>
+			<input
+				aria-label="Listing, miner or RIG voucher"
+				placeholder="Paste a listing, miner or RIG voucher"
+				value={q}
+				onChange={(e) => {
+					setQ(e.target.value);
+					setProblem(null);
+				}}
+				aria-describedby={problem ? "check-problem" : undefined}
+				aria-invalid={problem ? true : undefined}
+				spellCheck={false}
+				autoComplete="off"
+			/>
+			<button type="submit" disabled={busy || !q.trim()}>
+				{busy ? "Checking…" : "Check"}
+			</button>
+			{problem && (
+				<p id="check-problem" className={s.problem} role="alert">
+					{problem}
+				</p>
+			)}
+		</form>
 	);
 }

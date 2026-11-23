@@ -222,7 +222,7 @@
 /* market today */
 .market {
 	position: sticky;
-	top: 24px;
+	top: calc(var(--top-h) + 24px);
 }
 .sec {
 	padding-bottom: 12px;

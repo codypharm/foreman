@@ -20,6 +20,12 @@ export {
 	readCircuitRef,
 } from "./load-index.ts";
 export {
+	findListingCircuit,
+	findMinerCircuit,
+	type ListingLookup,
+	type MinerLookup,
+} from "./lookup.ts";
+export {
 	followMarket,
 	type MarketBook,
 	type MarketFollowResult,

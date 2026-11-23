@@ -3,9 +3,13 @@
 
 import {
 	type ApiError,
+	type CheckAnswer,
+	type CircuitPage,
 	type ListingsPage,
 	type ListingVerdict,
 	parseApiError,
+	parseCheckAnswer,
+	parseCircuitPage,
 	parseListingsPage,
 } from "@foreman/contract";
 
@@ -60,4 +64,17 @@ export function fetchListings(query: {
 	if (query.verdict) params.set("verdict", query.verdict);
 	if (query.cursor) params.set("cursor", query.cursor);
 	return get(`/listings?${params}`, parseListingsPage);
+}
+
+/** One circuit's result page: its stored result, publication and live reads (a few seconds). */
+export function fetchCircuit(
+	processor: string,
+	tokenId: string,
+): Promise<CircuitPage> {
+	return get(`/circuit/${processor}/${tokenId}`, parseCircuitPage);
+}
+
+/** The Check box: what was typed, to the one circuit it names (2026-11-22-check-box-input.md). */
+export function fetchCheck(q: string): Promise<CheckAnswer> {
+	return get(`/check?${new URLSearchParams({ q })}`, parseCheckAnswer);
 }

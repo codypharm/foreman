@@ -6,6 +6,7 @@ import held from "@foreman/chain-xlayer/fixtures/xlayer-held-vouchers.json" with
 import {
 	parseAddress,
 	parseApiError,
+	parseCheckAnswer,
 	parseCircuitPage,
 	parseListingsPage,
 	parseWalletMiners,
@@ -221,5 +222,48 @@ describe.skipIf(!TEST_DATABASE_URL)("GET /wallet/:address/miners", () => {
 			detail:
 				"That isn't a wallet address: 0x followed by 40 hexadecimal characters",
 		});
+	});
+});
+
+describe.skipIf(!TEST_DATABASE_URL)("GET /check", () => {
+	let pool: pg.Pool | undefined;
+	afterEach(async () => {
+		await pool?.end();
+	});
+
+	test("sends the circuit an input names as the contract's wire JSON", async () => {
+		const set = await setUp();
+		pool = set.pool;
+		const { processor, id } = PAGE_CIRCUITS.mining;
+		const res = await set.app.request(
+			`/check?q=${encodeURIComponent(`${processor} ${id}`)}`,
+		);
+		expect(res.status).toBe(200);
+		expect(res.headers.get("access-control-allow-origin")).toBe("*");
+		expect(parseCheckAnswer(await res.json(), "check")).toEqual({
+			processor,
+			tokenId: id,
+		});
+	});
+
+	test("an input it doesn't know is 400 with what the Check box accepts", async () => {
+		const set = await setUp();
+		pool = set.pool;
+		for (const path of ["/check?q=hello", "/check"]) {
+			const res = await set.app.request(path);
+			expect(res.status).toBe(400);
+			const error = parseApiError(await res.json(), "error");
+			expect(error.error).toBe("not-recognised");
+		}
+	});
+
+	test("a listing the market hasn't seen is 404 in plain words", async () => {
+		const set = await setUp();
+		pool = set.pool;
+		const res = await set.app.request("/check?q=listing%20999999999");
+		expect(res.status).toBe(404);
+		expect(parseApiError(await res.json(), "error").detail).toMatch(
+			/^No listing 999999999 on TapeOut/,
+		);
 	});
 });

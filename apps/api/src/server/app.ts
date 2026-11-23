@@ -7,6 +7,7 @@ import {
 	LISTING_VERDICTS,
 	type ListingVerdict,
 	serialiseApiError,
+	serialiseCheckAnswer,
 	serialiseCircuitPage,
 	serialiseListingsPage,
 	serialiseWalletMiners,
@@ -14,6 +15,7 @@ import {
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { resolveCheck } from "../page/check.ts";
 import { type PageDeps, readCircuitPage } from "../page/circuit-page.ts";
 import { readListingsPage } from "../page/listings-page.ts";
 import { readWalletMiners } from "../page/wallet-page.ts";
@@ -40,6 +42,14 @@ const LISTINGS_ACCEPTS = [
 export function createApp(deps: PageDeps): Hono {
 	const app = new Hono();
 	app.use("*", cors({ origin: "*", allowMethods: ["GET"] }));
+
+	// The Check box: what was typed, to the one circuit it names (2026-11-22-check-box-input.md)
+	app.get("/check", async (c) => {
+		const read = await resolveCheck(deps, c.req.query("q") ?? "");
+		return read.ok
+			? c.json(serialiseCheckAnswer(read.answer, "check"))
+			: sendError(c, read.error);
+	});
 
 	app.get("/circuit/:processor/:tokenId", async (c) => {
 		const processor = c.req.param("processor");
