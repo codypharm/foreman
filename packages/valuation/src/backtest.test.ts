@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import recorded from "../fixtures/network-daily-20260822-20261123.json" with {
+import recorded from "../fixtures/network-daily-20260822-20261124.json" with {
 	type: "json",
 };
 import {
@@ -17,8 +17,8 @@ import {
 
 // The forecast backtest (docs/decisions/2026-11-24-forecast-backtest.md): for every past start date with
 // 30 days before it and 30 days after, the 30-day range the app would have shown that day against the
-// output a verified miner of unchanged weight actually earned. The fixture is the index's 94 daily
-// network samples, 22 Aug to 23 Nov 2026 at 00:00 UTC.
+// output a verified miner of unchanged weight actually earned. The fixture is the index's 95 daily
+// network samples, 22 Aug to 24 Nov 2026 at 00:00 UTC.
 
 const DAY = 86_400n;
 const SAMPLES: DailySample[] = recorded.samples.map((s) => ({
@@ -26,9 +26,10 @@ const SAMPLES: DailySample[] = recorded.samples.map((s) => ({
 	block: BigInt(s.block),
 	verifiedWeight: BigInt(s.verifiedWeight),
 }));
-/** 21 Sep and 24 Oct 2026, 00:00 UTC. */
+/** 21 Sep and 25 Oct 2026, 00:00 UTC. */
 const FIRST_START = 1_789_948_800n;
-const LAST_START = 1_792_800_000n;
+const LAST_START = 1_792_886_400n;
+const STARTS = 35;
 
 /** 61 daily samples from 22 Aug 2026: one start date, with the network weight the function gives on day i. */
 function network(weightOnDay: (i: number) => bigint): DailySample[] {
@@ -43,7 +44,7 @@ function network(weightOnDay: (i: number) => bigint): DailySample[] {
 describe("the forecast backtest", () => {
 	test("tests every start date with 30 days before it and 30 days fully over after it", () => {
 		const { windows } = backtest(SAMPLES);
-		expect(windows).toHaveLength(34);
+		expect(windows).toHaveLength(STARTS);
 		expect(windows[0]?.start).toBe(FIRST_START);
 		expect(windows.at(-1)?.start).toBe(LAST_START);
 		expect(
@@ -136,29 +137,38 @@ describe("the forecast backtest", () => {
 	test("the summary counts the start dates, how many held and the misses by side", () => {
 		const { windows, summary } = backtest(SAMPLES);
 		expect(summary.horizonDays).toBe(30);
-		expect(summary.starts).toBe(34);
+		expect(summary.starts).toBe(STARTS);
 		expect(summary.firstStart).toBe(FIRST_START);
 		expect(summary.lastStart).toBe(LAST_START);
 		const count = (o: string) => windows.filter((w) => w.outcome === o).length;
 		expect(summary.held).toBe(count("held"));
 		expect(summary.belowLow).toBe(count("below-low"));
 		expect(summary.aboveHigh).toBe(count("above-high"));
-		expect(summary.held + summary.belowLow + summary.aboveHigh).toBe(34);
+		expect(summary.held + summary.belowLow + summary.aboveHigh).toBe(STARTS);
 	});
 
 	test("base error is how far base was from the actual output, as a share of actual, rounded up: the median and the worst", () => {
-		const { windows, summary } = backtest(SAMPLES);
-		const errors = windows
-			.map((w) => {
-				const gap = w.range.base - w.actual;
-				const abs = gap < 0n ? -gap : gap;
-				return (abs * 1_000_000n + w.actual - 1n) / w.actual;
-			})
-			.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-		// 34 start dates: the median is the mean of the 17th and 18th, rounded up
-		const middle = (errors[16] ?? 0n) + (errors[17] ?? 0n);
-		expect(summary.baseErrorMedianPpm).toBe((middle + 1n) / 2n);
-		expect(summary.baseErrorWorstPpm).toBe(errors.at(-1));
+		const errorsOf = (windows: { range: { base: bigint }; actual: bigint }[]) =>
+			windows
+				.map((w) => {
+					const gap = w.range.base - w.actual;
+					const abs = gap < 0n ? -gap : gap;
+					return (abs * 1_000_000n + w.actual - 1n) / w.actual;
+				})
+				.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+		// 35 start dates: the median is the 18th
+		const all = backtest(SAMPLES);
+		const errors = errorsOf(all.windows);
+		expect(errors).toHaveLength(35);
+		expect(all.summary.baseErrorMedianPpm).toBe(errors[17]);
+		expect(all.summary.baseErrorWorstPpm).toBe(errors.at(-1));
+		// One day fewer, 34 start dates: the mean of the 17th and 18th, rounded up
+		const fewer = backtest(SAMPLES.slice(0, -1));
+		const even = errorsOf(fewer.windows);
+		expect(even).toHaveLength(34);
+		expect(fewer.summary.baseErrorMedianPpm).toBe(
+			((even[16] ?? 0n) + (even[17] ?? 0n) + 1n) / 2n,
+		);
 	});
 
 	test("a network that didn't change has no base error", () => {
@@ -180,7 +190,7 @@ describe("the forecast backtest", () => {
 	test("the stored result is this model version's, and the saved samples give it exactly", () => {
 		expect(BACKTEST_RESULT.modelVersion).toBe(MODEL_VERSION);
 		expect(BACKTEST_RESULT.fixture).toBe(
-			"packages/valuation/fixtures/network-daily-20260822-20261123.json",
+			"packages/valuation/fixtures/network-daily-20260822-20261124.json",
 		);
 		expect(backtest(SAMPLES).summary).toEqual(BACKTEST_RESULT.summary);
 	});

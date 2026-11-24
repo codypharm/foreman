@@ -11,16 +11,16 @@ export const BACKTEST_RESULT: {
 	summary: BacktestSummary;
 } = {
 	modelVersion: "2026-11-24",
-	fixture: "packages/valuation/fixtures/network-daily-20260822-20261123.json",
+	fixture: "packages/valuation/fixtures/network-daily-20260822-20261124.json",
 	summary: {
 		horizonDays: 30,
-		starts: 34,
-		held: 34,
+		starts: 35,
+		held: 35,
 		/** 21 Sep 2026, 00:00 UTC. */
 		firstStart: 1_789_948_800n,
-		/** 24 Oct 2026, 00:00 UTC. */
-		lastStart: 1_792_800_000n,
-		baseErrorMedianPpm: 70_559n,
+		/** 25 Oct 2026, 00:00 UTC. */
+		lastStart: 1_792_886_400n,
+		baseErrorMedianPpm: 70_099n,
 		baseErrorWorstPpm: 409_701n,
 		belowLow: 0,
 		aboveHigh: 0,
