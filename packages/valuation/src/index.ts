@@ -3,6 +3,14 @@
 // Token amounts are bigint base units (BEM has 8 decimals), never number.
 
 export {
+	BACKTEST_MINER_WEIGHT,
+	type Backtest,
+	type BacktestSummary,
+	type BacktestWindow,
+	backtest,
+} from "./backtest.ts";
+export { BACKTEST_RESULT } from "./backtest-result.ts";
+export {
 	ASK_CEILING,
 	type MarketAsk,
 	type MarketMinerState,

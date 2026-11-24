@@ -5,6 +5,7 @@ import { ContractParseError } from "./errors.ts";
 import { parseSourced, type Sourced, serialiseSourced } from "./sourced.ts";
 import {
 	type Hex32,
+	parseCount,
 	parseHex32,
 	parseObject,
 	parseOneOf,
@@ -35,8 +36,31 @@ export interface Valuation {
 	};
 	model: {
 		version: string;
-		backtest: "pending" | { coverage: string; ref: string };
+		backtest: "pending" | Backtest;
 	};
+}
+
+/**
+ * How often the model's 30-day range held in the past (docs/decisions/2026-11-24-forecast-backtest.md):
+ * for each start date, the range the app would have shown that day against what a verified miner of
+ * unchanged weight earned. Neighbouring start dates share most of their days.
+ */
+export interface Backtest {
+	horizonDays: number;
+	/** How many start dates were tested. */
+	starts: number;
+	/** Start dates whose actual output fell between low and high, inclusive. */
+	held: number;
+	/** 00:00 UTC of the first and last start date, Unix seconds. */
+	firstStart: bigint;
+	lastStart: bigint;
+	/** |base − actual| ÷ actual, in parts per million: the median and the worst. */
+	baseErrorMedianPpm: bigint;
+	baseErrorWorstPpm: bigint;
+	belowLow: number;
+	aboveHigh: number;
+	/** Where the full table is, and how to rerun it. */
+	ref: string;
 }
 
 const POOLS = ["verified", "unverified"] as const;
@@ -123,7 +147,7 @@ export function serialiseValuation(
 		},
 		range: serialiseScenario(range, `${field}.range`, serialiseUint),
 		inputs: serialiseValuationInputs(inputs, `${field}.inputs`),
-		model: { version: model.version, backtest: model.backtest },
+		model: serialiseValuationModel(model, `${field}.model`),
 	};
 	parseValuation(wire, field);
 	return wire;
@@ -195,23 +219,89 @@ function valuesOf(scenario: Scenario<Sourced<bigint>>): Scenario<bigint> {
 	};
 }
 
-/** "pending" until a backtest is published; then how often the range held, and where to read it. */
+/** "pending" until the model is backtested; then how often its range held, and where to read it. */
 function parseBacktest(
 	wire: unknown,
 	field: string,
 ): Valuation["model"]["backtest"] {
 	if (wire === "pending") return "pending";
 	if (typeof wire !== "object" || wire === null) {
-		throw new ContractParseError(
-			field,
-			'"pending" or a published result',
-			wire,
-		);
+		throw new ContractParseError(field, '"pending" or a backtest result', wire);
 	}
 	const w = parseObject(wire, field);
-	return {
-		coverage: parseText(w.coverage, `${field}.coverage`),
+	const result: Backtest = {
+		horizonDays: parseCount(w.horizonDays, `${field}.horizonDays`),
+		starts: parseCount(w.starts, `${field}.starts`),
+		held: parseCount(w.held, `${field}.held`),
+		firstStart: parseUint(w.firstStart, `${field}.firstStart`),
+		lastStart: parseUint(w.lastStart, `${field}.lastStart`),
+		baseErrorMedianPpm: parseUint(
+			w.baseErrorMedianPpm,
+			`${field}.baseErrorMedianPpm`,
+		),
+		baseErrorWorstPpm: parseUint(
+			w.baseErrorWorstPpm,
+			`${field}.baseErrorWorstPpm`,
+		),
+		belowLow: parseCount(w.belowLow, `${field}.belowLow`),
+		aboveHigh: parseCount(w.aboveHigh, `${field}.aboveHigh`),
 		ref: parseText(w.ref, `${field}.ref`),
+	};
+	if (result.starts === 0) {
+		throw new ContractParseError(`${field}.starts`, "at least 1", 0);
+	}
+	if (result.held + result.belowLow + result.aboveHigh !== result.starts) {
+		throw new ContractParseError(
+			`${field}.held`,
+			`held + belowLow + aboveHigh = starts (${result.starts})`,
+			`${result.held} + ${result.belowLow} + ${result.aboveHigh}`,
+		);
+	}
+	if (result.lastStart < result.firstStart) {
+		throw new ContractParseError(
+			`${field}.lastStart`,
+			`at or after firstStart (${result.firstStart})`,
+			result.lastStart,
+		);
+	}
+	if (result.baseErrorMedianPpm > result.baseErrorWorstPpm) {
+		throw new ContractParseError(
+			`${field}.baseErrorMedianPpm`,
+			`at most baseErrorWorstPpm (${result.baseErrorWorstPpm})`,
+			result.baseErrorMedianPpm,
+		);
+	}
+	return result;
+}
+
+/** The model's version and backtest for the wire: the backtest's block-sized numbers as strings. */
+export function serialiseValuationModel(
+	model: Valuation["model"],
+	field: string,
+): Record<string, unknown> {
+	return {
+		version: model.version,
+		backtest: serialiseBacktest(model.backtest, `${field}.backtest`),
+	};
+}
+
+function serialiseBacktest(
+	backtest: Valuation["model"]["backtest"],
+	field: string,
+): unknown {
+	if (backtest === "pending") return "pending";
+	return {
+		...backtest,
+		firstStart: serialiseUint(backtest.firstStart, `${field}.firstStart`),
+		lastStart: serialiseUint(backtest.lastStart, `${field}.lastStart`),
+		baseErrorMedianPpm: serialiseUint(
+			backtest.baseErrorMedianPpm,
+			`${field}.baseErrorMedianPpm`,
+		),
+		baseErrorWorstPpm: serialiseUint(
+			backtest.baseErrorWorstPpm,
+			`${field}.baseErrorWorstPpm`,
+		),
 	};
 }
 

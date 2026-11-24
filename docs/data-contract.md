@@ -102,14 +102,28 @@ interface Valuation {
   };
   model: {
     version: string;
-    backtest: "pending" | { coverage: string; ref: string };
+    backtest: "pending" | Backtest;
   };
+}
+
+interface Backtest {        // the model's 30-day range against what miners earned
+  horizonDays: number;      // 30
+  starts: number;           // start dates tested; neighbours share most of their days
+  held: number;             // actual output between low and high, inclusive
+  firstStart: bigint;       // 00:00 UTC, Unix seconds
+  lastStart: bigint;
+  baseErrorMedianPpm: bigint; // |base − actual| ÷ actual, rounded up
+  baseErrorWorstPpm: bigint;
+  belowLow: number;
+  aboveHigh: number;
+  ref: string;              // where the full table is, and how to rerun it
 }
 ```
 
 - **Ordering:** the parser refuses a range that is not ordered low ≤ base ≤ high, and miner weight the same. Growth is ordered the other way (low ≥ base ≥ high): the low case assumes the fastest growth.
 - **Negative growth:** `growthPpm` may be negative (the network shrinks), but must be above −1,000,000 ppm (−100% a day). On the wire it is a decimal string with an optional minus sign.
 - **Window labels on screen:** "30 days" and "until the 2030 halving". Never "lifetime".
+- **Backtest:** rules in `docs/decisions/2026-11-24-forecast-backtest.md`. The parser refuses a result whose held and misses don't add up to `starts`, with no start dates, a last start before the first, or a median error above the worst. Both windows carry the model's result; it tests the 30-day range only (`horizonDays`), and the screen says the halving view isn't backtested. `"pending"` is a model version with no stored result. On the wire, the start dates and errors are decimal strings, the counts JSON numbers.
 
 ### `Price`
 

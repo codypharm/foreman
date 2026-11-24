@@ -64,6 +64,26 @@ describe("payback on the wire", () => {
 		expect(serialisePayback(payback, "payback")).toEqual(wireShown());
 	});
 
+	test("carries the model's backtest result and writes it back the same", () => {
+		const backtest = {
+			horizonDays: 30,
+			starts: 34,
+			held: 34,
+			firstStart: "1789948800",
+			lastStart: "1792800000",
+			baseErrorMedianPpm: "70559",
+			baseErrorWorstPpm: "409701",
+			belowLow: 0,
+			aboveHigh: 0,
+			ref: "README.md#the-forecast-backtest",
+		};
+		const wire = wireShown({ model: { version: "2026-11-24", backtest } });
+		const payback = parsePayback(wire, "payback");
+		expect(
+			JSON.parse(JSON.stringify(serialisePayback(payback, "payback"))),
+		).toEqual(wire);
+	});
+
 	test.each([
 		[
 			{ ask: { currency: "OKB", value: "1" } },

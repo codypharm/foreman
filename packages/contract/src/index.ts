@@ -94,6 +94,7 @@ export {
 	serialiseSourced,
 } from "./sourced.ts";
 export {
+	type Backtest,
 	parseValuation,
 	type Scenario,
 	serialiseValuation,

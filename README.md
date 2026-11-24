@@ -77,14 +77,23 @@ Every contract address Foreman reads or writes, each confirmed on chain before u
 
 1. **Index.** Every circuit on every BNB Chain processor, from one scan of `TapedOut` events with each processor's count checked against its `nextId()`. Then each netlist and each miner's design commitment. Followed every 5 minutes.
 2. **Check.** Each netlist is hashed: its input and output counts and bytes, with each NAND's two inputs put in order. Same hash and an earlier design time is a copy; only REF records is a wrapper.
-3. **Value.** Expected output = miner weight ÷ verified network weight × daily emission × 99%, with halvings on schedule. Low, base and high come from network growth measured on chain over the last 30 days. Payback compares the asking price with that output at BEM's 30-minute pool average.
+3. **Value.** Expected output = miner weight ÷ verified network weight × daily emission × 99%, with halvings on schedule. Low assumes the fastest week of network growth in the last 30 days, base the growth over those 30 days, high no network growth. Payback compares the asking price with that output at BEM's 30-minute pool average.
 4. **Market.** Sell shows recent sales and asks of comparable miners, picked by a stated rule. Lend shows TapePool's live quote or why there's none. Rent shows that no rental market exists yet.
 5. **Publish.** Changed results go to ForemanResults on X Layer, each with its rule version and the block it was read at.
 6. **Show.** The live listings page checks every open listing. The result page shows the three answers with their evidence. **Your miners** shows a connected wallet's miners, and a copy alert when a copy of one is listed.
 
 No verdict, value or comparison comes from a model: code decides, from chain data.
 
-**The forecast hasn't been backtested yet.** The payout maths mirrors the mining contract and is tested; how often past ranges held is not measured yet, and the app says so ("backtest pending").
+## The forecast backtest
+
+The payout maths mirrors the mining contract and is tested. The forecast, the low / base / high range of network growth, is backtested against what happened:
+
+- **Test:** for every past start date with 30 days of history before it and 30 days after, the 30-day range the app would have shown that day, against what a verified miner of unchanged weight actually earned on the real network.
+- **Result (model 2026-11-24, start dates 21 Sep to 24 Oct 2026):** the range held in **34 of 34** start dates. Base was below what miners earned every time: by 7.1% typically and 41.0% at worst (21 Sep, just after the network stopped growing fast).
+- **Read it with care:** neighbouring start dates share most of their 30 days, so 34 start dates aren't 34 independent tests. The high case's rule, no network growth, was chosen after the earlier rule (the slowest week) held in only 13 of 34, on this same history. It would miss if the network shrank, which it hasn't so far.
+- **Not tested:** the "until the 2030 halving" view, about 1,365 days, which 94 days of history can't test, and the low case's loss of the design bonus. The app says so.
+
+Rerun it from the saved samples: `pnpm --filter @foreman/valuation backtest`. The rules are in `docs/decisions/2026-11-24-forecast-backtest.md` and `2026-11-24-high-case-no-growth.md`.
 
 ## Run it locally
 

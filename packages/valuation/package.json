@@ -7,6 +7,7 @@
 		"./fixtures/*": "./fixtures/*"
 	},
 	"scripts": {
+		"backtest": "node scripts/backtest.ts",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"typecheck": "tsc -p ."

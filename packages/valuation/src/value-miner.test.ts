@@ -10,14 +10,17 @@ import recorded from "../fixtures/network-daily-20261021-20261120.json" with {
 	type: "json",
 };
 import {
+	BACKTEST_RESULT,
 	type DailySample,
 	FIRST_HALVING,
+	MODEL_VERSION,
 	outputRange,
 	valueMiner,
 } from "./index.ts";
 
 // A Valuation from chain reads: the miner and the network at one block, and the growth rates from
-// the daily samples (docs/decisions/2026-11-18-valuation-model.md, 2026-11-20-growth-rates.md).
+// the daily samples (docs/decisions/2026-11-18-valuation-model.md, 2026-11-20-growth-rates.md,
+// 2026-11-24-high-case-no-growth.md).
 // The miner and network figures are made up but realistic; the samples are real. The rule's
 // arithmetic is tested in growth.test.ts and range.test.ts; this checks what goes where.
 
@@ -77,7 +80,7 @@ describe("valuing a miner from chain reads", () => {
 				minerWeight: 412n,
 				weightWithoutBonus: 96n,
 				networkWeight: 1_614_500n,
-				growth: { fast: 1_873n, expected: 684n, slow: 82n },
+				growth: { fast: 1_873n, expected: 684n, slow: 0n },
 				from: READ_AT.time,
 				to,
 			}),
@@ -88,7 +91,7 @@ describe("valuing a miner from chain reads", () => {
 				growthPpm: {
 					low: expect.objectContaining({ value: 1_873n, source: "assumption" }),
 					base: expect.objectContaining({ value: 684n, source: "assumption" }),
-					high: expect.objectContaining({ value: 82n, source: "assumption" }),
+					high: expect.objectContaining({ value: 0n, source: "assumption" }),
 				},
 				emissionRate: {
 					value: 8_333_333n,
@@ -96,7 +99,13 @@ describe("valuing a miner from chain reads", () => {
 					ref: "PodMining.INITIAL_RATE",
 				},
 			},
-			model: { version: expect.any(String), backtest: "pending" },
+			model: {
+				version: MODEL_VERSION,
+				backtest: {
+					...BACKTEST_RESULT.summary,
+					ref: "README.md#the-forecast-backtest",
+				},
+			},
 		});
 	});
 
@@ -112,12 +121,14 @@ describe("valuing a miner from chain reads", () => {
 			to: FIRST_HALVING,
 			label: "to-2030-halving",
 		});
+		// The model's backtest covers its 30-day range only; the screen says this view isn't tested
+		expect(valuation.model.backtest).toMatchObject({ horizonDays: 30 });
 		expect(valuation.range).toEqual(
 			outputRange({
 				minerWeight: 412n,
 				weightWithoutBonus: 96n,
 				networkWeight: 1_614_500n,
-				growth: { fast: 1_873n, expected: 684n, slow: 82n },
+				growth: { fast: 1_873n, expected: 684n, slow: 0n },
 				from: READ_AT.time,
 				to: FIRST_HALVING,
 			}),

@@ -14,6 +14,7 @@ import {
 	formatShare,
 } from "../../format.ts";
 import s from "./ResultPage.module.css";
+import { backtestWords, growthWords } from "./worth-words.ts";
 
 /** The verified pool's share of emission (CLAUDE.md, "On-chain facts", "Emission"). Only verified miners are valued. */
 const VERIFIED_SHARE = 99n;
@@ -115,18 +116,41 @@ function Estimate({ v, page }: { v: Valuation; page: CircuitPage }) {
 						<b>{formatBem(low, "down")}</b>
 						<small>
 							{lostBonus && "Design bonus lost, "}
-							{lostBonus ? "network" : "Network"} +
-							{formatPpmPercent(growth.low.value)}% a day
+							{lostBonus
+								? growthWords(growth.low.value).replace(/^N/, "n")
+								: growthWords(growth.low.value)}
 						</small>
 					</div>
 					<div>
 						<span>High</span>
 						<b>{formatBem(high, "up")}</b>
-						<small>Network +{formatPpmPercent(growth.high.value)}% a day</small>
+						<small>{growthWords(growth.high.value)}</small>
 					</div>
 				</div>
 			</div>
+			<Backtest v={v} />
 		</>
+	);
+}
+
+/** How often the 30-day range held in the past; the halving view isn't backtested. */
+function Backtest({ v }: { v: Valuation }) {
+	const words = backtestWords(v.model.backtest, v.window.label);
+	if (words === null) {
+		return (
+			<p className={s.held}>
+				<b>Not backtested:</b> there isn’t enough history yet to test a forecast
+				to 2030.
+			</p>
+		);
+	}
+	if (words === "pending") {
+		return <p className={s.held}>Not backtested yet.</p>;
+	}
+	return (
+		<p className={s.held}>
+			Range held in <b>{words.held}</b> {words.rest}
+		</p>
 	);
 }
 
@@ -261,12 +285,7 @@ function Inputs({ v, page }: { v: Valuation; page: CircuitPage }) {
 					<span>Block · model</span>
 					<b>
 						{w.base.source === "chain" ? formatCount(w.base.block) : "Not read"}
-						<small>
-							model {v.model.version} ·{" "}
-							{v.model.backtest === "pending"
-								? "backtest pending"
-								: `backtest ${v.model.backtest.coverage}`}
-						</small>
+						<small>model {v.model.version}</small>
 					</b>
 				</li>
 			</ul>

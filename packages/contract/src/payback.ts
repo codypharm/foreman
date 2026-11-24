@@ -16,6 +16,7 @@ import {
 	type Scenario,
 	serialiseScenario,
 	serialiseValuationInputs,
+	serialiseValuationModel,
 	type Valuation,
 } from "./valuation.ts";
 import {
@@ -189,10 +190,7 @@ export function serialisePayback(
 				),
 				inputs: serialiseValuationInputs(payback.inputs, `${field}.inputs`),
 				readAt,
-				model: {
-					version: payback.model.version,
-					backtest: payback.model.backtest,
-				},
+				model: serialiseValuationModel(payback.model, `${field}.model`),
 			};
 	}
 	parsePayback(wire, field);

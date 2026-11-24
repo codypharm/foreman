@@ -283,6 +283,19 @@
 	line-height: 1.4;
 	color: var(--ink-2);
 }
+/* The backtest line under the range (docs/mocks/2026-11-24-backtest-line.html, B) */
+.held {
+	margin-top: 18px;
+	padding: 12px 14px;
+	border-radius: 12px;
+	background: var(--raise);
+	font: 400 13.5px / 1.45 var(--sans);
+	color: var(--ink-2);
+}
+.held b {
+	color: var(--ink);
+	font-weight: 600;
+}
 .ask {
 	display: flex;
 	align-items: center;

@@ -1,5 +1,6 @@
 // Growth rates for the low, base and high cases, from the verified network weight sampled daily
-// at 00:00 UTC (docs/decisions/2026-11-20-growth-rates.md). Code, never a model. Rates are parts
+// at 00:00 UTC (docs/decisions/2026-11-20-growth-rates.md; the high case from
+// 2026-11-24-high-case-no-growth.md). Code, never a model. Rates are parts
 // per million a day, compounding, rounded up so a value errs low.
 
 import type { Scenario, Sourced } from "@foreman/contract";
@@ -9,7 +10,7 @@ const DAY = 86_400n;
 const PPM = 1_000_000n;
 /** The look-back: the 30 days before the last midnight. */
 const WINDOW_DAYS = 30n;
-/** Fastest and slowest are measured over stretches of this many days. */
+/** The fastest growth is measured over stretches of this many days. */
 const STRETCH_DAYS = 7n;
 
 /** The verified network weight at the first block at or after 00:00 UTC of one day. */
@@ -20,8 +21,8 @@ export interface DailySample {
 }
 
 /**
- * Low = the fastest 7-day stretch, base = the 30 days compounded, high = the slowest 7-day stretch
- * (never below 0), over the 30 days ending at the last midnight at or before `readAt`.
+ * Low = the fastest 7-day stretch and base = the 30 days compounded, over the 30 days ending at the
+ * last midnight at or before `readAt`. High = no growth, or base's rate if the network shrank.
  */
 export function growthRates(
 	samples: DailySample[],
@@ -64,21 +65,26 @@ export function growthRates(
 	}
 	// Ties go to the earlier stretch
 	const fastest = stretches.reduce((a, b) => (b.ppm > a.ppm ? b : a));
-	const slowest = stretches.reduce((a, b) => (b.ppm < a.ppm ? b : a));
 	const stretch = (s: { from: bigint }) =>
 		`${dayMonth(s.from)} to ${dayMonth(s.from + STRETCH_DAYS * DAY)}`;
-
+	const base = dailyRate(
+		weightAt(weights, 0),
+		weightAt(weights, weights.length - 1),
+		WINDOW_DAYS,
+	);
+	// High assumes the network stops growing (2026-11-24-high-case-no-growth.md), but is never below
+	// base: if the network shrank, high takes base's measured rate
 	const high: Sourced<bigint> =
-		slowest.ppm >= 0n
+		base >= 0n
 			? {
-					value: slowest.ppm,
-					source: "assumption",
-					basis: `Slowest 7 days of verified network growth ${span}: ${stretch(slowest)}`,
-				}
-			: {
 					value: 0n,
 					source: "assumption",
-					basis: `Slowest 7 days of verified network growth ${span}: ${stretch(slowest)}, ${slowest.ppm} ppm a day; the high case assumes no growth, never shrinking`,
+					basis: "No growth: the verified network stays at today's weight",
+				}
+			: {
+					value: base,
+					source: "assumption",
+					basis: `The verified network shrank from ${dayMonth(start)} to ${date(end)}: the high case uses the same rate as base`,
 				};
 	return {
 		low: {
@@ -87,11 +93,7 @@ export function growthRates(
 			basis: `Fastest 7 days of verified network growth ${span}: ${stretch(fastest)}`,
 		},
 		base: {
-			value: dailyRate(
-				weightAt(weights, 0),
-				weightAt(weights, weights.length - 1),
-				WINDOW_DAYS,
-			),
+			value: base,
 			source: "assumption",
 			basis: `Verified network growth compounded from ${dayMonth(start)} to ${date(end)}`,
 		},

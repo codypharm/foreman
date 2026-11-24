@@ -1,6 +1,7 @@
 // A miner's Valuation from chain reads (docs/decisions/2026-11-18-valuation-model.md): the miner
 // and the network read at one block, and growth rates from the daily network samples
-// (2026-11-20-growth-rates.md). Code, never a model. Every input carries its source.
+// (2026-11-20-growth-rates.md; the high case, 2026-11-24-high-case-no-growth.md). Code, never a
+// model. Every input carries its source.
 
 import {
 	type Miner,
@@ -10,16 +11,29 @@ import {
 	serialiseValuation,
 	type Valuation,
 } from "@foreman/contract";
+import { BACKTEST_RESULT } from "./backtest-result.ts";
 import { FIRST_HALVING } from "./emission.ts";
 import { ValuationInputError } from "./errors.ts";
 import { type DailySample, growthRates } from "./growth.ts";
 import { outputRange } from "./range.ts";
 
 /**
- * The model's version: the date of the newest decision it follows (the growth rule). Changes
+ * The model's version: the date of the newest decision it follows (the high case). Changes
  * whenever a rule behind the numbers changes, so a published value can be recomputed.
  */
-export const MODEL_VERSION = "2026-11-20";
+export const MODEL_VERSION = "2026-11-24";
+
+/** Where the backtest's table is, and how to rerun it. */
+const BACKTEST_REF = "README.md#the-forecast-backtest";
+
+/**
+ * The stored backtest, only if it was run on this model version; otherwise "pending". It covers the
+ * 30-day range (horizonDays), and both windows carry it: the screen says the halving view isn't tested.
+ */
+function backtestResult(): Valuation["model"]["backtest"] {
+	if (BACKTEST_RESULT.modelVersion !== MODEL_VERSION) return "pending";
+	return { ...BACKTEST_RESULT.summary, ref: BACKTEST_REF };
+}
 
 /** The contract's emission rate in era 0, until the 2030 halving: 50 BEM per 600 s, rounded down. */
 const INITIAL_RATE = 8_333_333n;
@@ -92,7 +106,7 @@ export function valueMiner(input: {
 				ref: "PodMining.INITIAL_RATE",
 			},
 		},
-		model: { version: MODEL_VERSION, backtest: "pending" },
+		model: { version: MODEL_VERSION, backtest: backtestResult() },
 	};
 	// The contract's checks (ordered ranges and inputs, the window) run on every valuation
 	return parseValuation(

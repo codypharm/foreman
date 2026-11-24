@@ -6,6 +6,19 @@ const KEY =
 	"0x3f9a00000000000000000000000000000000000000000000000000000000c21e";
 const AT_BLOCK = { source: "chain", chainId: 56, block: "134351215" };
 const GROWTH = "growth measured over the last 14 days";
+/** The 2026-11-24 model's backtest, as the wire carries it. */
+const BACKTEST = {
+	horizonDays: 30,
+	starts: 34,
+	held: 34,
+	firstStart: "1789948800",
+	lastStart: "1792800000",
+	baseErrorMedianPpm: "70559",
+	baseErrorWorstPpm: "409701",
+	belowLow: 0,
+	aboveHigh: 0,
+	ref: "README.md#the-forecast-backtest",
+};
 
 function wireValuation(overrides: Record<string, unknown> = {}) {
 	return {
@@ -99,10 +112,7 @@ describe("a valuation written to the wire", () => {
 						high: { value: "-2000", source: "assumption", basis: GROWTH },
 					},
 				},
-				model: {
-					version: "v0.2",
-					backtest: { coverage: "27 of 30 days", ref: "README#backtests" },
-				},
+				model: { version: "2026-11-24", backtest: BACKTEST },
 			}),
 		],
 	])("reads back unchanged: %s", (_name, wire) => {
@@ -116,22 +126,42 @@ describe("a valuation written to the wire", () => {
 });
 
 describe("a valuation's backtest", () => {
-	test("once published, says how often the range held and where to read it", () => {
-		const backtest = {
-			coverage: "actual output inside the range for 27 of 30 days",
-			ref: "README#backtests",
-		};
+	test("once run, says how often the range held, the base error and where to read it", () => {
 		const valuation = parseValuation(
-			wireValuation({ model: { version: "v0.2", backtest } }),
+			wireValuation({ model: { version: "2026-11-24", backtest: BACKTEST } }),
 			"valuation",
 		);
-		expect(valuation.model.backtest).toEqual(backtest);
+		expect(valuation.model.backtest).toEqual({
+			horizonDays: 30,
+			starts: 34,
+			held: 34,
+			firstStart: 1_789_948_800n,
+			lastStart: 1_792_800_000n,
+			baseErrorMedianPpm: 70_559n,
+			baseErrorWorstPpm: 409_701n,
+			belowLow: 0,
+			aboveHigh: 0,
+			ref: "README.md#the-forecast-backtest",
+		});
 	});
 
 	test.each([
 		["done", "a word that is not pending"],
-		[{ coverage: "27 of 30 days" }, "a result with nowhere to read it"],
-		[{ coverage: "", ref: "README#backtests" }, "a result with no coverage"],
+		[{ ...BACKTEST, ref: undefined }, "a result with nowhere to read it"],
+		[
+			{ ...BACKTEST, held: 33 },
+			"held and misses that don't add up to the start dates",
+		],
+		[{ ...BACKTEST, starts: 0, held: 0 }, "no start dates"],
+		[
+			{ ...BACKTEST, lastStart: "1789000000" },
+			"a last start date before the first",
+		],
+		[
+			{ ...BACKTEST, baseErrorMedianPpm: "500000" },
+			"a median error above the worst",
+		],
+		[{ ...BACKTEST, firstStart: 1789948800 }, "a start date as a JSON number"],
 		[undefined, "missing"],
 	])("is refused when %j: %s", (backtest, _why) => {
 		expect(() =>

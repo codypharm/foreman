@@ -19,7 +19,7 @@ const SAMPLES: DailySample[] = recorded.samples.map((s) => ({
 const LAST = 1_795_132_800n;
 
 describe("growth rates", () => {
-	test("low is the fastest 7 days, base the 30 days, high the slowest 7 days, rounded up", () => {
+	test("low is the fastest 7 days, base the 30 days, rounded up; high assumes no growth", () => {
 		const rates = growthRates(SAMPLES, { readAt: LAST + 3_600n });
 		expect(rates).toEqual({
 			low: {
@@ -34,10 +34,9 @@ describe("growth rates", () => {
 				basis: "Verified network growth compounded from 21 Oct to 20 Nov 2026",
 			},
 			high: {
-				value: 82n,
+				value: 0n,
 				source: "assumption",
-				basis:
-					"Slowest 7 days of verified network growth between 21 Oct and 20 Nov 2026: 23 Oct to 30 Oct",
+				basis: "No growth: the verified network stays at today's weight",
 			},
 		});
 	});
@@ -75,24 +74,23 @@ describe("growth rates", () => {
 		expect(rates.low.value).toBe(1_873n);
 	});
 
-	test("the high case never assumes the network shrinks, and says what was measured", () => {
+	test("if the network shrank, high uses base's measured rate, so high is never below base", () => {
 		// The network loses 10,000 a day for the first 7 days (7%), then holds:
-		// 0.93^(1/7) − 1 = −10,313.8 ppm a day, rounded up to −10,313
+		// 0.93^(1/30) − 1 = −2,416.2 ppm a day, rounded up to −2,416
 		const shrinking = SAMPLES.map((s, i) => ({
 			...s,
 			verifiedWeight: 1_000_000n - 10_000n * BigInt(Math.min(i, 7)),
 		}));
 		const rates = growthRates(shrinking, { readAt: LAST });
+		expect(rates.base.value).toBe(-2_416n);
 		expect(rates.high).toEqual({
-			value: 0n,
+			value: -2_416n,
 			source: "assumption",
 			basis:
-				"Slowest 7 days of verified network growth between 21 Oct and 20 Nov 2026: 21 Oct to 28 Oct, -10313 ppm a day; the high case assumes no growth, never shrinking",
+				"The verified network shrank from 21 Oct to 20 Nov 2026: the high case uses the same rate as base",
 		});
-		// Low and base keep what was measured, even shrinking
-		expect(rates.base.value).toBeLessThan(0n);
+		// Low keeps what was measured: every flat week ties as fastest, the earliest is named
 		expect(rates.low.value).toBe(0n);
-		// Every flat week ties as fastest: the earliest is named
 		expect(rates.low).toMatchObject({
 			basis: expect.stringMatching(/: 28 Oct to 4 Nov$/),
 		});
