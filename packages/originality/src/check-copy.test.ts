@@ -30,7 +30,7 @@ describe("checking a circuit for an earlier copy", () => {
 		expect(checkCopy({ processor: P0, id: 1n }, index, RULES)).toEqual({
 			kind: "no-earlier-copy",
 			circuitsChecked: 33,
-			upToBlock: 134_673_279n,
+			upTo: [{ chainId: 56, block: 134_673_279n }],
 		});
 	});
 });

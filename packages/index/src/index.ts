@@ -2,12 +2,22 @@
 // (docs/decisions/2026-11-20-database-access.md).
 
 export {
-	type BackfillResult,
 	type BackfillOptions,
+	type BackfillResult,
 	backfillNetlists,
 	readStoredNetlist,
 	type StoredNetlist,
 } from "./backfill.ts";
+export {
+	backfillFabxNetlists,
+	type FabxState,
+	FREEZING,
+	fillFabxClaimTimes,
+	type Reviewed,
+	readFabxState,
+	saveFabxHistory,
+	saveFabxMiners,
+} from "./fabx.ts";
 export {
 	type FillResult,
 	fillCommitmentTimes,
@@ -107,12 +117,3 @@ export {
 	WORKER_STAGES,
 	type WorkerStage,
 } from "./worker-stages.ts";
-export {
-	backfillFabxNetlists,
-	type FabxState,
-	FREEZING,
-	readFabxState,
-	type Reviewed,
-	saveFabxHistory,
-	saveFabxMiners,
-} from "./fabx.ts";

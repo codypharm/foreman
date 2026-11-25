@@ -4,6 +4,7 @@
 
 export { type CanMineRead, readCanMine, STOP_COOLDOWN } from "./can-mine.ts";
 export {
+	bnbBlockOf,
 	type CircuitIndex,
 	type CopyCheck,
 	checkCopy,
@@ -16,12 +17,19 @@ export {
 	type WrapperCheck,
 } from "./check-wrapper.ts";
 export {
+	type CommitmentCheck,
+	type CommitmentEvent,
+	confirmCommitment,
+	type MinerCommitment,
+} from "./fabx-commitment.ts";
+export {
 	HASH_RULE_VERSION,
 	hashNetlist,
 	type NetlistHashes,
 } from "./hash.ts";
 export {
 	buildOriginality,
+	CROSS_CHAIN_RULE_VERSION,
 	circuitRef,
 	ORIGINALITY_RULES,
 	type OriginalityVerdictResult,
@@ -62,9 +70,3 @@ export {
 	type TapeOut,
 	type TapeOutScan,
 } from "./scan-tape-outs.ts";
-export {
-	type CommitmentCheck,
-	type CommitmentEvent,
-	confirmCommitment,
-	type MinerCommitment,
-} from "./fabx-commitment.ts";

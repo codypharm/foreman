@@ -268,7 +268,7 @@ type OriginalityVerdict =
   | { verdict: "copy"; of: CircuitRef; netlistHash: Hex32; bytesIdentical: boolean; earlierBy: "tape-out" | "commitment" } // same netlist hash as a circuit with an earlier design time, at or above the size floor; bytesIdentical is false when they match only once NAND inputs are sorted; earlierBy says what made "of" earlier
   | { verdict: "too-small-to-tell"; sameAs: number; earliest: CircuitRef; netlistHash: Hex32; gateCount: number; floor: number } // identical, below the size floor
   | { verdict: "no-earlier-copy"; netlistHash: Hex32 }
-  | { verdict: "cant-check"; reason: "netlist-unreadable" | "outside-index" | "read-failed" | "ref-chain-too-long" | "commitment-unconfirmed" }; // commitment-unconfirmed: FabX only, 2026-11-25-fabx-copy-check.md decision 5
+  | { verdict: "cant-check"; reason: "netlist-unreadable" | "outside-index" | "read-failed" | "ref-chain-too-long" | "commitment-unconfirmed" }; // commitment-unconfirmed: counting a FabX commitment without its event would change the verdict or the circuit named, on either chain; only where X Layer was checked (2026-11-25-fabx-copy-check.md decision 5, 2026-11-25-cross-chain-check.md decision 1)
 
 type OriginalityFact =
   | { fact: "tape-out-address"; same: boolean }                      // beside "copy": the earlier circuit was taped out by the same address, or not

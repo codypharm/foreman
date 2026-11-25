@@ -56,7 +56,7 @@ export async function fixtureCircuitsScan(): Promise<CompleteScan> {
 	}
 	return {
 		complete: true,
-		upToBlock: index.upToBlock,
+		upToBlock: index.upTo[0]!.block,
 		processors: [...issued].map(([address, n]) => ({ address, issued: n })),
 		tapeOuts: index.entries
 			.map((e) => ({

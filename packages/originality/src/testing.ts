@@ -133,6 +133,7 @@ export async function fixtureIndex(): Promise<CircuitIndex> {
 				`the fixture has no block ${committed} for ${k}'s commitment`,
 			);
 		entries.push({
+			chainId: 56,
 			circuit: { processor, id: BigInt(id) },
 			...hashNetlist(read.netlist),
 			gateCount: read.netlist.gateCount,
@@ -148,9 +149,10 @@ export async function fixtureIndex(): Promise<CircuitIndex> {
 				committed === undefined
 					? null
 					: { block: committed, time: committedTime as bigint },
+			unconfirmedCommitment: null,
 		});
 	}
-	return { entries, upToBlock: at.blockNumber };
+	return { entries, upTo: [{ chainId: 56, block: at.blockNumber }] };
 }
 
 const TAPED_OUT =

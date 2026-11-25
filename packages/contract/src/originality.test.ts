@@ -223,6 +223,13 @@ describe("an Originality on the wire", () => {
 			}),
 		],
 		[
+			"a BNB Chain miner whose result a FabX commitment without its event would change",
+			wire({
+				result: { verdict: "cant-check", reason: "commitment-unconfirmed" },
+				index: BOTH_CHAINS,
+			}),
+		],
+		[
 			"a BNB Chain miner checked against both chains",
 			wire({ index: BOTH_CHAINS }),
 		],
@@ -368,7 +375,7 @@ describe("an Originality on the wire", () => {
 			"o.index.upTo",
 		],
 		[
-			"an unconfirmed commitment on a BNB Chain miner",
+			"an unconfirmed commitment where X Layer wasn't checked",
 			{ result: { verdict: "cant-check", reason: "commitment-unconfirmed" } },
 			"o.result.reason",
 		],

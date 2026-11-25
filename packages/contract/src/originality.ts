@@ -74,7 +74,7 @@ export type OriginalityVerdict =
 				| "outside-index"
 				| "read-failed"
 				| "ref-chain-too-long"
-				/** FabX only: a commitment without its event would decide the order (2026-11-25-fabx-copy-check.md, decision 5). */
+				/** Counting a FabX commitment without its event would change the result, on either chain (2026-11-25-cross-chain-check.md, decision 1). */
 				| "commitment-unconfirmed";
 	  };
 
@@ -162,17 +162,6 @@ export function parseOriginality(wire: unknown, field: string): Originality {
 	] as const);
 	const mining = parseMining(w.mining, `${field}.mining`, scope, circuit);
 	const result = parseVerdict(w.result, `${field}.result`, circuit);
-	if (
-		result.verdict === "cant-check" &&
-		result.reason === "commitment-unconfirmed" &&
-		mining?.chainId !== 196
-	) {
-		throw new ContractParseError(
-			`${field}.result.reason`,
-			"an unconfirmed commitment on a FabX miner only",
-			result.reason,
-		);
-	}
 	if (scope === "miner" && result.verdict === "wrapper") {
 		// A miner can't have a REF record: the mining contract's start reverts
 		throw new ContractParseError(
@@ -183,6 +172,18 @@ export function parseOriginality(wire: unknown, field: string): Originality {
 	}
 	const facts = parseFacts(w.facts, `${field}.facts`, scope, circuit, mining);
 	const index = parseOriginalityIndex(w.index, `${field}.index`);
+	if (
+		result.verdict === "cant-check" &&
+		result.reason === "commitment-unconfirmed" &&
+		indexBlock(index, 196) === null
+	) {
+		// Only FabX's commitments go unconfirmed, so the result checked X Layer (2026-11-25-cross-chain-check.md, decision 1)
+		throw new ContractParseError(
+			`${field}.result.reason`,
+			"an unconfirmed commitment only where X Layer was checked",
+			result.reason,
+		);
+	}
 	if (!index.upTo.some((u) => u.chainId === circuit.chainId)) {
 		throw new ContractParseError(
 			`${field}.index.upTo`,

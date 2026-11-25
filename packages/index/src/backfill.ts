@@ -58,7 +58,13 @@ export async function backfillNetlists(
 	);
 	const row = state.rows[0];
 	if (!row) throw new Error("the index is empty: save a tape-out scan first");
-	return backfillTable(pool, client, "circuits", BigInt(row.up_to_block), options);
+	return backfillTable(
+		pool,
+		client,
+		"circuits",
+		BigInt(row.up_to_block),
+		options,
+	);
 }
 
 /**

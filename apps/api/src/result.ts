@@ -12,6 +12,7 @@ import {
 	readStoredNetlist,
 } from "@foreman/index";
 import {
+	bnbBlockOf,
 	buildOriginality,
 	type CircuitId,
 	type CircuitIndex,
@@ -64,7 +65,7 @@ export async function buildResult(
 	circuit: CircuitId,
 	scope: Originality["scope"],
 ): Promise<ResultRead> {
-	const at = { blockNumber: ctx.index.upToBlock };
+	const at = { blockNumber: bnbBlockOf(ctx.index) };
 	const ref = await readCircuitRef(ctx.pool, circuit);
 	if (!ref)
 		return { ok: false, detail: `${name(circuit)} is outside the index` };

@@ -101,7 +101,7 @@ describe.skipIf(!TEST_DATABASE_URL)("following the index", () => {
 		});
 		expect(await loadCircuitIndex(pool)).toMatchObject({
 			ready: true,
-			index: { upToBlock: HEAD },
+			index: { upTo: [{ chainId: 56, block: HEAD }] },
 			notCompared: { unread: 0, unreadable: 0 },
 		});
 	});

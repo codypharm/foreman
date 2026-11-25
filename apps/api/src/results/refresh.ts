@@ -11,7 +11,7 @@ import {
 	readStoredCircuits,
 	saveResults,
 } from "@foreman/index";
-import type { CircuitId } from "@foreman/originality";
+import { bnbBlockOf, type CircuitId } from "@foreman/originality";
 import type pg from "pg";
 import type { PublicClient } from "viem";
 import {
@@ -51,7 +51,7 @@ export async function refreshResults(
 	const loaded = await loadResultContext(pool, client);
 	if (!loaded.ready) return { refreshed: false, detail: loaded.detail };
 	const ctx = loaded.context;
-	const indexBlock = ctx.index.upToBlock;
+	const indexBlock = bnbBlockOf(ctx.index);
 
 	const state = await readResultsState(pool);
 	const mode =

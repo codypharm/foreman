@@ -29,7 +29,7 @@ describe.skipIf(!TEST_DATABASE_URL)(
 			if (!loaded.ready) throw new Error(loaded.detail);
 			expect(loaded.notCompared).toEqual({ unread: 0, unreadable: 0 });
 			const expected = await fixtureIndex();
-			expect(loaded.index.upToBlock).toBe(expected.upToBlock);
+			expect(loaded.index.upTo).toEqual(expected.upTo);
 			for (const e of expected.entries) {
 				expect(checkCopy(e.circuit, loaded.index, RULES)).toEqual(
 					checkCopy(e.circuit, expected, RULES),

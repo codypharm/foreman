@@ -29,10 +29,14 @@ export const ORIGINALITY_RULES = {
 	chainSteps: MAX_CHAIN_STEPS,
 } as const;
 
+/** An index of BNB Chain's circuits alone. */
 export const RULE_VERSION = `hash ${ORIGINALITY_RULES.hashRule}, floor ${ORIGINALITY_RULES.sizeFloor}, chain ${ORIGINALITY_RULES.chainSteps}`;
 
-/** The index is BNB Chain only for the MVP (2026-11-20-circuit-index.md). */
-const CHAIN_ID = 56;
+/**
+ * An index of both chains: ordered across them by the second, with FabX commitments counted only
+ * when confirmed by their event. One string for every result (2026-11-25-cross-chain-check.md, decision 2).
+ */
+export const CROSS_CHAIN_RULE_VERSION = `${RULE_VERSION}, BNB Chain and X Layer by second, FabX commitments by event`;
 
 export interface OriginalityVerdictResult {
 	result: OriginalityVerdict;
@@ -54,7 +58,7 @@ export function originalityVerdict(input: {
 	const { target, index } = input;
 	const coverage: OriginalityIndex = {
 		circuitsChecked: BigInt(index.entries.length),
-		upTo: [{ chainId: CHAIN_ID, block: index.upToBlock }],
+		upTo: index.upTo,
 	};
 	const done = (
 		result: OriginalityVerdict,
@@ -63,7 +67,8 @@ export function originalityVerdict(input: {
 		result,
 		facts,
 		index: coverage,
-		ruleVersion: RULE_VERSION,
+		ruleVersion:
+			index.upTo.length > 1 ? CROSS_CHAIN_RULE_VERSION : RULE_VERSION,
 	});
 
 	const { wrapper } = input;
@@ -74,7 +79,7 @@ export function originalityVerdict(input: {
 	// 1. Outside the index
 	const copy = checkCopy(target, index, ORIGINALITY_RULES);
 	if (copy.kind === "cant-check") {
-		return done({ verdict: "cant-check", reason: "outside-index" });
+		return done({ verdict: "cant-check", reason: copy.reason });
 	}
 	const self = index.entries.find((e) => same(e.circuit, target)) as IndexEntry;
 	const refs = (ids: CircuitId[]): CircuitRef[] | null => {
@@ -209,7 +214,7 @@ export function buildOriginality(input: {
 /** An index entry as the data contract's CircuitRef. */
 export function circuitRef(e: IndexEntry): CircuitRef {
 	return {
-		chainId: CHAIN_ID,
+		chainId: e.chainId,
 		processor: parseAddress(e.circuit.processor, "processor"),
 		tokenId: e.circuit.id,
 		tapedOutAt: e.tapedOutAt,

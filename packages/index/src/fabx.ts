@@ -12,10 +12,18 @@ import {
 import { type CommitmentEvent, confirmCommitment } from "@foreman/originality";
 import type pg from "pg";
 import type { Address, PublicClient } from "viem";
-import { type BackfillOptions, type BackfillResult, backfillTable } from "./backfill.ts";
+import {
+	type BackfillOptions,
+	type BackfillResult,
+	backfillTable,
+} from "./backfill.ts";
 
 /** Contract changes that freeze FabX results when after the reviewed block (decision 6). */
-export const FREEZING: readonly FabxContractEventKind[] = ["Upgraded", "OwnershipTransferred", "ProcessorSet"];
+export const FREEZING: readonly FabxContractEventKind[] = [
+	"Upgraded",
+	"OwnershipTransferred",
+	"ProcessorSet",
+];
 
 export interface Reviewed {
 	implementation: string;
@@ -36,7 +44,11 @@ export interface FabxState {
  */
 export async function saveFabxHistory(
 	pool: pg.Pool,
-	range: { fromBlock: bigint; toBlock: bigint; history: Extract<FabxHistory, { ok: true }> },
+	range: {
+		fromBlock: bigint;
+		toBlock: bigint;
+		history: Extract<FabxHistory, { ok: true }>;
+	},
 	reviewed: Reviewed,
 ): Promise<FabxState> {
 	const { fromBlock, toBlock, history: h } = range;
@@ -46,11 +58,17 @@ export async function saveFabxHistory(
 		const state = await client.query<{ logs_up_to_block: string }>(
 			"select logs_up_to_block from xlayer_state for update",
 		);
-		const stored = state.rows[0] ? BigInt(state.rows[0].logs_up_to_block) : null;
+		const stored = state.rows[0]
+			? BigInt(state.rows[0].logs_up_to_block)
+			: null;
 		if (stored === null && fromBlock !== FABX_FIRST_BLOCK)
-			throw new Error(`FabX's first range must start at block ${FABX_FIRST_BLOCK}; this one starts at ${fromBlock}`);
+			throw new Error(
+				`FabX's first range must start at block ${FABX_FIRST_BLOCK}; this one starts at ${fromBlock}`,
+			);
 		if (stored !== null && fromBlock > stored + 1n)
-			throw new Error(`FabX's logs are stored up to block ${stored}; this range starts at ${fromBlock}`);
+			throw new Error(
+				`FabX's logs are stored up to block ${stored}; this range starts at ${fromBlock}`,
+			);
 
 		await client.query(
 			`insert into xlayer_circuits (processor, id, taped_out_block, taped_out_tx, taped_out_log, taped_out_time, taped_out_by)
@@ -118,10 +136,16 @@ export async function saveFabxHistory(
 			await client.query(
 				`insert into xlayer_state (logs_up_to_block, reviewed_implementation, reviewed_at_block)
 				 values ($1, $2, $3)`,
-				[toBlock.toString(), reviewed.implementation.toLowerCase(), reviewed.atBlock.toString()],
+				[
+					toBlock.toString(),
+					reviewed.implementation.toLowerCase(),
+					reviewed.atBlock.toString(),
+				],
 			);
 		else if (toBlock > stored)
-			await client.query("update xlayer_state set logs_up_to_block = $1", [toBlock.toString()]);
+			await client.query("update xlayer_state set logs_up_to_block = $1", [
+				toBlock.toString(),
+			]);
 
 		// The first freezing change after the reviewed block; once frozen, it stays at that block
 		await client.query(
@@ -161,31 +185,64 @@ export async function saveFabxMiners(
 		const state = await client.query<{ logs_up_to_block: string }>(
 			"select logs_up_to_block from xlayer_state for update",
 		);
-		const stored = state.rows[0] ? BigInt(state.rows[0].logs_up_to_block) : null;
+		const stored = state.rows[0]
+			? BigInt(state.rows[0].logs_up_to_block)
+			: null;
 		if (stored === null) throw new Error("FabX's history isn't stored yet");
 		if (read.block > stored)
 			throw new Error(
 				`FabX's events are stored up to block ${stored}; miners read at ${read.block} could miss a commitment's event`,
 			);
 		const circuits = Number(
-			(await client.query<{ n: string }>("select count(*) as n from xlayer_circuits")).rows[0]!.n,
+			(
+				await client.query<{ n: string }>(
+					"select count(*) as n from xlayer_circuits",
+				)
+			).rows[0]!.n,
 		);
 		const covered = read.miners.length + read.notMiners;
-		if (covered !== circuits) throw new Error(`the read covers ${covered} circuits; ${circuits} are stored`);
+		if (covered !== circuits)
+			throw new Error(
+				`the read covers ${covered} circuits; ${circuits} are stored`,
+			);
 
+		// A confirmed commitment is kept, with its event, while its block stays the same
 		const kept = new Map(
 			(
-				await client.query<{ id: string; commit_block: string }>(
-					"select id, commit_block from fabx_miners where commitment_status = 'confirmed'",
+				await client.query<{
+					id: string;
+					commit_block: string;
+					confirmed_by_block: string;
+					confirmed_by_tx: number;
+					confirmed_by_log: number;
+					commitment_time: string;
+				}>(
+					`select id, commit_block, confirmed_by_block, confirmed_by_tx, confirmed_by_log, commitment_time
+					 from fabx_miners where commitment_status = 'confirmed'`,
 				)
-			).rows.map((r) => [r.id, BigInt(r.commit_block)]),
+			).rows.map((r) => [r.id, r]),
 		);
-		const blocks = [...new Set(read.miners.filter((m) => m.commitBlock > 0n).map((m) => m.commitBlock.toString()))];
-		const events = new Map<string, (CommitmentEvent & { tx: number; log: number })[]>();
+		const blocks = [
+			...new Set(
+				read.miners
+					.filter((m) => m.commitBlock > 0n)
+					.map((m) => m.commitBlock.toString()),
+			),
+		];
+		const events = new Map<
+			string,
+			(CommitmentEvent & { tx: number; log: number })[]
+		>();
 		for (const r of (
 			await client.query<{
-				block: string; tx: number; log: number; block_time: string;
-				designer: string; circuits: string; claimed_block: string; first_unused_id: string;
+				block: string;
+				tx: number;
+				log: number;
+				block_time: string;
+				designer: string;
+				circuits: string;
+				claimed_block: string;
+				first_unused_id: string;
 			}>(
 				`select block, tx, log, block_time, designer, circuits, claimed_block, first_unused_id
 				 from fabx_design_commitments where block = any($1::bigint[])`,
@@ -211,12 +268,18 @@ export async function saveFabxMiners(
 			)
 		).rows) {
 			const k = `${r.processor}/${r.id}`;
-			(starters.get(k) ?? starters.set(k, new Set()).get(k)!).add(r.registrant as Address);
+			(starters.get(k) ?? starters.set(k, new Set()).get(k)!).add(
+				r.registrant as Address,
+			);
 		}
 
 		for (const m of read.miners) {
 			const id = m.id.toString();
-			const keep = kept.get(id) === m.commitBlock && m.commitBlock > 0n;
+			const was = kept.get(id);
+			const keep =
+				was !== undefined &&
+				BigInt(was.commit_block) === m.commitBlock &&
+				m.commitBlock > 0n;
 			const check = keep
 				? null
 				: confirmCommitment(
@@ -226,7 +289,22 @@ export async function saveFabxMiners(
 					);
 			const status = keep ? "confirmed" : check!.status;
 			counts[status]++;
-			const by = check?.status === "confirmed" ? check.by : null;
+			const by =
+				keep && was
+					? {
+							block: was.confirmed_by_block,
+							tx: was.confirmed_by_tx,
+							log: was.confirmed_by_log,
+							time: was.commitment_time,
+						}
+					: check?.status === "confirmed"
+						? {
+								block: check.by.at.block.toString(),
+								tx: check.by.at.tx,
+								log: check.by.at.log,
+								time: check.by.time.toString(),
+							}
+						: null;
 			await client.query(
 				`insert into fabx_miners (processor, id, key, status, registrant, task_id, commit_block, first_unused_id,
 				   read_at_block, commitment_status, confirmed_by_block, confirmed_by_tx, confirmed_by_log, commitment_time)
@@ -235,25 +313,36 @@ export async function saveFabxMiners(
 				   key = excluded.key, status = excluded.status, registrant = excluded.registrant,
 				   task_id = excluded.task_id, first_unused_id = excluded.first_unused_id,
 				   read_at_block = excluded.read_at_block, commit_block = excluded.commit_block,
-				   commitment_status = case when $15 then fabx_miners.commitment_status else excluded.commitment_status end,
-				   confirmed_by_block = case when $15 then fabx_miners.confirmed_by_block else excluded.confirmed_by_block end,
-				   confirmed_by_tx = case when $15 then fabx_miners.confirmed_by_tx else excluded.confirmed_by_tx end,
-				   confirmed_by_log = case when $15 then fabx_miners.confirmed_by_log else excluded.confirmed_by_log end,
-				   commitment_time = case when $15 then fabx_miners.commitment_time else excluded.commitment_time end`,
+				   commitment_status = excluded.commitment_status,
+				   confirmed_by_block = excluded.confirmed_by_block, confirmed_by_tx = excluded.confirmed_by_tx,
+				   confirmed_by_log = excluded.confirmed_by_log, commitment_time = excluded.commitment_time,
+				   claimed_time = case when fabx_miners.commit_block = excluded.commit_block
+				     and excluded.commitment_status = 'unconfirmed' then fabx_miners.claimed_time end`,
 				[
-					m.processor, id, Buffer.from(m.key.slice(2), "hex"), m.status, m.registrant, m.taskId,
-					m.commitBlock.toString(), m.firstUnusedId.toString(), read.block.toString(),
-					keep ? "confirmed" : status,
-					by ? by.at.block.toString() : null, by ? by.at.tx : null, by ? by.at.log : null,
-					by ? by.time.toString() : null,
-					keep,
+					m.processor,
+					id,
+					Buffer.from(m.key.slice(2), "hex"),
+					m.status,
+					m.registrant,
+					m.taskId,
+					m.commitBlock.toString(),
+					m.firstUnusedId.toString(),
+					read.block.toString(),
+					status,
+					by?.block ?? null,
+					by?.tx ?? null,
+					by?.log ?? null,
+					by?.time ?? null,
 				],
 			);
 		}
-		await client.query("delete from fabx_miners where not (id = any($1::numeric[]))", [
-			read.miners.map((m) => m.id.toString()),
+		await client.query(
+			"delete from fabx_miners where not (id = any($1::numeric[]))",
+			[read.miners.map((m) => m.id.toString())],
+		);
+		await client.query("update xlayer_state set miners_read_at_block = $1", [
+			read.block.toString(),
 		]);
-		await client.query("update xlayer_state set miners_read_at_block = $1", [read.block.toString()]);
 		await client.query("commit");
 	} catch (error) {
 		await client.query("rollback");
@@ -270,14 +359,48 @@ export async function readFabxState(pool: pg.Pool): Promise<FabxState | null> {
 		reviewed_implementation: string;
 		reviewed_at_block: string;
 		frozen_at_block: string | null;
-	}>("select logs_up_to_block, reviewed_implementation, reviewed_at_block, frozen_at_block from xlayer_state");
+	}>(
+		"select logs_up_to_block, reviewed_implementation, reviewed_at_block, frozen_at_block from xlayer_state",
+	);
 	const r = rows[0];
 	if (!r) return null;
 	return {
 		logsUpToBlock: BigInt(r.logs_up_to_block),
-		reviewed: { implementation: r.reviewed_implementation, atBlock: BigInt(r.reviewed_at_block) },
-		frozenAtBlock: r.frozen_at_block === null ? null : BigInt(r.frozen_at_block),
+		reviewed: {
+			implementation: r.reviewed_implementation,
+			atBlock: BigInt(r.reviewed_at_block),
+		},
+		frozenAtBlock:
+			r.frozen_at_block === null ? null : BigInt(r.frozen_at_block),
 	};
+}
+
+/**
+ * Reads, from X Layer, the second each unconfirmed commitment claims: its commitBlock's timestamp
+ * (2026-11-25-cross-chain-check.md, decision 3). Each block is read once; a failed read throws and
+ * stores nothing, and the index isn't loaded while any is missing.
+ */
+export async function fillFabxClaimTimes(
+	pool: pg.Pool,
+	client: PublicClient,
+): Promise<{ filled: number }> {
+	const { rows } = await pool.query<{ commit_block: string }>(
+		`select distinct commit_block from fabx_miners
+		 where commitment_status = 'unconfirmed' and claimed_time is null order by commit_block`,
+	);
+	let filled = 0;
+	for (const r of rows) {
+		const block = await client.getBlock({
+			blockNumber: BigInt(r.commit_block),
+		});
+		const updated = await pool.query(
+			`update fabx_miners set claimed_time = $2
+			 where commit_block = $1 and commitment_status = 'unconfirmed' and claimed_time is null`,
+			[r.commit_block, block.timestamp.toString()],
+		);
+		filled += updated.rowCount ?? 0;
+	}
+	return { filled };
 }
 
 const bytes = (hex: string) => Buffer.from(hex.slice(2), "hex");
@@ -294,5 +417,11 @@ export async function backfillFabxNetlists(
 ): Promise<BackfillResult> {
 	const state = await readFabxState(pool);
 	if (!state) throw new Error("FabX's history isn't stored: save it first");
-	return backfillTable(pool, client, "xlayer_circuits", state.logsUpToBlock, options);
+	return backfillTable(
+		pool,
+		client,
+		"xlayer_circuits",
+		state.logsUpToBlock,
+		options,
+	);
 }
