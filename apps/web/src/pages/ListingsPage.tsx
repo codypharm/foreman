@@ -4,6 +4,7 @@
 // here but formatting.
 
 import {
+	bnbIndexBlock,
 	LISTING_VERDICTS,
 	LISTINGS_PAGE_SIZE,
 	type ListingRow,
@@ -188,7 +189,7 @@ export function ListingsPage() {
 						<p className={s.limit}>
 							Each verdict checked against{" "}
 							{formatCount(first.index.circuitsChecked)} circuits up to BNB
-							block {formatCount(first.index.upToBlock.block)}. The earliest
+							block {formatCount(bnbIndexBlock(first.index))}. The earliest
 							proven design is the original. Checks identical netlists,
 							including swapped gate inputs. A copy with its gates reordered
 							isn’t detected. Values are estimated ranges under stated

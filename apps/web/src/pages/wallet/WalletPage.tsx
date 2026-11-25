@@ -9,6 +9,7 @@ import type {
 	WalletMiner,
 	WalletMiners,
 } from "@foreman/contract";
+import { bnbIndexBlock } from "@foreman/contract";
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { useConnection } from "wagmi";
@@ -501,12 +502,12 @@ function indexLine(checks: StoredCheck[]): string {
 	const same = idx.every(
 		(i) =>
 			i.circuitsChecked === first.circuitsChecked &&
-			i.upToBlock.block === first.upToBlock.block,
+			bnbIndexBlock(i) === bnbIndexBlock(first),
 	);
 	if (same) {
-		return `Each verdict checked against ${formatCount(first.circuitsChecked)} circuits up to BNB block ${formatCount(first.upToBlock.block)}.`;
+		return `Each verdict checked against ${formatCount(first.circuitsChecked)} circuits up to BNB block ${formatCount(bnbIndexBlock(first))}.`;
 	}
-	const blocks = idx.map((i) => i.upToBlock.block);
+	const blocks = idx.map((i) => bnbIndexBlock(i));
 	const lo = blocks.reduce((a, b) => (b < a ? b : a));
 	const hi = blocks.reduce((a, b) => (b > a ? b : a));
 	return `Verdicts checked up to BNB blocks ${formatCount(lo)} to ${formatCount(hi)}; each circuit’s page gives its count.`;

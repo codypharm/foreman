@@ -48,7 +48,7 @@ describe.skipIf(!TEST_DATABASE_URL)("one circuit's result", () => {
 		});
 		expect(o.facts[0]?.fact).toBe("design-bonus");
 		expect(o.facts.filter((f) => f.fact === "can-mine")).toHaveLength(1);
-		expect(o.index.upToBlock.block).toBe(INDEX_BLOCK);
+		expect(o.index.upTo).toEqual([{ chainId: 56, block: INDEX_BLOCK }]);
 		expect(parseOriginality(serialiseOriginality(o, "o"), "o")).toEqual(o);
 	});
 

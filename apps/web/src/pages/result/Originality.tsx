@@ -7,6 +7,7 @@ import type {
 	Originality as OriginalityResult,
 	StoredCheck,
 } from "@foreman/contract";
+import { bnbIndexBlock } from "@foreman/contract";
 import type { ReactNode } from "react";
 import { formatCount, formatDate, formatGap, shortHex } from "../../format.ts";
 import { circuitName, designTime, processorLabel } from "./circuit-words.ts";
@@ -24,7 +25,7 @@ export function Originality({ check }: { check: StoredCheck }) {
 					<span className={s.meta}>
 						{formatCount(check.originality.index.circuitsChecked)} circuits
 						checked · BNB block{" "}
-						{formatCount(check.originality.index.upToBlock.block)}
+						{formatCount(bnbIndexBlock(check.originality.index))}
 					</span>
 				)}
 			</div>
@@ -181,7 +182,7 @@ function Checked({ result: o }: { result: OriginalityResult }) {
 					<Verdict mark={<NoCopyMark />} title="No earlier copy found">
 						No earlier circuit among{" "}
 						<b>{formatCount(o.index.circuitsChecked)} checked</b>, up to BNB
-						block {formatCount(o.index.upToBlock.block)}, has the same netlist.
+						block {formatCount(bnbIndexBlock(o.index))}, has the same netlist.
 						{usesRefLine}
 					</Verdict>
 					<ul className={s.evidence}>
@@ -209,10 +210,13 @@ const CANT_CHECK: Record<
 	"netlist-unreadable": () =>
 		"Its netlist couldn’t be read, so it can’t be compared.",
 	"outside-index": (o) =>
-		`It isn’t in the index of ${formatCount(o.index.circuitsChecked)} circuits up to BNB block ${formatCount(o.index.upToBlock.block)}.`,
+		`It isn’t in the index of ${formatCount(o.index.circuitsChecked)} circuits up to BNB block ${formatCount(bnbIndexBlock(o.index))}.`,
 	"read-failed": () => "Reading its netlist failed. It will be checked again.",
 	"ref-chain-too-long": () =>
 		"Its REF records chain more than 10 steps, further than Foreman follows.",
+	// 2026-11-25-fabx-copy-check.md, decision 5
+	"commitment-unconfirmed": () =>
+		"FabX’s record of this design commitment doesn’t match its event history.",
 };
 
 function Verdict({

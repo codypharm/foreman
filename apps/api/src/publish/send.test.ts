@@ -25,7 +25,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import { buildResult, loadResultContext } from "../result.ts";
 import { foremanResultsAbi } from "./abi.ts";
 import { FOUNDRY, type LocalXLayer, localXLayer } from "./local-xlayer.ts";
-import { planPublish, shortVerdict } from "./plan.ts";
+import { bnbBlock, planPublish, shortVerdict } from "./plan.ts";
 import { recoverBatch } from "./recover.ts";
 import { sendPlan } from "./send.ts";
 
@@ -107,7 +107,9 @@ describe.skipIf(!TEST_DATABASE_URL || !FOUNDRY)("sending a plan", () => {
 			expect(decoded).toEqual(o);
 			expect(decoded.result).toEqual(o.result);
 			expect(decoded.ruleVersion).toBe(o.ruleVersion);
-			expect(decoded.index.upToBlock.block).toBe(134_673_279n);
+			expect(decoded.index.upTo).toEqual([
+				{ chainId: 56, block: 134_673_279n },
+			]);
 
 			const stored = await chain.publicClient.readContract({
 				address: contract.address,
@@ -117,7 +119,7 @@ describe.skipIf(!TEST_DATABASE_URL || !FOUNDRY)("sending a plan", () => {
 			});
 			expect(stored).toEqual({
 				...shortVerdict(o),
-				indexBlock: o.index.upToBlock.block,
+				indexBlock: bnbBlock(o),
 				resultHash: keccak256(log.args.result),
 			});
 			const row = recorded.get(parseHex32(log.args.key, "key"));

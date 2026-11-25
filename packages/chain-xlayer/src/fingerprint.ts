@@ -7,9 +7,19 @@
 import type { CircuitRef, Hex32, Originality } from "@foreman/contract";
 import { keccak256, toBytes } from "viem";
 
+/**
+ * The data contract's shape of the logged result. 2 since 25 Nov 2026 (`mining`, `index.upTo`):
+ * every result published before it is published once more (2026-11-25-republish-in-new-shape.md).
+ */
+const SHAPE = 2;
+
 /** keccak256 of the parts of a result whose change triggers a new publish. */
 export function changeFingerprint(o: Originality): Hex32 {
-	const parts = { verdict: evidence(o.result), canMine: canMine(o) };
+	const parts = {
+		shape: SHAPE,
+		verdict: evidence(o.result),
+		canMine: canMine(o),
+	};
 	return keccak256(toBytes(JSON.stringify(parts))) as Hex32;
 }
 

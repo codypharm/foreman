@@ -1,5 +1,10 @@
+import { POD_MINING } from "@foreman/chain-bnb";
 import { replayClient } from "@foreman/chain-bnb/fixture";
-import { parseOriginality, serialiseOriginality } from "@foreman/contract";
+import {
+	parseAddress,
+	parseOriginality,
+	serialiseOriginality,
+} from "@foreman/contract";
 import { expect, test } from "vitest";
 import fixture from "../fixtures/bnb-circuits-134673279.json" with {
 	type: "json",
@@ -40,6 +45,9 @@ test("every result from the fixture reads back unchanged from the data contract'
 			mining: [
 				{ fact: "can-mine", state: entry.miner ? "mining" : "not-started" },
 			],
+			miningContract: entry.miner
+				? { chainId: 56, contract: parseAddress(POD_MINING, "POD_MINING") }
+				: null,
 		});
 		const sent = JSON.parse(
 			JSON.stringify(serialiseOriginality(originality, "originality")),

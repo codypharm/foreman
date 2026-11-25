@@ -35,12 +35,19 @@ function result(id: bigint, block = 134_600_000n): Originality {
 			designCommittedAt: null,
 		},
 		scope: "miner",
+		mining: {
+			chainId: 56,
+			contract: parseAddress(
+				"0x7e2e0dc66a3bd9103e69b766afa62d9f7b697b46",
+				"mining",
+			),
+		},
 		result: { verdict: "no-earlier-copy", netlistHash: HASH },
 		facts: [{ fact: "can-mine", state: "mining" }],
 		occc: { status: "not-checked" },
 		index: {
 			circuitsChecked: 41_203n,
-			upToBlock: { chainId: 56, block },
+			upTo: [{ chainId: 56, block }],
 		},
 		ruleVersion: "hash 2026-11-20, floor 4, chain 10",
 	};

@@ -5,6 +5,7 @@
 // (docs/decisions/2026-11-21-results-contract.md).
 
 import { ContractParseError } from "./errors.ts";
+import type { ChainId } from "./sourced.ts";
 import {
 	type Address,
 	type Hex32,
@@ -72,7 +73,9 @@ export type OriginalityVerdict =
 				| "netlist-unreadable"
 				| "outside-index"
 				| "read-failed"
-				| "ref-chain-too-long";
+				| "ref-chain-too-long"
+				/** FabX only: a commitment without its event would decide the order (2026-11-25-fabx-copy-check.md, decision 5). */
+				| "commitment-unconfirmed";
 	  };
 
 export type CantMineReason =
@@ -122,18 +125,26 @@ export interface Originality {
 	circuit: CircuitRef;
 	/** Why it was checked; only "miner" and "listed" are published. */
 	scope: "miner" | "listed" | "pasted";
+	/**
+	 * The mining contract a miner is registered in, on the circuit's chain (TapeOut's PoD on 56,
+	 * FabX's on 196); null for a circuit that isn't a miner. Named on screen from On-chain facts.
+	 */
+	mining: { chainId: ChainId; contract: Address } | null;
 	result: OriginalityVerdict;
 	facts: OriginalityFact[];
 	occc:
 		| { status: "official"; collection: Address }
 		| { status: "not-listed" }
 		| { status: "not-checked" };
-	index: {
-		circuitsChecked: bigint;
-		upToBlock: { chainId: 56 | 196; block: bigint };
-	};
+	index: OriginalityIndex;
 	/** Every setting that can change the result, spelled out: "hash 2026-11-20, floor 4, chain 10". */
 	ruleVersion: string;
+}
+
+/** Coverage: one entry per chain checked, BNB Chain first. */
+export interface OriginalityIndex {
+	circuitsChecked: bigint;
+	upTo: { chainId: ChainId; block: bigint }[];
 }
 
 /** A stopped miner can start again this many blocks after its stop block (the mining contract's cooldown). */
@@ -149,7 +160,19 @@ export function parseOriginality(wire: unknown, field: string): Originality {
 		"listed",
 		"pasted",
 	] as const);
+	const mining = parseMining(w.mining, `${field}.mining`, scope, circuit);
 	const result = parseVerdict(w.result, `${field}.result`, circuit);
+	if (
+		result.verdict === "cant-check" &&
+		result.reason === "commitment-unconfirmed" &&
+		mining?.chainId !== 196
+	) {
+		throw new ContractParseError(
+			`${field}.result.reason`,
+			"an unconfirmed commitment on a FabX miner only",
+			result.reason,
+		);
+	}
 	if (scope === "miner" && result.verdict === "wrapper") {
 		// A miner can't have a REF record: the mining contract's start reverts
 		throw new ContractParseError(
@@ -158,35 +181,84 @@ export function parseOriginality(wire: unknown, field: string): Originality {
 			result.verdict,
 		);
 	}
-	const facts = parseFacts(w.facts, `${field}.facts`, scope, circuit);
-	const index = parseObject(w.index, `${field}.index`);
+	const facts = parseFacts(w.facts, `${field}.facts`, scope, circuit, mining);
+	const index = parseOriginalityIndex(w.index, `${field}.index`);
+	if (!index.upTo.some((u) => u.chainId === circuit.chainId)) {
+		throw new ContractParseError(
+			`${field}.index.upTo`,
+			`an entry for the circuit's own chain (${circuit.chainId})`,
+			index.upTo.map((u) => u.chainId),
+		);
+	}
+	return {
+		circuit,
+		scope,
+		mining,
+		result,
+		facts,
+		occc: parseOccc(w.occc, `${field}.occc`),
+		index,
+		ruleVersion: parseText(w.ruleVersion, `${field}.ruleVersion`),
+	};
+}
+
+/** Coverage: at least one circuit, BNB Chain first, each chain once. */
+export function parseOriginalityIndex(
+	wire: unknown,
+	field: string,
+): OriginalityIndex {
+	const w = parseObject(wire, field);
 	const circuitsChecked = parseUint(
-		index.circuitsChecked,
-		`${field}.index.circuitsChecked`,
+		w.circuitsChecked,
+		`${field}.circuitsChecked`,
 	);
 	if (circuitsChecked === 0n) {
 		throw new ContractParseError(
-			`${field}.index.circuitsChecked`,
+			`${field}.circuitsChecked`,
 			"at least one circuit checked",
 			circuitsChecked,
 		);
 	}
-	const upTo = parseObject(index.upToBlock, `${field}.index.upToBlock`);
-	return {
-		circuit,
-		scope,
-		result,
-		facts,
-		occc: parseOccc(w.occc, `${field}.occc`),
-		index: {
-			circuitsChecked,
-			upToBlock: {
-				chainId: parseChain(upTo.chainId, `${field}.index.upToBlock.chainId`),
-				block: parseUint(upTo.block, `${field}.index.upToBlock.block`),
-			},
-		},
-		ruleVersion: parseText(w.ruleVersion, `${field}.ruleVersion`),
-	};
+	if (!Array.isArray(w.upTo)) {
+		throw new ContractParseError(`${field}.upTo`, "a list of chains", w.upTo);
+	}
+	const upTo = w.upTo.map((u, i) => {
+		const e = parseObject(u, `${field}.upTo[${i}]`);
+		return {
+			chainId: parseChain(e.chainId, `${field}.upTo[${i}].chainId`),
+			block: parseUint(e.block, `${field}.upTo[${i}].block`),
+		};
+	});
+	const chains = upTo.map((u) => u.chainId);
+	const expected = [56, 196];
+	if (
+		chains.length < 1 ||
+		chains.length > 2 ||
+		chains.some((c, i) => c !== expected[i])
+	) {
+		throw new ContractParseError(
+			`${field}.upTo`,
+			"BNB Chain (56), then X Layer (196) when it was checked, each once",
+			chains,
+		);
+	}
+	return { circuitsChecked, upTo };
+}
+
+/** The block an index was read up to on one chain, or null when it didn't check that chain. */
+export function indexBlock(
+	index: OriginalityIndex,
+	chainId: ChainId,
+): bigint | null {
+	return index.upTo.find((u) => u.chainId === chainId)?.block ?? null;
+}
+
+/** The BNB Chain block an index was read up to: every parsed index states it, first. */
+export function bnbIndexBlock(index: OriginalityIndex): bigint {
+	const block = indexBlock(index, 56);
+	if (block === null)
+		throw new Error("an index states its BNB Chain block first");
+	return block;
 }
 
 /** An Originality for the wire. Parses its own output, so it never sends what a reader would refuse. */
@@ -228,9 +300,12 @@ export function parseCircuitRef(wire: unknown, field: string): CircuitRef {
 /**
  * True when `a` has the earlier design time: its accepted commitment block if that is before its
  * tape-out, otherwise its tape-out block; same block, the lower tape-out position is earlier
- * (2026-11-20-verdict-scope-and-earliest-design.md, decision 4).
+ * (2026-11-20-verdict-scope-and-earliest-design.md, decision 4). Across chains, design times are
+ * compared in Unix seconds, and the same second is earlier on neither
+ * (2026-11-25-fabx-copy-check.md, decision 4).
  */
 export function designedEarlier(a: CircuitRef, b: CircuitRef): boolean {
+	if (a.chainId !== b.chainId) return designSecond(a) < designSecond(b);
 	const da = designTime(a);
 	const db = designTime(b);
 	if (da !== db) return da < db;
@@ -246,6 +321,38 @@ function designTime(c: CircuitRef): bigint {
 	return committed !== undefined && committed < c.tapedOutAt.block
 		? committed
 		: c.tapedOutAt.block;
+}
+
+/** The Unix second of the design block: its own block's timestamp. */
+function designSecond(c: CircuitRef): bigint {
+	const committed = c.designCommittedAt;
+	return committed && committed.block < c.tapedOutAt.block
+		? committed.time
+		: c.tapedOutAt.time;
+}
+
+function parseMining(
+	wire: unknown,
+	field: string,
+	scope: Originality["scope"],
+	circuit: CircuitRef,
+): Originality["mining"] {
+	if (wire === null) {
+		if (scope === "miner") {
+			throw new ContractParseError(field, "a miner's mining contract", wire);
+		}
+		return null;
+	}
+	const w = parseObject(wire, field);
+	const chainId = parseChain(w.chainId, `${field}.chainId`);
+	if (chainId !== circuit.chainId) {
+		throw new ContractParseError(
+			`${field}.chainId`,
+			`the circuit's own chain (${circuit.chainId})`,
+			chainId,
+		);
+	}
+	return { chainId, contract: parseAddress(w.contract, `${field}.contract`) };
 }
 
 function parseVerdict(
@@ -332,6 +439,7 @@ function parseVerdict(
 					"outside-index",
 					"read-failed",
 					"ref-chain-too-long",
+					"commitment-unconfirmed",
 				] as const),
 			};
 	}
@@ -342,10 +450,12 @@ function parseFacts(
 	field: string,
 	scope: Originality["scope"],
 	circuit: CircuitRef,
+	mining: Originality["mining"],
 ): OriginalityFact[] {
 	if (!Array.isArray(wire)) throw new ContractParseError(field, "a list", wire);
+	const fabx = mining?.chainId === 196;
 	const facts = wire.map((f, i) =>
-		parseFact(f, `${field}[${i}]`, scope, circuit),
+		parseFact(f, `${field}[${i}]`, scope, circuit, fabx),
 	);
 	const canMine = facts.filter((f) => f.fact === "can-mine").length;
 	if (canMine !== 1) {
@@ -359,6 +469,7 @@ function parseFact(
 	field: string,
 	scope: Originality["scope"],
 	circuit: CircuitRef,
+	fabx: boolean,
 ): OriginalityFact {
 	const w = parseObject(wire, field);
 	const fact = parseOneOf(w.fact, `${field}.fact`, [
@@ -374,6 +485,14 @@ function parseFact(
 			field,
 			"a design bonus on a miner only",
 			scope,
+		);
+	}
+	if (fact === "design-bonus" && fabx) {
+		// Its meaning in FabX's unverified code is an assumption (2026-11-25-fabx-copy-check.md, decision 10)
+		throw new ContractParseError(
+			field,
+			"no design bonus on a FabX miner",
+			fact,
 		);
 	}
 	if (fact === "uses-ref" && scope === "miner") {
@@ -401,7 +520,7 @@ function parseFact(
 				netlistHash: parseHex32(w.netlistHash, `${field}.netlistHash`),
 			};
 		case "can-mine":
-			return parseCanMine(w, field);
+			return parseCanMine(w, field, fabx);
 		case "design-bonus":
 			return {
 				fact,
@@ -425,6 +544,7 @@ function parseFact(
 function parseCanMine(
 	w: Record<string, unknown>,
 	field: string,
+	fabx: boolean,
 ): Extract<OriginalityFact, { fact: "can-mine" }> {
 	const state = parseOneOf(w.state, `${field}.state`, [
 		"mining",
@@ -447,9 +567,18 @@ function parseCanMine(
 			return {
 				fact: "can-mine",
 				state,
-				reasons: w.reasons.map((r, i) =>
-					parseCantMineReason(r, `${field}.reasons[${i}]`),
-				),
+				reasons: w.reasons.map((r, i) => {
+					const reason = parseCantMineReason(r, `${field}.reasons[${i}]`);
+					if (fabx && reason.reason === "failed-test-vector") {
+						// FabX's tasks aren't read (2026-11-25-fabx-copy-check.md, decision 10)
+						throw new ContractParseError(
+							`${field}.reasons[${i}]`,
+							"no failed test vector on a FabX miner",
+							reason.reason,
+						);
+					}
+					return reason;
+				}),
 			};
 		}
 		case "stopped": {
@@ -519,7 +648,7 @@ function parseRefs(wire: unknown, field: string): CircuitRef[] {
 	return wire.map((r, i) => parseCircuitRef(r, `${field}[${i}]`));
 }
 
-function parseChain(wire: unknown, field: string): 56 | 196 {
+function parseChain(wire: unknown, field: string): ChainId {
 	if (wire !== 56 && wire !== 196) {
 		throw new ContractParseError(field, "56 or 196", wire);
 	}

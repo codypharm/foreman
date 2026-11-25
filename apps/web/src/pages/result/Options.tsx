@@ -2,7 +2,12 @@
 // no bid, no offer and no rental market are said, never shown as zero). Then whether the result was
 // published on X Layer.
 
-import type { CircuitPage, LendNoneReason, Offer } from "@foreman/contract";
+import {
+	bnbIndexBlock,
+	type CircuitPage,
+	type LendNoneReason,
+	type Offer,
+} from "@foreman/contract";
 import { VerdictLine } from "../../components/VerdictLine.tsx";
 import {
 	formatAmount,
@@ -221,7 +226,7 @@ function Published({ page }: { page: CircuitPage }) {
 						{p.state === "current" && check.state === "checked" && (
 							<>
 								<dt>Read at BNB block</dt>
-								<dd>{formatCount(check.originality.index.upToBlock.block)}</dd>
+								<dd>{formatCount(bnbIndexBlock(check.originality.index))}</dd>
 								<dt>Rule</dt>
 								<dd>{check.originality.ruleVersion}</dd>
 							</>

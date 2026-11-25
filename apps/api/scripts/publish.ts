@@ -41,7 +41,7 @@ import {
 	type ResultsChain,
 	XLAYER_RPC,
 } from "../src/publish/contracts.ts";
-import { planPublish } from "../src/publish/plan.ts";
+import { bnbBlock, planPublish } from "../src/publish/plan.ts";
 import {
 	type PlanFile,
 	parsePlanFile,
@@ -102,7 +102,7 @@ async function dryRun() {
 		process.exitCode = 1;
 		return;
 	}
-	const blocks = results.map((o) => o.index.upToBlock.block);
+	const blocks = results.map(bnbBlock);
 	const indexBlock = blocks.reduce((a, b) => (b > a ? b : a));
 	const oldest = blocks.reduce((a, b) => (b < a ? b : a));
 	console.log(

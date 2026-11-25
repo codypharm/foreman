@@ -10,7 +10,7 @@ const AT_BNB = { chainId: 56, block: "134724711", time: "1795190000" };
 const AT_BLOCK = { source: "chain", chainId: 56, block: "134724711" };
 const INDEX = {
 	circuitsChecked: "80290",
-	upToBlock: { chainId: 56, block: "134712080" },
+	upTo: [{ chainId: 56, block: "134712080" }],
 };
 
 function circuit(tokenId: string) {
@@ -77,6 +77,10 @@ function row(
 			originality: {
 				circuit: circuit(tokenId),
 				scope: "miner",
+				mining: {
+					chainId: 56,
+					contract: "0x7e2e0dc66a3bd9103e69b766afa62d9f7b697b46",
+				},
 				result: { verdict: "no-earlier-copy", netlistHash: HASH },
 				facts: [{ fact: "can-mine", state: "mining" }],
 				occc: { status: "not-checked" },

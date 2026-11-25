@@ -23,19 +23,14 @@ import {
 	type Originality,
 	type OriginalityVerdict,
 	parseCircuitRef,
+	parseOriginalityIndex,
 } from "./originality.ts";
 import {
 	parseValuation,
 	serialiseValuation,
 	type Valuation,
 } from "./valuation.ts";
-import {
-	parseCount,
-	parseObject,
-	parseOneOf,
-	parseText,
-	parseUint,
-} from "./wire.ts";
+import { parseCount, parseObject, parseOneOf, parseText } from "./wire.ts";
 
 /** The most rows one page carries. */
 export const LISTINGS_PAGE_SIZE = 50;
@@ -106,7 +101,7 @@ export function parseListingsPage(wire: unknown, field: string): ListingsPage {
 			] as const),
 			upTo: parseChainRead(market.upTo, `${field}.market.upTo`, 56),
 		},
-		index: parseIndex(w.index, `${field}.index`),
+		index: parseOriginalityIndex(w.index, `${field}.index`),
 		counts: {
 			open: parseCount(counts.open, `${field}.counts.open`),
 			buyable: parseCount(counts.buyable, `${field}.counts.buyable`),
@@ -306,34 +301,4 @@ function parseValue30d(wire: unknown, field: string): ListingRow["value30d"] {
 				valuation: parseValuation(w.valuation, `${field}.valuation`),
 			};
 	}
-}
-
-function parseIndex(wire: unknown, field: string): Originality["index"] {
-	const w = parseObject(wire, field);
-	const circuitsChecked = parseUint(
-		w.circuitsChecked,
-		`${field}.circuitsChecked`,
-	);
-	if (circuitsChecked === 0n) {
-		throw new ContractParseError(
-			`${field}.circuitsChecked`,
-			"at least one circuit checked",
-			circuitsChecked,
-		);
-	}
-	const upTo = parseObject(w.upToBlock, `${field}.upToBlock`);
-	if (upTo.chainId !== 56) {
-		throw new ContractParseError(
-			`${field}.upToBlock.chainId`,
-			"56 (the index is BNB Chain's circuits)",
-			upTo.chainId,
-		);
-	}
-	return {
-		circuitsChecked,
-		upToBlock: {
-			chainId: 56,
-			block: parseUint(upTo.block, `${field}.upToBlock.block`),
-		},
-	};
 }

@@ -11,7 +11,11 @@ import {
 	readPublishedResult,
 	XLAYER_RPC,
 } from "@foreman/chain-xlayer/results";
-import type { CircuitPage, Originality } from "@foreman/contract";
+import {
+	bnbIndexBlock,
+	type CircuitPage,
+	type Originality,
+} from "@foreman/contract";
 import { useState } from "react";
 import { BaseError, createPublicClient, http, type PublicClient } from "viem";
 import { xLayer, xLayerTestnet } from "viem/chains";
@@ -146,7 +150,7 @@ function Checks({
 				{compared === "identical" ? (
 					<Check ok title="Same as this page">
 						Verdict, evidence, rule ({r.logged.ruleVersion}) and BNB block{" "}
-						{formatCount(r.logged.index.upToBlock.block)}
+						{formatCount(bnbIndexBlock(r.logged.index))}
 					</Check>
 				) : compared === "same-verdict" && onPage ? (
 					// Mock B of docs/mocks/2026-11-23-readback-same-verdict.html: the tick covers only what
@@ -157,9 +161,9 @@ function Checks({
 						</Check>
 						<Check mark="neutral" title="Checked again since">
 							Published from BNB block{" "}
-							{formatCount(r.logged.index.upToBlock.block)} against{" "}
+							{formatCount(bnbIndexBlock(r.logged.index))} against{" "}
 							{formatCount(r.logged.index.circuitsChecked)} circuits; this page
-							is at {formatCount(onPage.index.upToBlock.block)} against{" "}
+							is at {formatCount(bnbIndexBlock(onPage.index))} against{" "}
 							{formatCount(onPage.index.circuitsChecked)}. A newer check with
 							the same verdict isn’t published again.
 						</Check>

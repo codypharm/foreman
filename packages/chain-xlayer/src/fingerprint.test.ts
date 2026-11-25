@@ -1,5 +1,6 @@
 import type { CircuitRef, Originality } from "@foreman/contract";
 import { parseAddress, parseHex32 } from "@foreman/contract";
+import { keccak256, toBytes } from "viem";
 import { describe, expect, test } from "vitest";
 import { changeFingerprint } from "./fingerprint.ts";
 
@@ -27,6 +28,13 @@ function circuit(id: bigint, block: bigint): CircuitRef {
 const COPY: Originality = {
 	circuit: circuit(17_663n, 134_500_000n),
 	scope: "miner",
+	mining: {
+		chainId: 56,
+		contract: parseAddress(
+			"0x7e2e0dc66a3bd9103e69b766afa62d9f7b697b46",
+			"mining",
+		),
+	},
 	result: {
 		verdict: "copy",
 		of: circuit(12_000n, 134_400_000n),
@@ -47,7 +55,7 @@ const COPY: Originality = {
 	occc: { status: "not-checked" },
 	index: {
 		circuitsChecked: 41_203n,
-		upToBlock: { chainId: 56, block: 134_600_000n },
+		upTo: [{ chainId: 56, block: 134_600_000n }],
 	},
 	ruleVersion: "hash 2026-11-20, floor 4, chain 10",
 };
@@ -68,7 +76,7 @@ describe("the change fingerprint", () => {
 			],
 			index: {
 				circuitsChecked: 41_900n,
-				upToBlock: { chainId: 56, block: 134_800_000n },
+				upTo: [{ chainId: 56, block: 134_800_000n }],
 			},
 		};
 		expect(changeFingerprint(later)).toBe(changeFingerprint(COPY));
@@ -190,6 +198,22 @@ describe("the change fingerprint", () => {
 			changeFingerprint(
 				two([{ reason: "processor-not-eligible" }, { reason: "uses-ref" }]),
 			),
+		);
+	});
+
+	test("differs from the fingerprint stored for the same result before 25 Nov 2026, so each is published once more in today's shape", () => {
+		// The fingerprint before the shape number: the copy's evidence and its can-mine state
+		const before = keccak256(
+			toBytes(
+				JSON.stringify({
+					verdict: ["copy", `${PROCESSOR}/12000`, HASH],
+					canMine: ["stopped"],
+				}),
+			),
+		);
+		expect(changeFingerprint(COPY)).not.toBe(before);
+		expect(changeFingerprint({ ...COPY, mining: null })).toBe(
+			changeFingerprint(COPY),
 		);
 	});
 });

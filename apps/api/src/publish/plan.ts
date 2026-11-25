@@ -6,6 +6,7 @@
 import { minerKey } from "@foreman/chain-bnb";
 import { changeFingerprint, shortVerdict } from "@foreman/chain-xlayer/results";
 import {
+	bnbIndexBlock,
 	type Hex32,
 	type Originality,
 	serialiseOriginality,
@@ -56,7 +57,11 @@ export function planEntry(o: Originality): PlanEntry {
 		...shortVerdict(o),
 		fingerprint: changeFingerprint(o),
 		resultHash: keccak256(result) as Hex32,
-		indexBlock: o.index.upToBlock.block,
+		// The BNB Chain block, for FabX results too (2026-11-25-fabx-copy-check.md, decision 7)
+		indexBlock: bnbBlock(o),
 		result,
 	};
 }
+
+/** The BNB Chain block a result's index was read up to. */
+export const bnbBlock = (o: Originality): bigint => bnbIndexBlock(o.index);

@@ -3,12 +3,29 @@ import { describe, expect, test } from "vitest";
 import wire from "../../fixtures/wallet-077e-135141389.json" with {
 	type: "json",
 };
+import { inTodaysShape } from "../../testing.ts";
 import { groupAlerts } from "./alert-groups.ts";
 
 // Real response from Foreman's local API on 22 Nov 2026: wallet 0x077e…2ea5, owner follow at BNB block
 // 135,140,617, market at 135,141,389. 64 miners, 21 with an alert, on 4 designs
 // (docs/mocks/2026-11-23-copy-alerts-by-design.html).
-const wallet = parseWalletMiners(wire, "page");
+const wallet = parseWalletMiners(
+	{
+		...wire,
+		miners: wire.miners.map((m) =>
+			m.check.state === "checked"
+				? {
+						...m,
+						check: {
+							...m.check,
+							originality: inTodaysShape(m.check.originality),
+						},
+					}
+				: m,
+		),
+	},
+	"page",
+);
 const groups = groupAlerts(wallet.miners);
 const ids = (g: (typeof groups)[number]) =>
 	g.copies.map((c) => c.listing.listingId);

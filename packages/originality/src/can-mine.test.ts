@@ -14,6 +14,11 @@ const MINE6 = "0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c";
 const P0 = "0x50a994e71615474b55559ff4f500928fbc339dd9";
 const client = replayClient(fixture);
 const NO_REVOKE = null;
+/** A circuit with a miner record names TapeOut's mining contract; one without names none. */
+const POD = {
+	chainId: 56,
+	contract: "0x7e2e0dc66a3bd9103e69b766afa62d9f7b697b46",
+};
 
 describe("can mine", () => {
 	test("a mining miner holding the design bonus: the contract's answer first, then mining now", async () => {
@@ -29,6 +34,7 @@ describe("can mine", () => {
 			),
 		).toEqual({
 			read: true,
+			mining: POD,
 			facts: [
 				{ fact: "design-bonus", holds: true, bonus: 328n },
 				{ fact: "can-mine", state: "mining" },
@@ -52,6 +58,7 @@ describe("can mine", () => {
 			),
 		).toEqual({
 			read: true,
+			mining: POD,
 			facts: [
 				{ fact: "design-bonus", holds: false, bonus: 3752n },
 				{
@@ -100,6 +107,7 @@ describe("can mine", () => {
 			),
 		).toEqual({
 			read: true,
+			mining: POD,
 			facts: [
 				{ fact: "design-bonus", holds: false, bonus: 0n },
 				{
@@ -125,6 +133,7 @@ describe("can mine", () => {
 			),
 		).toEqual({
 			read: true,
+			mining: null,
 			facts: [{ fact: "can-mine", state: "not-started" }],
 		});
 	});
@@ -143,6 +152,7 @@ describe("can mine", () => {
 			),
 		).toEqual({
 			read: true,
+			mining: null,
 			facts: [
 				{
 					fact: "can-mine",
@@ -167,6 +177,7 @@ describe("can mine", () => {
 			),
 		).toEqual({
 			read: true,
+			mining: null,
 			facts: [
 				{
 					fact: "can-mine",

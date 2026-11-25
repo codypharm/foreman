@@ -7,6 +7,7 @@
 import {
 	type Address,
 	type Hex32,
+	indexBlock,
 	type Originality,
 	parseOriginality,
 } from "@foreman/contract";
@@ -48,6 +49,8 @@ export type ReadBackFailure =
 	| "no-transaction"
 	| "failed-transaction"
 	| "no-log"
+	/** Published before 25 Nov 2026, in the shape before `mining` and `index.upTo`; published again in today's (2026-11-25-republish-in-new-shape.md). */
+	| "earlier-format"
 	| "unreadable-result";
 
 /** A read-back that found something other than a published result. Its message is plain words. */
@@ -117,12 +120,17 @@ export async function readPublishedResult(
 
 	const loggedHash = keccak256(log.args.result) as Hex32;
 	let logged: Originality;
+	let json: unknown;
 	try {
-		logged = parseOriginality(
-			JSON.parse(hexToString(log.args.result)),
-			"logged",
-		);
+		json = JSON.parse(hexToString(log.args.result));
+		logged = parseOriginality(json, "logged");
 	} catch {
+		if (isEarlierFormat(json)) {
+			throw new ReadBackError(
+				"earlier-format",
+				"This circuit’s last result was published in an earlier format, before 25 November 2026. Foreman publishes it again in the current one.",
+			);
+		}
 		throw new ReadBackError(
 			"unreadable-result",
 			"The logged result isn’t one the data contract can read.",
@@ -157,6 +165,13 @@ export async function readPublishedResult(
 		shortVerdictAgrees:
 			log.args.kind === short.kind &&
 			log.args.canMine === short.canMine &&
-			log.args.indexBlock === logged.index.upToBlock.block,
+			log.args.indexBlock === indexBlock(logged.index, 56),
 	};
+}
+
+/** The shape before 25 Nov 2026: one-chain `index.upToBlock` and no `mining`. */
+function isEarlierFormat(json: unknown): boolean {
+	if (json === null || typeof json !== "object") return false;
+	const o = json as { mining?: unknown; index?: { upToBlock?: unknown } };
+	return !("mining" in o) && o.index?.upToBlock !== undefined;
 }

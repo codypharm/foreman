@@ -4,7 +4,12 @@
 // design bonus answer comes first. Never a promise that a circuit passes a task. Read only.
 
 import { POD_MINING, podMiningAbi } from "@foreman/chain-bnb";
-import type { CantMineReason, OriginalityFact } from "@foreman/contract";
+import {
+	type CantMineReason,
+	type Originality,
+	type OriginalityFact,
+	parseAddress,
+} from "@foreman/contract";
 import { type PublicClient, zeroAddress } from "viem";
 import type { CircuitId } from "./check-wrapper.ts";
 import type { MinerRevoke } from "./scan-miner-revokes.ts";
@@ -30,8 +35,11 @@ const REVOKED = 2;
 const COOLING = 3;
 
 export type CanMineRead =
-	/** The design-bonus fact first (miners only), then exactly one can-mine fact. */
-	| { read: true; facts: OriginalityFact[] }
+	/**
+	 * The design-bonus fact first (miners only), then exactly one can-mine fact; and TapeOut's
+	 * mining contract when the circuit has a miner record, null when it has none.
+	 */
+	| { read: true; facts: OriginalityFact[]; mining: Originality["mining"] }
 	/** Shown as "Can't check", never as a can-mine answer. */
 	| { read: false; detail: string };
 
@@ -72,12 +80,16 @@ export async function readCanMine(
 	}
 
 	const facts: OriginalityFact[] = [];
+	const mining: Originality["mining"] =
+		m.status === NONE
+			? null
+			: { chainId: 56, contract: parseAddress(POD_MINING, "POD_MINING") };
 	if (m.status !== NONE) {
 		facts.push({ fact: "design-bonus", holds: m.optimal, bonus: m.bonus });
 	}
 	if (m.status === ACTIVE) {
 		facts.push({ fact: "can-mine", state: "mining" });
-		return { read: true, facts };
+		return { read: true, facts, mining };
 	}
 	if (m.status === COOLING) {
 		facts.push({
@@ -86,7 +98,7 @@ export async function readCanMine(
 			stoppedAt: m.stopBlock,
 			canStartFrom: m.stopBlock + STOP_COOLDOWN,
 		});
-		return { read: true, facts };
+		return { read: true, facts, mining };
 	}
 
 	const reasons: CantMineReason[] = [];
@@ -116,7 +128,7 @@ export async function readCanMine(
 			? { fact: "can-mine", state: "cant-mine", reasons }
 			: { fact: "can-mine", state: "not-started" },
 	);
-	return { read: true, facts };
+	return { read: true, facts, mining };
 }
 
 async function readMiner(

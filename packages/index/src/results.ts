@@ -4,6 +4,7 @@
 
 import {
 	type Address,
+	indexBlock,
 	type Originality,
 	parseOriginality,
 	serialiseOriginality,
@@ -13,7 +14,7 @@ import type pg from "pg";
 
 export interface StoredResult {
 	originality: Originality;
-	/** = originality.index.upToBlock.block */
+	/** = the BNB Chain block in originality.index */
 	indexBlock: bigint;
 	/** When the job built it, Unix seconds. */
 	builtAt: bigint;
@@ -45,9 +46,10 @@ export async function saveResults(
 				`${name(o.circuit)}: a pasted result is never stored (2026-11-21-stored-results.md)`,
 			);
 		}
-		if (o.index.upToBlock.block !== input.indexBlock) {
+		const built = indexBlock(o.index, 56);
+		if (built !== input.indexBlock) {
 			throw new Error(
-				`${name(o.circuit)} was built at block ${o.index.upToBlock.block}, not the rebuild's ${input.indexBlock}`,
+				`${name(o.circuit)} was built at block ${built}, not the rebuild's ${input.indexBlock}`,
 			);
 		}
 	}

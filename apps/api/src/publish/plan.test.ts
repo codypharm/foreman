@@ -36,12 +36,19 @@ function result(id: bigint, canMine: "mining" | "not-started"): Originality {
 	return {
 		circuit: ref(id),
 		scope: "miner",
+		mining: {
+			chainId: 56,
+			contract: parseAddress(
+				"0x7e2e0dc66a3bd9103e69b766afa62d9f7b697b46",
+				"mining",
+			),
+		},
 		result: { verdict: "no-earlier-copy", netlistHash: HASH },
 		facts: [{ fact: "can-mine", state: canMine }],
 		occc: { status: "not-checked" },
 		index: {
 			circuitsChecked: 41_203n,
-			upToBlock: { chainId: 56, block: 134_600_000n },
+			upTo: [{ chainId: 56, block: 134_600_000n }],
 		},
 		ruleVersion: "hash 2026-11-20, floor 4, chain 10",
 	};

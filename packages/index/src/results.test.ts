@@ -43,6 +43,13 @@ function result(
 				designCommittedAt: null,
 			},
 			scope,
+			mining:
+				scope === "miner"
+					? {
+							chainId: 56,
+							contract: "0x7e2e0dc66a3bd9103e69b766afa62d9f7b697b46",
+						}
+					: null,
 			result: {
 				verdict: "no-earlier-copy",
 				netlistHash: `0x${"ab".repeat(32)}`,
@@ -51,7 +58,7 @@ function result(
 			occc: { status: "not-checked" },
 			index: {
 				circuitsChecked: "80290",
-				upToBlock: { chainId: 56, block: indexBlock },
+				upTo: [{ chainId: 56, block: indexBlock }],
 			},
 			ruleVersion: "hash 2026-11-20, floor 4, chain 10",
 		},

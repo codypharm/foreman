@@ -87,7 +87,7 @@ describe("a copy", () => {
 		expect(result.facts).toContainEqual({ fact: "design-shared", miners: 3 });
 		expect(result.index).toEqual({
 			circuitsChecked: 33n,
-			upToBlock: { chainId: 56, block: 134_673_279n },
+			upTo: [{ chainId: 56, block: 134_673_279n }],
 		});
 		expect(result.ruleVersion).toBe("hash 2026-11-20, floor 4, chain 10");
 	});
@@ -406,6 +406,7 @@ describe("one complete result", () => {
 				scope: "miner",
 				verdict,
 				mining: mining.facts,
+				miningContract: mining.mining,
 			}),
 		).toEqual({
 			circuit: {
@@ -422,6 +423,10 @@ describe("one complete result", () => {
 				designCommittedAt: { block: 122_268_369n, time: 1_789_582_759n },
 			},
 			scope: "miner",
+			mining: {
+				chainId: 56,
+				contract: "0x7e2e0dc66a3bd9103e69b766afa62d9f7b697b46",
+			},
 			result: { verdict: "no-earlier-copy", netlistHash: entry.netlistHash },
 			facts: [
 				{ fact: "design-bonus", holds: true, bonus: 328n },
@@ -431,7 +436,7 @@ describe("one complete result", () => {
 			occc: { status: "not-checked" },
 			index: {
 				circuitsChecked: 33n,
-				upToBlock: { chainId: 56, block: 134_673_279n },
+				upTo: [{ chainId: 56, block: 134_673_279n }],
 			},
 			ruleVersion: "hash 2026-11-20, floor 4, chain 10",
 		});
@@ -452,6 +457,7 @@ describe("one complete result", () => {
 				scope: "listed",
 				verdict,
 				mining,
+				miningContract: null,
 			});
 		expect(() => build([])).toThrow("can-mine");
 		expect(() =>

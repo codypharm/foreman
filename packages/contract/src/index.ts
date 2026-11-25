@@ -72,14 +72,18 @@ export {
 	type Venue,
 } from "./offer.ts";
 export {
+	bnbIndexBlock,
 	type CantMineReason,
 	type CircuitRef,
 	designedEarlier,
+	indexBlock,
 	type Originality,
 	type OriginalityFact,
+	type OriginalityIndex,
 	type OriginalityVerdict,
 	parseCircuitRef,
 	parseOriginality,
+	parseOriginalityIndex,
 	STOP_COOLDOWN_BLOCKS,
 	serialiseOriginality,
 	WRAPPER_STEP_LIMIT,

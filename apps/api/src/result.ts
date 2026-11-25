@@ -129,6 +129,7 @@ export async function buildResult(
 			scope,
 			verdict,
 			mining: mining.facts,
+			miningContract: mining.mining,
 		}),
 	};
 }

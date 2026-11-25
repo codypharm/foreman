@@ -9,6 +9,7 @@ import {
 	type CircuitRef,
 	type Originality,
 	type OriginalityFact,
+	type OriginalityIndex,
 	type OriginalityVerdict,
 	parseAddress,
 } from "@foreman/contract";
@@ -37,10 +38,7 @@ export interface OriginalityVerdictResult {
 	result: OriginalityVerdict;
 	/** Every fact except can-mine and design-bonus, which come from the mining contract. */
 	facts: OriginalityFact[];
-	index: {
-		circuitsChecked: bigint;
-		upToBlock: { chainId: 56; block: bigint };
-	};
+	index: OriginalityIndex;
 	ruleVersion: string;
 }
 
@@ -54,10 +52,10 @@ export function originalityVerdict(input: {
 	wrapper: WrapperCheck;
 }): OriginalityVerdictResult {
 	const { target, index } = input;
-	const coverage = {
+	const coverage: OriginalityIndex = {
 		circuitsChecked: BigInt(index.entries.length),
-		upToBlock: { chainId: CHAIN_ID, block: index.upToBlock },
-	} as const;
+		upTo: [{ chainId: CHAIN_ID, block: index.upToBlock }],
+	};
 	const done = (
 		result: OriginalityVerdict,
 		facts: OriginalityFact[] = [],
@@ -185,6 +183,8 @@ export function buildOriginality(input: {
 	verdict: OriginalityVerdictResult;
 	/** readCanMine's facts: the design bonus (miners only), then exactly one can-mine fact. */
 	mining: OriginalityFact[];
+	/** readCanMine's mining contract: the one the circuit has a miner record in, or null. */
+	miningContract: Originality["mining"];
 }): Originality {
 	const canMine = input.mining.filter((f) => f.fact === "can-mine");
 	if (canMine.length !== 1) {
@@ -196,6 +196,7 @@ export function buildOriginality(input: {
 	return {
 		circuit: input.circuit,
 		scope: input.scope,
+		mining: input.miningContract,
 		result: input.verdict.result,
 		// The contract's own answer first, then Foreman's facts, then whether it can mine
 		facts: [...bonus, ...input.verdict.facts, ...canMine],
