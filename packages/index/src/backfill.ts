@@ -40,26 +40,40 @@ export type StoredNetlist =
 			hashRule: string;
 	  };
 
+export interface BackfillOptions {
+	/** At most this many circuits in this run. */
+	limit?: number;
+	/** Netlists read at once. */
+	concurrency?: number;
+	onProgress?: (done: number, total: number) => void;
+}
+
 export async function backfillNetlists(
 	pool: pg.Pool,
 	client: PublicClient,
-	options: {
-		/** At most this many circuits in this run. */
-		limit?: number;
-		/** Netlists read at once. */
-		concurrency?: number;
-		onProgress?: (done: number, total: number) => void;
-	} = {},
+	options: BackfillOptions = {},
 ): Promise<BackfillResult> {
 	const state = await pool.query<{ up_to_block: string }>(
 		"select up_to_block from index_state",
 	);
 	const row = state.rows[0];
 	if (!row) throw new Error("the index is empty: save a tape-out scan first");
-	const atBlock = BigInt(row.up_to_block);
+	return backfillTable(pool, client, "circuits", BigInt(row.up_to_block), options);
+}
 
+/**
+ * The shared loop: BNB Chain's circuits and FabX's X Layer circuits (xlayer_circuits, the same
+ * netlist columns: 2026-11-25-fabx-storage.md) are read the same way, with the same hash rule.
+ */
+export async function backfillTable(
+	pool: pg.Pool,
+	client: PublicClient,
+	table: "circuits" | "xlayer_circuits",
+	atBlock: bigint,
+	options: BackfillOptions,
+): Promise<BackfillResult> {
 	const unread = await pool.query<{ processor: string; id: string }>(
-		`select processor, id from circuits where netlist_status is null
+		`select processor, id from ${table} where netlist_status is null
 		 order by taped_out_block, taped_out_tx, taped_out_log limit $1`,
 		[options.limit ?? null],
 	);
@@ -88,7 +102,7 @@ export async function backfillNetlists(
 				const n = r.netlist;
 				const h = hashNetlist(n);
 				await pool.query(
-					`update circuits set netlist_status = 'read', netlist_read_at_block = $3,
+					`update ${table} set netlist_status = 'read', netlist_read_at_block = $3,
 					   n_in = $4, n_out = $5, n_state = $6, gate_count = $7, netlist = $8,
 					   netlist_hash = $9, byte_hash = $10, hash_rule = $11
 					 where processor = $1 and id = $2 and netlist_status is null`,
@@ -108,7 +122,7 @@ export async function backfillNetlists(
 				result.read++;
 			} else if (r.reason === "netlist-unreadable") {
 				await pool.query(
-					`update circuits set netlist_status = 'unreadable', netlist_read_at_block = $3,
+					`update ${table} set netlist_status = 'unreadable', netlist_read_at_block = $3,
 					   netlist_detail = $4
 					 where processor = $1 and id = $2 and netlist_status is null`,
 					[...key, atBlock.toString(), r.detail],
@@ -122,7 +136,7 @@ export async function backfillNetlists(
 	}
 
 	const left = await pool.query<{ n: string }>(
-		"select count(*) as n from circuits where netlist_status is null",
+		`select count(*) as n from ${table} where netlist_status is null`,
 	);
 	result.remaining = Number(left.rows[0]?.n ?? 0);
 	return result;

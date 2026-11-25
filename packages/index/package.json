@@ -22,7 +22,9 @@
 		"fill-network": "node --env-file-if-exists=../../.env scripts/fill-network.ts",
 		"probe-node": "node --env-file-if-exists=../../.env scripts/probe-bnb-node.ts",
 		"save-fabx-history": "node --env-file-if-exists=../../.env scripts/save-fabx-history.ts",
-		"save-fabx-miners": "node --env-file-if-exists=../../.env scripts/save-fabx-miners.ts"
+		"save-fabx-miners": "node --env-file-if-exists=../../.env scripts/save-fabx-miners.ts",
+		"record:fabx-netlists": "node --env-file-if-exists=../../.env scripts/record-fabx-netlists-fixture.ts",
+		"backfill-fabx-netlists": "node --env-file-if-exists=../../.env scripts/backfill-fabx-netlists.ts"
 	},
 	"dependencies": {
 		"@foreman/chain-bnb": "workspace:*",

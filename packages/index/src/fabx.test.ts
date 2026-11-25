@@ -2,7 +2,9 @@ import { decodeFabxLogs, type FabxMinerRecord, type XLayerLog } from "@foreman/c
 import fixture from "@foreman/chain-xlayer/fixtures/fabx-logs-sample.json" with { type: "json" };
 import type pg from "pg";
 import { afterEach, describe, expect, test } from "vitest";
-import { readFabxState, saveFabxHistory, saveFabxMiners } from "./fabx.ts";
+import { replayClient } from "@foreman/chain-bnb/fixture";
+import netlists from "../fixtures/fabx-netlists-76847895.json" with { type: "json" };
+import { backfillFabxNetlists, readFabxState, saveFabxHistory, saveFabxMiners } from "./fabx.ts";
 import { freshDatabase, TEST_DATABASE_URL } from "./testing.ts";
 
 // One real log of each kind from FabX's processor and mining contract, read on 25 Nov 2026
@@ -142,5 +144,34 @@ describe.skipIf(!TEST_DATABASE_URL)("saving FabX's miners", () => {
 		await expect(
 			saveFabxMiners(pool, { complete: true, block: 76_847_895n, miners: [record(24n, 0n, 0n)], notMiners: 0 }),
 		).rejects.toThrow("the read covers 1 circuits; 3 are stored");
+	});
+});
+
+// Netlists of FabX #24 and #1961, read at X Layer block 76,847,895 (fixtures/fabx-netlists-76847895.json).
+// #24 has the same netlist as BNB Chain circuit #97: netlist hash 0xb546f5b9…184c.
+describe.skipIf(!TEST_DATABASE_URL)("reading FabX's netlists", () => {
+	let pool: pg.Pool;
+	afterEach(async () => {
+		await pool?.end();
+	});
+
+	test("stores each netlist with its counts and hashes at the stored block, once; a failed read stores nothing", async () => {
+		pool = await freshDatabase();
+		await saveFabxHistory(pool, { ...FIRST, history: minersHistory }, REVIEWED); // #24, #1020, #1961
+		const first = await backfillFabxNetlists(pool, replayClient(netlists));
+		expect(first).toMatchObject({ atBlock: 76_847_895n, read: 2, unreadable: 0, remaining: 1 });
+		expect(first.failed.map((f) => f.circuit.id)).toEqual([1020n]); // not in the fixture
+		const rows = (
+			await pool.query(
+				`select id, netlist_status, gate_count, encode(netlist_hash, 'hex') as hash, hash_rule, netlist_read_at_block
+				 from xlayer_circuits where netlist_status is not null order by id`,
+			)
+		).rows;
+		expect(rows).toMatchObject([
+			{ id: "24", netlist_status: "read", gate_count: 140, hash: "b546f5b9789f61b5a9a497a5545356df53317cf36919a934925411ffdf19184c", netlist_read_at_block: "76847895" },
+			{ id: "1961", netlist_status: "read", gate_count: 20, hash: "fb118fc4df25eb5f2e61df1daed31ededaa9d75af9af4ec9613c321869639c8f" },
+		]);
+		const again = await backfillFabxNetlists(pool, replayClient(netlists));
+		expect(again).toMatchObject({ read: 0, remaining: 1 });
 	});
 });

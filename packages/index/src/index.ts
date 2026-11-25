@@ -3,6 +3,7 @@
 
 export {
 	type BackfillResult,
+	type BackfillOptions,
 	backfillNetlists,
 	readStoredNetlist,
 	type StoredNetlist,
@@ -107,6 +108,7 @@ export {
 	type WorkerStage,
 } from "./worker-stages.ts";
 export {
+	backfillFabxNetlists,
 	type FabxState,
 	FREEZING,
 	readFabxState,

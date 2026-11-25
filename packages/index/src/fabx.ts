@@ -11,7 +11,8 @@ import {
 } from "@foreman/chain-xlayer";
 import { type CommitmentEvent, confirmCommitment } from "@foreman/originality";
 import type pg from "pg";
-import type { Address } from "viem";
+import type { Address, PublicClient } from "viem";
+import { type BackfillOptions, type BackfillResult, backfillTable } from "./backfill.ts";
 
 /** Contract changes that freeze FabX results when after the reviewed block (decision 6). */
 export const FREEZING: readonly FabxContractEventKind[] = ["Upgraded", "OwnershipTransferred", "ProcessorSet"];
@@ -280,3 +281,18 @@ export async function readFabxState(pool: pg.Pool): Promise<FabxState | null> {
 }
 
 const bytes = (hex: string) => Buffer.from(hex.slice(2), "hex");
+
+/**
+ * Reads each stored FabX circuit's netlist once, at the block FabX's history is stored up to,
+ * with the same reader, hash and rule version as BNB Chain's (2026-11-25-fabx-storage.md).
+ * A failed read stores nothing and is tried again on the next run.
+ */
+export async function backfillFabxNetlists(
+	pool: pg.Pool,
+	client: PublicClient,
+	options: BackfillOptions = {},
+): Promise<BackfillResult> {
+	const state = await readFabxState(pool);
+	if (!state) throw new Error("FabX's history isn't stored: save it first");
+	return backfillTable(pool, client, "xlayer_circuits", state.logsUpToBlock, options);
+}
