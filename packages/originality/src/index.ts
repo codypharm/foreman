@@ -62,3 +62,9 @@ export {
 	type TapeOut,
 	type TapeOutScan,
 } from "./scan-tape-outs.ts";
+export {
+	type CommitmentCheck,
+	type CommitmentEvent,
+	confirmCommitment,
+	type MinerCommitment,
+} from "./fabx-commitment.ts";

@@ -147,6 +147,9 @@ importers:
       '@foreman/chain-bnb':
         specifier: workspace:*
         version: link:../chain-bnb
+      '@foreman/chain-xlayer':
+        specifier: workspace:*
+        version: link:../chain-xlayer
       '@foreman/contract':
         specifier: workspace:*
         version: link:../contract

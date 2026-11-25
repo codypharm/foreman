@@ -106,3 +106,11 @@ export {
 	WORKER_STAGES,
 	type WorkerStage,
 } from "./worker-stages.ts";
+export {
+	type FabxState,
+	FREEZING,
+	readFabxState,
+	type Reviewed,
+	saveFabxHistory,
+	saveFabxMiners,
+} from "./fabx.ts";

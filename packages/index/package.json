@@ -20,10 +20,13 @@
 		"fill-market": "node --env-file-if-exists=../../.env scripts/fill-market.ts",
 		"fill-listing-times": "node --env-file-if-exists=../../.env scripts/fill-listing-times.ts",
 		"fill-network": "node --env-file-if-exists=../../.env scripts/fill-network.ts",
-		"probe-node": "node --env-file-if-exists=../../.env scripts/probe-bnb-node.ts"
+		"probe-node": "node --env-file-if-exists=../../.env scripts/probe-bnb-node.ts",
+		"save-fabx-history": "node --env-file-if-exists=../../.env scripts/save-fabx-history.ts",
+		"save-fabx-miners": "node --env-file-if-exists=../../.env scripts/save-fabx-miners.ts"
 	},
 	"dependencies": {
 		"@foreman/chain-bnb": "workspace:*",
+		"@foreman/chain-xlayer": "workspace:*",
 		"@foreman/contract": "workspace:*",
 		"@foreman/originality": "workspace:*",
 		"@foreman/valuation": "workspace:*",

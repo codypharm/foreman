@@ -17,7 +17,8 @@
 		"record:held-vouchers": "node scripts/record-held-vouchers-fixture.ts",
 		"record:voucher-circuit": "node scripts/record-voucher-circuit-fixture.ts",
 		"record:published-result": "node scripts/record-published-result-fixture.ts",
-		"backfill:fabx-logs": "node --env-file-if-exists=../../.env scripts/backfill-fabx-logs.ts"
+		"backfill:fabx-logs": "node --env-file-if-exists=../../.env scripts/backfill-fabx-logs.ts",
+		"record:fabx-miners": "node --env-file-if-exists=../../.env scripts/record-fabx-miners-fixture.ts"
 	},
 	"dependencies": {
 		"@foreman/chain-bnb": "workspace:*",
