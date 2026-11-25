@@ -33,3 +33,6 @@ data/publish-plan-*.json
 
 # Database dumps (docs/deploy.md): copies of the index, never committed
 *.dump
+
+# FabX log backfill (packages/chain-xlayer): large, re-read from chain
+data/fabx-logs-*.jsonl

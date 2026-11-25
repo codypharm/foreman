@@ -1,0 +1,485 @@
+<!--
+  Chosen by William on 25 November 2026: B (a mining contract panel under the header: label, address, fact line
+  and caveat; it turns red with the notice when FabX results are frozen; BNB Chain results get the label and
+  address only). Options and Published as drawn in B. A and C are kept below for the record.
+  FabX result page: three directions for William to choose from (docs/decisions/2026-11-25-fabx-copy-check.md,
+  decisions 2, 6, 8 and 10).
+  Same page as shipped (docs/mocks/2026-11-21-result-page.html), shown at phone width. What changes: the
+  "FabX · X Layer" label, the fact line, the caveat line, the cross-chain evidence, coverage across both chains,
+  "Value: not covered yet" in place of Worth?, the frozen notice, and Options and Published for a FabX miner.
+  Real data, read 25 Nov 2026:
+    FabX #24 (processor 0x87bf…f9a6), 140 gates, taped out at X Layer block 73,044,971 (12 Oct 2026 14:06:47
+    UTC), no design commitment. Byte-identical to BNB Chain circuit #97 on processor ×1 (0xb102…a14c), taped out
+    at BNB block 116,187,134 (16 Aug 2026 01:48:41 UTC) by 0x077e…92a5: 57 days earlier. 152 BNB Chain miners
+    and 44 FabX miners share the design (netlist hash 0xb546…184c).
+    FabX #1961, 20 gates, task 48, design commitment at X Layer block 73,131,773 (14:13:29 UTC, 13 Oct).
+    Identical to FabX #1648, design commitment at block 73,128,498 (13:18:54 UTC): 54 minutes earlier. 1,533
+    FabX miners share it (0xfb11…9c8f).
+    Coverage: 80,438 BNB Chain circuits in the local index (block 135,390,773) + 7,164 FabX circuits read at X
+    Layer block 76,839,338 = 87,602.
+  Illustrative only: the frozen state. FabX has not changed its mining contract; block 76,912,004 is made up.
+  FabX results aren't published yet (decision 9), so Published shows that.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foreman · FabX result</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --raise:#F5F5F5; --ink:#000000; --ink-2:#6B6B6B; --ink-3:#9A9A9A; --line:#EBEBEB;
+  --accent:#C2F24B; --on-accent:#000000; --live:#14A44D; --stale:#C4231B; --stale-bg:#FDECEA;
+  --btn:#000000; --on-btn:#FFFFFF; --canvas:#F2F2F2;
+  --sans:"Geist",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+    --live:#3DDC84; --stale:#FF7A6B; --stale-bg:#2A1210; --btn:#FFFFFF; --on-btn:#000000; --canvas:#0B0B0B;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+  --live:#3DDC84; --stale:#FF7A6B; --stale-bg:#2A1210; --btn:#FFFFFF; --on-btn:#000000; --canvas:#0B0B0B;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--canvas);color:var(--ink);font:400 15px/1.5 var(--sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{background:var(--canvas);padding:28px 20px 56px}
+::selection{background:var(--accent);color:var(--on-accent)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+button{font:inherit;color:inherit}
+
+/* the board */
+.head{max-width:1560px;margin:0 auto 20px}
+.head h1{font:600 22px/1.2 var(--sans);letter-spacing:-.01em}
+.head p{margin-top:6px;max-width:88ch;font-size:14px;color:var(--ink-2)}
+.head p b{color:var(--ink);font-weight:600}
+.board{max-width:1560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:start}
+.opt{background:var(--bg);border-radius:20px;box-shadow:0 1px 2px rgb(0 0 0 / .04),0 8px 28px rgb(0 0 0 / .06);overflow:hidden}
+.opt>header{padding:16px 20px;border-bottom:1px solid var(--line)}
+.opt>header h2{font:600 16px/1.25 var(--sans)}
+.opt>header p{margin-top:4px;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.screen{padding:22px 20px 26px}
+.cap{margin:34px 0 18px;padding-top:14px;border-top:1px dashed var(--line);font:600 12px/1.3 var(--sans);color:var(--ink-2)}
+.cap:first-child{margin-top:0;padding-top:0;border-top:0}
+.common{max-width:1560px;margin:20px auto 0;padding:16px 20px;border-radius:16px;background:var(--bg);font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+.common b{color:var(--ink);font-weight:600}
+.common ul{margin-top:6px;padding-left:18px}
+@media (max-width:1180px){ .board{grid-template-columns:minmax(0,1fr);max-width:560px} .common{max-width:560px} }
+
+/* the result page, as shipped */
+.who{display:flex;align-items:center;gap:14px}
+.badge{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:999px;background:var(--ink);color:var(--bg);font:700 14px/1 var(--sans)}
+.who h1{font:600 22px/1.2 var(--sans);letter-spacing:-.01em}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{font:500 12px/1 var(--sans);padding:5px 8px;border-radius:6px;background:var(--raise);color:var(--ink-2);white-space:nowrap}
+.chip.ok{color:var(--ink)}
+.chip.ok::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--live);margin-right:6px;vertical-align:1px}
+.q{margin-top:36px}
+.sec{display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.sec h2{font:600 17px/1.2 var(--sans)}
+.sec .meta{font:500 12px/1.4 var(--sans);color:var(--ink-2)}
+.verdict{display:flex;align-items:flex-start;gap:12px;margin-top:18px}
+.vmark{flex:none;width:36px;height:36px;border-radius:999px;display:grid;place-items:center;box-shadow:inset 0 0 0 1.5px var(--ink);margin-top:2px}
+.verdict h3{font:600 26px/1.12 var(--sans);letter-spacing:-.025em;text-wrap:balance}
+.verdict p{margin-top:6px;font:400 15px/1.45 var(--sans);color:var(--ink-2)}
+.verdict p b{color:var(--ink);font-weight:600}
+.evidence{list-style:none;padding:0;margin-top:16px}
+.evidence li{display:grid;grid-template-columns:1fr auto;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}
+.evidence li>span{color:var(--ink-2);font-size:14px}
+.evidence li b{text-align:right;font:600 15px/1.3 var(--sans)}
+.evidence li b small{display:block;font:400 12px/1.4 var(--sans);color:var(--ink-2)}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:13px;font-weight:500}
+.limit{margin-top:14px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.limit b{color:var(--ink);font-weight:600}
+.opts{list-style:none;padding:0;margin-top:4px}
+.opts li{padding:14px 0;border-bottom:1px solid var(--line)}
+.opts .h{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.opts .h strong{font:600 15px/1.2 var(--sans)}
+.opts .h em{font:500 15px/1.2 var(--sans);font-style:normal;text-align:right;color:var(--ink-2)}
+.opts p{margin-top:4px;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.pub{margin-top:32px}
+.pub p{margin-top:12px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.pub .net{display:inline-block;margin-top:14px;font:600 12px/1 var(--sans);padding:5px 8px;border-radius:6px;background:var(--raise)}
+
+/* Worth? for a FabX miner */
+.none{margin-top:16px;font:600 20px/1.25 var(--sans);letter-spacing:-.01em}
+.none+p{margin-top:6px;font-size:14px;line-height:1.5;color:var(--ink-2)}
+
+/* ---- A: a chip and a note under the header ---- */
+.chip.sys{background:none;box-shadow:inset 0 0 0 1px var(--ink-3);color:var(--ink);font-weight:600}
+.note{margin-top:14px;font:400 14px/1.5 var(--sans);color:var(--ink-2)}
+.note+.note{margin-top:6px}
+.note b{color:var(--ink);font-weight:600}
+.note.stale{padding:12px 14px;border-radius:12px;background:var(--stale-bg);color:var(--stale)}
+.note.stale b{color:inherit}
+
+/* ---- B: a mining contract panel ---- */
+.mc{margin-top:18px;padding:14px 16px;border-radius:14px;background:var(--raise)}
+.mc .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.mc .top span{font:500 13px/1.3 var(--sans);color:var(--ink-2)}
+.mc .top b{font:600 15px/1.3 var(--sans)}
+.mc .top b .mono{display:block;text-align:right;font-weight:400;font-size:12px;color:var(--ink-2);margin-top:2px}
+.mc p{margin-top:10px;font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+.mc .watch{display:flex;gap:9px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);color:var(--ink)}
+.mc .watch svg{flex:none;margin-top:2px}
+.mc.frozen{background:var(--stale-bg)}
+.mc.frozen .top span,.mc.frozen p,.mc.frozen .top b .mono{color:var(--stale)}
+.mc.frozen .watch{color:var(--stale);border-color:color-mix(in srgb,var(--stale) 25%,transparent)}
+.mc.plain p{display:none}
+
+
+/* ---- C: named in the title, explained beside the verdict ---- */
+.who h1 .sys{display:block;margin-top:3px;font:500 14px/1.2 var(--sans);letter-spacing:0;color:var(--ink-2)}
+.who h1 .sys b{color:var(--ink);font-weight:600}
+.banner{display:flex;gap:10px;margin:0 -20px 22px;padding:14px 20px;background:var(--stale-bg);color:var(--stale);font-size:14px;line-height:1.45}
+.banner svg{flex:none;margin-top:2px}
+.banner b{font-weight:600}
+.about{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);font-size:13px;line-height:1.5;color:var(--ink-2)}
+.about b{color:var(--ink);font-weight:600}
+.about+.about{border-top:0;padding-top:0;margin-top:8px}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h1>A FabX miner's result page</h1>
+  <p>Three ways to show that a result is about <b>FabX · X Layer</b>, with its fact line and its caveat. Each column shows FabX #24 (its design was on BNB Chain 57 days earlier), then FabX #1961 while FabX results are frozen, then the label on a BNB Chain result. Everything below the label is the same in all three, and is listed at the bottom.</p>
+</div>
+
+<div class="board">
+
+<!-- ============ A ============ -->
+<section class="opt">
+  <header>
+    <h2>A · A chip and two lines under the header</h2>
+    <p>The label joins the chips. The fact line and the caveat sit under them as plain text. Quietest; the caveat is the first thing after the title.</p>
+  </header>
+  <div class="screen">
+    <p class="cap">FabX #24 · mining</p>
+    <div class="who">
+      <span class="badge" aria-hidden="true">#</span>
+      <div>
+        <h1>Circuit #24</h1>
+        <div class="chips">
+          <span class="chip sys">FabX · X Layer</span>
+          <span class="chip ok">Mining now</span>
+          <span class="chip">Task 0</span>
+        </div>
+      </div>
+    </div>
+    <p class="note">FabX is a mining system on X Layer that mines FAB with circuits from TapeOut's X Layer factory. It's separate from TapeOut's BEM mining, and its contracts are controlled by their own owner.</p>
+    <p class="note"><b>FabX's owner can change its mining contract.</b> Read at X Layer block 76,839,338; Foreman stops FabX results if it does.</p>
+
+    <!--ORIGINAL-->
+    <section class="q" aria-label="Original?">
+      <div class="sec"><h2>Original?</h2><span class="meta">87,602 circuits checked · BNB block 135,390,773 · X Layer block 76,839,338</span></div>
+      <div class="verdict">
+        <span class="vmark"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="2" y="5" width="9" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7" y="2" width="9" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <div>
+          <h3>Copy of circuit #97 on BNB Chain</h3>
+          <p>Byte-identical netlist, taped out on BNB Chain <b>57 days earlier</b> on processor ×1.</p>
+        </div>
+      </div>
+      <ul class="evidence">
+        <li><span>#97 taped out</span><b>16 Aug 2026<small>BNB Chain · block 116,187,134 · processor ×1</small></b></li>
+        <li><span>#24 taped out</span><b>12 Oct 2026<small>X Layer · block 73,044,971 · FabX's processor</small></b></li>
+        <li><span>Netlist hash, both</span><b><span class="mono">0xb546…184c</span><small>identical bytes</small></b></li>
+        <li><span>Miners on this design</span><b>196<small>152 on BNB Chain · 44 on FabX</small></b></li>
+      </ul>
+      <p class="limit"><b>The earliest proven design is the original,</b> on either chain, by the time of its block. Checks identical netlists, including swapped gate inputs. A copy with its gates reordered isn't detected.</p>
+    </section>
+
+    <section class="q" aria-label="Worth?">
+      <div class="sec"><h2>Worth?</h2></div>
+      <p class="none">Value: not covered yet</p>
+      <p>Foreman values TapeOut's BEM miners only. It doesn't read FAB's price or FabX's output.</p>
+    </section>
+
+    <section class="q" aria-label="Options">
+      <div class="sec"><h2>Options</h2></div>
+      <ul class="opts">
+        <li><div class="h"><strong>Hold</strong><em>Not covered yet</em></div></li>
+        <li><div class="h"><strong>Sell</strong><em>Not read</em></div><p>FabX's market isn't checked.</p></li>
+        <li><div class="h"><strong>Lend</strong><em>No offer</em></div><p>TapePool lends against RIG vouchers, which stand for BNB Chain miners.</p></li>
+        <li><div class="h"><strong>Rent</strong><em>No rental market yet</em></div></li>
+      </ul>
+      <div class="pub">
+        <div class="sec"><h2>Published</h2></div>
+        <span class="net">X Layer testnet</span>
+        <p>Not published yet. FabX results are published once FabX's full processor history has been read.</p>
+      </div>
+    </section>
+
+    <p class="cap">FabX #1961 · frozen (illustrative: FabX hasn't changed anything)</p>
+    <div class="who">
+      <span class="badge" aria-hidden="true">#</span>
+      <div>
+        <h1>Circuit #1961</h1>
+        <div class="chips">
+          <span class="chip sys">FabX · X Layer</span>
+          <span class="chip ok">Mining now</span>
+          <span class="chip">Task 48</span>
+        </div>
+      </div>
+    </div>
+    <p class="note stale"><b>FabX changed its mining contract at X Layer block 76,912,004.</b> Foreman hasn't reviewed the change; this result was read at block 76,839,338, before it.</p>
+    <p class="note">FabX is a mining system on X Layer that mines FAB with circuits from TapeOut's X Layer factory. It's separate from TapeOut's BEM mining, and its contracts are controlled by their own owner.</p>
+    <section class="q" aria-label="Original?">
+      <div class="sec"><h2>Original?</h2><span class="meta">87,602 circuits checked · BNB block 135,390,773 · X Layer block 76,839,338</span></div>
+      <div class="verdict">
+        <span class="vmark"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="2" y="5" width="9" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7" y="2" width="9" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <div>
+          <h3>Copy of circuit #1648</h3>
+          <p>Byte-identical netlist, designed <b>54 minutes earlier</b> on FabX's processor.</p>
+        </div>
+      </div>
+    </section>
+
+    <p class="cap">A BNB Chain result's header (#5607)</p>
+    <div class="who">
+      <span class="badge" aria-hidden="true">#</span>
+      <div>
+        <h1>Circuit #5607</h1>
+        <div class="chips">
+          <span class="chip sys">TapeOut · BNB Chain</span>
+          <span class="chip ok">Mining now</span>
+          <span class="chip">Doesn't hold the design bonus</span>
+          <span class="chip">Task 75</span>
+          <span class="chip">Processor ×1</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ B ============ -->
+<section class="opt">
+  <header>
+    <h2>B · A mining contract panel</h2>
+    <p>One raised panel under the header names the mining contract, its address, the fact line and the caveat. When frozen, the panel turns red and carries the notice.</p>
+  </header>
+  <div class="screen">
+    <p class="cap">FabX #24 · mining</p>
+    <div class="who">
+      <span class="badge" aria-hidden="true">#</span>
+      <div>
+        <h1>Circuit #24</h1>
+        <div class="chips">
+          <span class="chip ok">Mining now</span>
+          <span class="chip">Task 0</span>
+        </div>
+      </div>
+    </div>
+    <div class="mc">
+      <div class="top"><span>Mining contract</span><b>FabX · X Layer<span class="mono">0x4f6a…8265</span></b></div>
+      <p>FabX is a mining system on X Layer that mines FAB with circuits from TapeOut's X Layer factory. It's separate from TapeOut's BEM mining, and its contracts are controlled by their own owner.</p>
+      <p class="watch"><svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 5.5V9l2.5 1.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>FabX's owner can change its mining contract. Read at X Layer block 76,839,338; Foreman stops FabX results if it does.</span></p>
+    </div>
+
+    <section class="q" aria-label="Original?">
+      <div class="sec"><h2>Original?</h2><span class="meta">87,602 circuits checked · BNB block 135,390,773 · X Layer block 76,839,338</span></div>
+      <div class="verdict">
+        <span class="vmark"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="2" y="5" width="9" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7" y="2" width="9" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <div>
+          <h3>Copy of circuit #97 on BNB Chain</h3>
+          <p>Byte-identical netlist, taped out on BNB Chain <b>57 days earlier</b> on processor ×1.</p>
+        </div>
+      </div>
+      <ul class="evidence">
+        <li><span>#97 taped out</span><b>16 Aug 2026<small>BNB Chain · block 116,187,134 · processor ×1</small></b></li>
+        <li><span>#24 taped out</span><b>12 Oct 2026<small>X Layer · block 73,044,971 · FabX's processor</small></b></li>
+        <li><span>Netlist hash, both</span><b><span class="mono">0xb546…184c</span><small>identical bytes</small></b></li>
+        <li><span>Miners on this design</span><b>196<small>152 on BNB Chain · 44 on FabX</small></b></li>
+      </ul>
+      <p class="limit"><b>The earliest proven design is the original,</b> on either chain, by the time of its block. Checks identical netlists, including swapped gate inputs. A copy with its gates reordered isn't detected.</p>
+    </section>
+
+    <section class="q" aria-label="Worth?">
+      <div class="sec"><h2>Worth?</h2></div>
+      <p class="none">Value: not covered yet</p>
+      <p>Foreman values TapeOut's BEM miners only. It doesn't read FAB's price or FabX's output.</p>
+    </section>
+
+    <section class="q" aria-label="Options">
+      <div class="sec"><h2>Options</h2></div>
+      <ul class="opts">
+        <li><div class="h"><strong>Hold</strong><em>Not covered yet</em></div></li>
+        <li><div class="h"><strong>Sell</strong><em>Not read</em></div><p>FabX's market isn't checked.</p></li>
+        <li><div class="h"><strong>Lend</strong><em>No offer</em></div><p>TapePool lends against RIG vouchers, which stand for BNB Chain miners.</p></li>
+        <li><div class="h"><strong>Rent</strong><em>No rental market yet</em></div></li>
+      </ul>
+      <div class="pub">
+        <div class="sec"><h2>Published</h2></div>
+        <span class="net">X Layer testnet</span>
+        <p>Not published yet. FabX results are published once FabX's full processor history has been read.</p>
+      </div>
+    </section>
+
+    <p class="cap">FabX #1961 · frozen (illustrative: FabX hasn't changed anything)</p>
+    <div class="who">
+      <span class="badge" aria-hidden="true">#</span>
+      <div>
+        <h1>Circuit #1961</h1>
+        <div class="chips">
+          <span class="chip ok">Mining now</span>
+          <span class="chip">Task 48</span>
+        </div>
+      </div>
+    </div>
+    <div class="mc frozen">
+      <div class="top"><span>Mining contract</span><b>FabX · X Layer<span class="mono">0x4f6a…8265</span></b></div>
+      <p>FabX is a mining system on X Layer that mines FAB with circuits from TapeOut's X Layer factory. It's separate from TapeOut's BEM mining, and its contracts are controlled by their own owner.</p>
+      <p class="watch"><svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 5.5v4.5M9 12.5v.01" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span><b>FabX changed its mining contract at X Layer block 76,912,004.</b> Foreman hasn't reviewed the change; this result was read at block 76,839,338, before it.</span></p>
+    </div>
+    <section class="q" aria-label="Original?">
+      <div class="sec"><h2>Original?</h2><span class="meta">87,602 circuits checked · BNB block 135,390,773 · X Layer block 76,839,338</span></div>
+      <div class="verdict">
+        <span class="vmark"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="2" y="5" width="9" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7" y="2" width="9" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <div>
+          <h3>Copy of circuit #1648</h3>
+          <p>Byte-identical netlist, designed <b>54 minutes earlier</b> on FabX's processor.</p>
+        </div>
+      </div>
+    </section>
+
+    <p class="cap">A BNB Chain result's header (#5607)</p>
+    <div class="who">
+      <span class="badge" aria-hidden="true">#</span>
+      <div>
+        <h1>Circuit #5607</h1>
+        <div class="chips">
+          <span class="chip ok">Mining now</span>
+          <span class="chip">Doesn't hold the design bonus</span>
+          <span class="chip">Task 75</span>
+          <span class="chip">Processor ×1</span>
+        </div>
+      </div>
+    </div>
+    <div class="mc plain">
+      <div class="top"><span>Mining contract</span><b>TapeOut · BNB Chain<span class="mono">0x7e2e…7b46</span></b></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ C ============ -->
+<section class="opt">
+  <header>
+    <h2>C · In the title, explained under the verdict</h2>
+    <p>The label is a second line of the title. The fact line and the caveat sit under the verdict's rule, where the reader checks the evidence. Frozen shows as a red bar across the top of the page.</p>
+  </header>
+  <div class="screen">
+    <p class="cap">FabX #24 · mining</p>
+    <div class="who">
+      <span class="badge" aria-hidden="true">#</span>
+      <div>
+        <h1>Circuit #24<span class="sys"><b>FabX</b> · X Layer</span></h1>
+        <div class="chips">
+          <span class="chip ok">Mining now</span>
+          <span class="chip">Task 0</span>
+        </div>
+      </div>
+    </div>
+
+    <section class="q" aria-label="Original?">
+      <div class="sec"><h2>Original?</h2><span class="meta">87,602 circuits checked · BNB block 135,390,773 · X Layer block 76,839,338</span></div>
+      <div class="verdict">
+        <span class="vmark"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="2" y="5" width="9" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7" y="2" width="9" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <div>
+          <h3>Copy of circuit #97 on BNB Chain</h3>
+          <p>Byte-identical netlist, taped out on BNB Chain <b>57 days earlier</b> on processor ×1.</p>
+        </div>
+      </div>
+      <ul class="evidence">
+        <li><span>#97 taped out</span><b>16 Aug 2026<small>BNB Chain · block 116,187,134 · processor ×1</small></b></li>
+        <li><span>#24 taped out</span><b>12 Oct 2026<small>X Layer · block 73,044,971 · FabX's processor</small></b></li>
+        <li><span>Netlist hash, both</span><b><span class="mono">0xb546…184c</span><small>identical bytes</small></b></li>
+        <li><span>Miners on this design</span><b>196<small>152 on BNB Chain · 44 on FabX</small></b></li>
+      </ul>
+      <p class="limit"><b>The earliest proven design is the original,</b> on either chain, by the time of its block. Checks identical netlists, including swapped gate inputs. A copy with its gates reordered isn't detected.</p>
+      <p class="about"><b>FabX</b> is a mining system on X Layer that mines FAB with circuits from TapeOut's X Layer factory. It's separate from TapeOut's BEM mining, and its contracts are controlled by their own owner.</p>
+      <p class="about">FabX's owner can change its mining contract. Read at X Layer block 76,839,338; Foreman stops FabX results if it does.</p>
+    </section>
+
+    <section class="q" aria-label="Worth?">
+      <div class="sec"><h2>Worth?</h2></div>
+      <p class="none">Value: not covered yet</p>
+      <p>Foreman values TapeOut's BEM miners only. It doesn't read FAB's price or FabX's output.</p>
+    </section>
+
+    <section class="q" aria-label="Options">
+      <div class="sec"><h2>Options</h2></div>
+      <ul class="opts">
+        <li><div class="h"><strong>Hold</strong><em>Not covered yet</em></div></li>
+        <li><div class="h"><strong>Sell</strong><em>Not read</em></div><p>FabX's market isn't checked.</p></li>
+        <li><div class="h"><strong>Lend</strong><em>No offer</em></div><p>TapePool lends against RIG vouchers, which stand for BNB Chain miners.</p></li>
+        <li><div class="h"><strong>Rent</strong><em>No rental market yet</em></div></li>
+      </ul>
+      <div class="pub">
+        <div class="sec"><h2>Published</h2></div>
+        <span class="net">X Layer testnet</span>
+        <p>Not published yet. FabX results are published once FabX's full processor history has been read.</p>
+      </div>
+    </section>
+
+    <p class="cap">FabX #1961 · frozen (illustrative: FabX hasn't changed anything)</p>
+    <div class="banner" role="status"><svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 5.5v4.5M9 12.5v.01" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span><b>FabX changed its mining contract at X Layer block 76,912,004.</b> Foreman hasn't reviewed the change; this result was read at block 76,839,338, before it.</span></div>
+    <div class="who">
+      <span class="badge" aria-hidden="true">#</span>
+      <div>
+        <h1>Circuit #1961<span class="sys"><b>FabX</b> · X Layer</span></h1>
+        <div class="chips">
+          <span class="chip ok">Mining now</span>
+          <span class="chip">Task 48</span>
+        </div>
+      </div>
+    </div>
+    <section class="q" aria-label="Original?">
+      <div class="sec"><h2>Original?</h2><span class="meta">87,602 circuits checked · BNB block 135,390,773 · X Layer block 76,839,338</span></div>
+      <div class="verdict">
+        <span class="vmark"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="2" y="5" width="9" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7" y="2" width="9" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        <div>
+          <h3>Copy of circuit #1648</h3>
+          <p>Byte-identical netlist, designed <b>54 minutes earlier</b> on FabX's processor.</p>
+        </div>
+      </div>
+    </section>
+
+    <p class="cap">A BNB Chain result's header (#5607)</p>
+    <div class="who">
+      <span class="badge" aria-hidden="true">#</span>
+      <div>
+        <h1>Circuit #5607<span class="sys"><b>TapeOut</b> · BNB Chain</span></h1>
+        <div class="chips">
+          <span class="chip ok">Mining now</span>
+          <span class="chip">Doesn't hold the design bonus</span>
+          <span class="chip">Task 75</span>
+          <span class="chip">Processor ×1</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<div class="common">
+  <b>The same in all three</b>
+  <ul>
+    <li>The verdict names the other circuit's chain when it isn't the same ("Copy of circuit #97 on BNB Chain"), and each evidence row names its chain and block.</li>
+    <li>Coverage counts both chains and names both blocks.</li>
+    <li>The rule line adds "on either chain, by the time of its block".</li>
+    <li>Worth? becomes "Value: not covered yet". The Worth range, the backtest and "What it's based on" don't appear.</li>
+    <li><b>Options and Published for FabX are new here and aren't settled by the decision.</b> Hold "Not covered yet", Sell "Not read", Lend "No offer", Rent as today; Published says why there's nothing yet.</li>
+  </ul>
+</div>
+
+</body>
+</html>
