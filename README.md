@@ -8,18 +8,76 @@ For any TapeOut miner, listed circuit or RIG voucher, Foreman answers three ques
 2. **What's it worth?** An estimated value range and payback, from the miner's own on-chain weight, with every input shown.
 3. **What can I do with it?** Hold, Sell, Lend and Rent, each shown as it really is today.
 
-- **Web app:** https://foreman-eight-beta.vercel.app/
-- **API health:** https://api-production-7065c976.up.railway.app/health
+| | |
+| --- | --- |
+| **Web app** | https://foreman-eight-beta.vercel.app/ |
+| **API health** | https://api-production-7065c976.up.railway.app/health |
+| **Demo video** | Link added at submission |
+| **Results contract** | ForemanResults on X Layer testnet (chain 1952): `0xe1b2343d3da66afec740c0fcaf40a701e2d513e8` |
 
 Built for **X Layer TapeOut Accelerate** (OKX Build X).
+
+![A result page: circuit #5607 is a copy of circuit #5566, with the evidence, its estimated output and its payback](docs/screenshots/result-page.png)
 
 Foreman never holds a miner, never lends, rents or trades, and never calls a circuit fake or stolen. It states what the chain shows. Values are estimates under stated assumptions. Not financial advice.
 
 ## The problem
 
-A TapeOut miner is a circuit NFT that passed the official test vectors and earns BEM under Proof of Design on BNB Chain. Miners trade on TapeOut's circuit market, and since October 2026 they can be bridged to X Layer as RIG vouchers.
+A TapeOut miner is a circuit NFT that passed the official test vectors and earns BEM under Proof of Design on BNB Chain. Miners trade on TapeOut's circuit market, and since October 2026 they can be bridged to X Layer as RIG vouchers, sold there and borrowed against.
 
-Anyone can tape out a byte-for-byte copy of someone else's circuit, or a netlist made only of REF records pointing to another circuit, and list it. Asking prices for mining miners range by four orders of magnitude for the same weight. Nothing checked existing circuits (TAPs issue #102).
+- **Copies cost nothing to make.** Anyone can tape out a byte-for-byte copy of someone else's circuit, or a netlist made only of REF records that points to another circuit, and list it. Nothing checked existing circuits (TAPs issue #102). On 25 November 2026, 89 of the 308 mining miners for sale on TapeOut's market were copies of an earlier circuit.
+- **Prices are guesses.** Asking prices for mining miners ran from 0.015 to 222 BNB per unit of weight in November: sellers guess, and buyers can't tell a fair ask from a silly one.
+- **Options are scattered.** Selling, borrowing and renting each live somewhere different, and some don't exist yet.
+
+The market is small and early, and growing on X Layer: the time to put trust in place is before the money arrives.
+
+## Who it's for
+
+| User | What they get |
+| --- | --- |
+| **Buyers** | Before paying: is this listing a copy or a wrapper, what will it likely earn, and how long the asking price takes to pay back |
+| **Owners** | What their miners are worth, and a copy alert when someone lists a copy of one |
+| **Markets and wallets** | Originality results on X Layer that any contract or app can read, to stop listing copies and wrappers as compliant |
+| **Lenders** (such as TapePool) | The same results before a loan, and a second opinion on value |
+
+Foreman is free for buyers and owners. Markets and lenders can read the published results on X Layer today; an API for them, and premium alerts, are the paths to revenue.
+
+## How it uses TapeOut and X Layer
+
+- **Reads TapeOut's contracts on BNB Chain:** the Proof of Design mining contract (miners, weights, design commitments), the processor factory and every processor (each circuit's netlist and tape-out), and TapeOut's circuit market (listings and sales).
+- **Reads X Layer:** RIG vouchers (which miner a voucher stands for, and who holds it) and TapePool's lending quotes.
+- **Writes to X Layer:** every miner's and every listed circuit's originality result goes to Foreman's own contract, ForemanResults, which anyone can read and check.
+
+Every address is listed under [Addresses](#addresses), each confirmed on chain before use.
+
+## Screens
+
+**Live listings.** Every open listing on TapeOut's market, checked: copies, wrappers and circuits too small to tell, with each one's estimated output.
+
+![Today's listings, checked: 89 of the 308 mining miners for sale are copies of an earlier circuit](docs/screenshots/live-listings.png)
+
+**Your miners.** Connect a wallet (OKX Wallet first) to see the miners it holds, and a copy alert whenever a circuit identical to one of them is listed.
+
+![Your miners: copy alerts for a wallet's miners, each naming the listed copies and the earliest design](docs/screenshots/your-miners.png)
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**Read it back from the contract.** On any result page, your browser checks the published result straight from X Layer, not through Foreman: it finds the publish transaction, checks that the contract stores that result's hash, and compares the verdict with the page.
+
+</td>
+<td width="50%" valign="top">
+
+**On a phone.** Every page is built mobile first.
+
+</td>
+</tr>
+<tr>
+<td valign="top"><img src="docs/screenshots/read-back.png" alt="The Published panel after reading the result back from X Layer: found the publish, the contract stores this result, same verdict and evidence as this page" width="340"></td>
+<td valign="top"><img src="docs/screenshots/result-page-mobile.png" alt="Circuit #5607's result page on a phone" width="300"></td>
+</tr>
+</table>
 
 ## What a result says
 
@@ -29,11 +87,11 @@ Every result names what was checked, against how many circuits and up to which b
 | --- | --- |
 | **Copy of circuit #X** | Same netlist hash as circuit #X, which has an earlier design time. Names both circuits, both design times and the hash |
 | **Wrapper of circuit #X** | The netlist is only REF records. Names the circuit they point to and the one at the end of the chain that holds the gates |
-| **Too small to tell** | Identical to earlier circuits, but under 4 gates, where honest circuits match by nature |
-| **No earlier copy found** | No earlier circuit in the index has the same netlist hash, e.g. "among 80,409 circuits checked, up to BNB block 135,273,897" (23 Nov 2026) |
+| **Too small to tell** | Identical to earlier circuits, but under 4 gates, where honest circuits match by nature: 7,520 miners of 1 to 3 gates share just 53 designs |
+| **No earlier copy found** | No earlier circuit in the index has the same netlist hash, e.g. "among 80,455 circuits checked, up to BNB block 135,643,755" (25 Nov 2026) |
 | **Can't check** | The netlist can't be read, or the circuit is outside the index |
 
-**The rule: the earliest proven design is the original.** A circuit's design time is its design commitment block when the mining contract accepted one before its tape-out, otherwise its tape-out block. Within a block, the lower transaction index, then log index, is earlier.
+**The rule: the earliest proven design is the original.** A circuit's design time is its design commitment block when the mining contract accepted one before its tape-out, otherwise its tape-out block. Within a block, the lower transaction index, then log index, is earlier. So a tape-out can't be front-run.
 
 **The limit:** Foreman checks identical netlists, including swapped gate inputs. A copy with its gates reordered isn't detected.
 
@@ -50,10 +108,22 @@ A worker follows BNB Chain every 5 minutes and publishes a circuit again when it
 1. **The short verdict in storage:** call `resultOf(processor, circuitId)`. It returns the verdict kind (1 no earlier copy found, 2 copy, 3 too small to tell, 4 wrapper, 5 can't check), the can-mine state (1 mining, 2 can't mine, 3 stopped, 4 not started), the BNB block the index was read up to, and `resultHash`.
 2. **The full result in the log:** the `Published` event of the publish transaction carries the result as JSON, with its evidence, rule version and block.
 3. **Tie them together:** `keccak256` of the logged bytes equals the stored `resultHash`.
+4. **Redo the verdict from BNB Chain:** the result names both circuits, both design blocks and the netlist hash. Read both netlists from the processor (`netlist(id)`), hash them by the rule above, and compare the blocks.
 
-On any result page, **Read it back from the contract** does these three checks in your browser, straight from X Layer, not through Foreman's API.
+For example, circuit #5607 on processor `0xb1024b89886b9a34aa4ff5f31c411d708b20a14c` was published in transaction `0x466062da96b3c80a44494f8bf54c2129a6501074162e65d20d0a31414cc23624` at X Layer testnet block 46,801,755: copy of circuit #5566, which taped out at BNB block 117,798,950, before #5607's design commitment at block 117,802,215.
 
 Results are on the testnet for the hackathon. ForemanResults isn't deployed on X Layer mainnet (chain 196).
+
+## The forecast backtest
+
+The payout maths mirrors the mining contract and is tested. The forecast, the low / base / high range of network growth, is backtested against what happened:
+
+- **Test:** for every past start date with 30 days of history before it and 30 days after, the 30-day range the app would have shown that day, against what a verified miner of unchanged weight actually earned on the real network.
+- **Result (model 2026-11-24, start dates 21 Sep to 25 Oct 2026):** the range held in **35 of 35** start dates. Base was below what miners earned every time: by 7.1% typically and 41.0% at worst, rounded up (the worst on 21 Sep, just after the network stopped growing fast).
+- **Read it with care:** neighbouring start dates share most of their 30 days, so 35 start dates aren't 35 independent tests. The high case's rule, no network growth, was chosen after the earlier rule (the slowest week) held in only 13 of 34, on this same history. It would miss if the network shrank, which it hasn't so far.
+- **Not tested:** the "until the 2030 halving" view, about 1,365 days, which 95 days of history can't test, and the low case's loss of the design bonus. The app says so.
+
+Rerun it from the saved samples: `pnpm --filter @foreman/valuation backtest`. The rules are in `docs/decisions/2026-11-24-forecast-backtest.md` and `2026-11-24-high-case-no-growth.md`.
 
 ## Addresses
 
@@ -84,16 +154,15 @@ Every contract address Foreman reads or writes, each confirmed on chain before u
 
 No verdict, value or comparison comes from a model: code decides, from chain data.
 
-## The forecast backtest
+**Stack:** TypeScript throughout. viem for both chains; Postgres with plain SQL; a Hono API and a pg-boss worker on Railway; a Vite and React web app with wagmi on Vercel; the results contract in Solidity with Foundry. An uptime monitor watches `/health`, which also warns when the publisher wallet runs low on OKB.
 
-The payout maths mirrors the mining contract and is tested. The forecast, the low / base / high range of network growth, is backtested against what happened:
+## Limits today
 
-- **Test:** for every past start date with 30 days of history before it and 30 days after, the 30-day range the app would have shown that day, against what a verified miner of unchanged weight actually earned on the real network.
-- **Result (model 2026-11-24, start dates 21 Sep to 25 Oct 2026):** the range held in **35 of 35** start dates. Base was below what miners earned every time: by 7.1% typically and 41.0% at worst, rounded up (the worst on 21 Sep, just after the network stopped growing fast).
-- **Read it with care:** neighbouring start dates share most of their 30 days, so 35 start dates aren't 35 independent tests. The high case's rule, no network growth, was chosen after the earlier rule (the slowest week) held in only 13 of 34, on this same history. It would miss if the network shrank, which it hasn't so far.
-- **Not tested:** the "until the 2030 halving" view, about 1,365 days, which 95 days of history can't test, and the low case's loss of the design bonus. The app says so.
-
-Rerun it from the saved samples: `pnpm --filter @foreman/valuation backtest`. The rules are in `docs/decisions/2026-11-24-forecast-backtest.md` and `2026-11-24-high-case-no-growth.md`.
+- **Results are on the X Layer testnet**, not mainnet.
+- **BNB Chain circuits only.** Circuits taped out on X Layer aren't indexed yet.
+- **Reordered gates aren't detected.** Only identical netlists, including swapped gate inputs, count as copies.
+- **OCCC status isn't shown.** No deployment of Official Curated Circuit Collections has been confirmed on chain yet.
+- **Copy alerts show in the app** while a wallet is connected. Telegram and browser notifications aren't built.
 
 ## Run it locally
 
@@ -126,11 +195,11 @@ The web app runs on http://localhost:5173 against the API on port 8787. `pnpm te
 | `packages/chain-xlayer` | X Layer reader: RIG vouchers, TapePool offers, reading a published result back |
 | `packages/originality` | Netlist reader, hashing, copy and wrapper checks, the tape-out scan |
 | `packages/index` | The circuit index's storage in Postgres |
-| `packages/valuation` | Estimated value, payback and Sell comparables |
+| `packages/valuation` | Estimated value, payback, Sell comparables and the forecast backtest |
 | `contracts` | ForemanResults (Solidity, Foundry) |
 | `apps/api` | The API, the publish job and the worker |
 | `apps/web` | The web app (Vite, React, wagmi) |
-| `docs` | Product, data contract, decisions, research notes, mocks |
+| `docs` | Product, data contract, decisions, research notes, mocks, screenshots |
 
 The rules behind every verdict and value are in `docs/decisions/`, each dated, and `docs/data-contract.md` defines every shape the API returns and the contract stores.
 
