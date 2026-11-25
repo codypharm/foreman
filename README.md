@@ -48,7 +48,7 @@ Foreman is free for buyers and owners. Markets and lenders can read the publishe
 - **Reads X Layer:** RIG vouchers (which miner a voucher stands for, and who holds it) and TapePool's lending quotes.
 - **Writes to X Layer:** every miner's and every listed circuit's originality result goes to Foreman's own contract, ForemanResults, which anyone can read and check.
 
-Every address is listed under [Addresses](#addresses), each confirmed on chain before use.
+Every address is listed under [Addresses](#addresses), each confirmed on chain before use, and the [architecture diagram](#how-it-works) shows how the pieces connect.
 
 ## Screens
 
@@ -144,6 +144,11 @@ Every contract address Foreman reads or writes, each confirmed on chain before u
 | X Layer (196) | TapePool account factory, pool, quote calculator (third party) | `0xa9014e27dd17ea30e4fa4f71934645b9dcef8ac8`, `0x1a9a9850d597d8e3a03afae48e3ac8e2d4aec9d7`, `0xfcc669bc9cca397cb01804035d5be981d7389ef2` | Lend offers against RIG vouchers |
 
 ## How it works
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/architecture-dark.svg">
+  <img src="docs/diagrams/architecture-light.svg" alt="Foreman's architecture: a worker on Railway indexes TapeOut's contracts on BNB Chain every 5 minutes into Postgres and publishes changed results to ForemanResults on the X Layer testnet. The API reads the index, and reads BNB Chain and X Layer live for each page. The web app shows the results and reads published results back from X Layer in the browser." width="100%">
+</picture>
 
 1. **Index.** Every circuit on every BNB Chain processor, from one scan of `TapedOut` events with each processor's count checked against its `nextId()`. Then each netlist and each miner's design commitment. Followed every 5 minutes.
 2. **Check.** Each netlist is hashed: its input and output counts and bytes, with each NAND's two inputs put in order. Same hash and an earlier design time is a copy; only REF records is a wrapper.
