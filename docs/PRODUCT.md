@@ -58,7 +58,7 @@ A missing offer is shown as missing, never as zero.
 
 **In:**
 
-- Circuit index and originality check (copies, wrappers) across every BNB Chain processor. X Layer circuits are later, once the X Layer factory is confirmed.
+- Circuit index and originality check (copies, wrappers) across every BNB Chain processor. From 25 Nov: FabX's miners on X Layer too, checked against both chains, with no FabX value (`decisions/2026-11-25-fabx-copy-check.md`). Other X Layer circuits are later.
 - Valuation range and payback for any miner.
 - Sell context, Lend and Rent states, as above.
 - Results contract on X Layer and a job that publishes results to it.
@@ -84,10 +84,11 @@ Build so each step works end to end before the next.
 | 30 Nov–1 Dec | Mocks with `impeccable`, 2–3 directions per page, William chooses |
 | 2–3 Dec | Build the chosen pages; live-listings check; copy alert; OCCC status |
 | 4 Dec | Real users: check real listings, share results; README |
+| 26 Nov–1 Dec | **Added 25 Nov:** FabX copy check (`decisions/2026-11-25-fabx-copy-check.md`): FabX's history on X Layer, cross-chain order, commitments by event, the freeze, Check box and result page (mocked first), publishing. **Go/no-go 1 Dec:** a FabX miner shows a correct verdict end to end, or it is cut |
 | **5 Dec** | **Feature freeze**; demo video |
 | 6 Dec | Submit, a day before the provisional 7 Dec deadline |
 
-**Cut list, in this order, if behind on 1 December:** DeWEB mirror (`decisions/2026-11-23-hosting.md`) → copy alert notifications by Telegram and browser (`decisions/2026-11-23-copy-alert-notifications.md`) → OCCC status → copy alert → Lend read (show "not checked") → X Layer mainnet (publish on testnet for the demo).
+**Cut list, in this order, if behind on 1 December:** FabX copy check (`decisions/2026-11-25-fabx-copy-check.md`) → DeWEB mirror (`decisions/2026-11-23-hosting.md`) → copy alert notifications by Telegram and browser (`decisions/2026-11-23-copy-alert-notifications.md`) → OCCC status → copy alert → Lend read (show "not checked") → X Layer mainnet (publish on testnet for the demo).
 
 **Never cut:** the evidence behind every originality result, the inputs behind every value, and publishing results on X Layer (the hackathon's hard requirement).
 

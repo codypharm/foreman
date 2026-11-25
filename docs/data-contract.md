@@ -14,7 +14,7 @@
 | `Payback` | Settled (`2026-11-20-payback-and-bem-price.md`) | Valuation engine, from the market index and the BEM/WBNB pool | API, app |
 | `Offer` | Settled (`2026-11-19-offer-shape.md`) | Readers (BNB market, TapePool) + comparables rule | API, app |
 | `CircuitRef` | Settled 21 Nov 2026: storage from `docs/notes/2026-11-20-netlist-storage.md`, times from `2026-11-20-originality-result.md`; built by the circuit index, parsed by `parseCircuitRef` | Circuit index | Originality, API, app |
-| `Originality` | Settled 21 Nov 2026: rules from `2026-11-20-copy-and-wrapper-rules.md`, `2026-11-20-verdict-scope-and-earliest-design.md`, `2026-11-20-size-floor.md`, `2026-11-20-originality-result.md`; built by `packages/originality`, parsed by `parseOriginality` and written by `serialiseOriginality` | Originality check | API, app, publish job |
+| `Originality` | Settled 21 Nov 2026: rules from `2026-11-20-copy-and-wrapper-rules.md`, `2026-11-20-verdict-scope-and-earliest-design.md`, `2026-11-20-size-floor.md`, `2026-11-20-originality-result.md`; built by `packages/originality`, parsed by `parseOriginality` and written by `serialiseOriginality`. Amended 25 Nov 2026 for FabX and cross-chain order (`2026-11-25-fabx-copy-check.md`), not yet built | Originality check | API, app, publish job |
 | `PublishedResult` | Settled (`2026-11-21-results-contract.md`); its `originality` follows `Originality` | Publish job | App, markets, lenders |
 | `ListingsPage`, `CircuitPage`, `WalletMiners`, `ApiError` | Provisional, approved by William 21 Nov 2026 (`2026-11-21-api-endpoints.md`); the market index keeps listing times and weight without the bonus since migration 009 (21 Nov 2026) | API | App, markets, lenders |
 | ~~`Policy`, `TapeOutResult`, `AgentKey`, `ActionLogEntry`~~ | **Withdrawn** 20 Nov 2026 with autopilot (`2026-11-20-scope-and-team.md`). Parsers removed in a later commit | — | — |
@@ -255,6 +255,8 @@ interface CircuitRef {
 - **Design time:** `designCommittedAt.block` when it is set and before `tapedOutAt.block`, otherwise `tapedOutAt.block`.
 - **Times:** each `time` is its block's own timestamp (Unix seconds), so it is reproducible. Tape-out times come from the `TapedOut` logs' `blockTimestamp`; a commitment's from its block (`2026-11-20-originality-result.md`, decision 1).
 - **Order:** a circuit is earlier than another when its design time is earlier. Same block: the lower `tapedOutAt` (block, then transaction index, then log index) is earlier. The earliest proven design is the original (`2026-11-20-verdict-scope-and-earliest-design.md`, decision 4).
+- **Across chains** (`2026-11-25-fabx-copy-check.md`, decision 4): circuits on different chains are ordered by design time in Unix seconds, each the `time` of its design block. The same second on two chains can't be ordered, and neither circuit is a copy of the other.
+- **FabX commitments** (decision 5): `designCommittedAt` for a FabX miner is set only when FabX's `DesignCommitted` event is found in the block its `commitBlock` names. Where a commitment without its event would decide the order, the verdict is `cant-check` with `commitment-unconfirmed`.
 - **Miner link:** a miner's key is `keccak256(abi.encodePacked(processor, tokenId))` (`docs/notes/2026-11-18-mining-contract-findings.md`).
 - **Where it comes from:** `tapedOutAt` and `tapedOutBy` come from the processor's `TapedOut(uint256 indexed id, address indexed owner, uint32, uint32)` event (`docs/notes/2026-11-20-netlist-storage.md`). `designCommittedAt` comes from `getMiner(key).commitBlock` on the mining contract, re-checkable against the `DesignCommitted` event in that block (`docs/notes/2026-11-20-what-can-mine.md`).
 
@@ -266,7 +268,7 @@ type OriginalityVerdict =
   | { verdict: "copy"; of: CircuitRef; netlistHash: Hex32; bytesIdentical: boolean; earlierBy: "tape-out" | "commitment" } // same netlist hash as a circuit with an earlier design time, at or above the size floor; bytesIdentical is false when they match only once NAND inputs are sorted; earlierBy says what made "of" earlier
   | { verdict: "too-small-to-tell"; sameAs: number; earliest: CircuitRef; netlistHash: Hex32; gateCount: number; floor: number } // identical, below the size floor
   | { verdict: "no-earlier-copy"; netlistHash: Hex32 }
-  | { verdict: "cant-check"; reason: "netlist-unreadable" | "outside-index" | "read-failed" | "ref-chain-too-long" };
+  | { verdict: "cant-check"; reason: "netlist-unreadable" | "outside-index" | "read-failed" | "ref-chain-too-long" | "commitment-unconfirmed" }; // commitment-unconfirmed: FabX only, 2026-11-25-fabx-copy-check.md decision 5
 
 type OriginalityFact =
   | { fact: "tape-out-address"; same: boolean }                      // beside "copy": the earlier circuit was taped out by the same address, or not
@@ -277,7 +279,7 @@ type OriginalityFact =
   | { fact: "can-mine"; state: "stopped"; stoppedAt: bigint; canStartFrom: bigint } // cooling: stopBlock, and stopBlock + 1,200
   | { fact: "can-mine"; state: "not-started" }                       // nothing rules it out; never a promise that it passes a task
   | { fact: "design-bonus"; holds: boolean; bonus: bigint }          // miners only, from getMiner (optimal, bonus); shown before the verdict
-  | { fact: "design-shared"; miners: number };                      // miners in the index with the same netlist hash, this one included, up to index.upToBlock; only when 2 or more, beside copy, too-small-to-tell and no-earlier-copy
+  | { fact: "design-shared"; miners: number };                      // miners in the index with the same netlist hash, this one included, up to the blocks in index.upTo; only when 2 or more, beside copy, too-small-to-tell and no-earlier-copy
 
 type CantMineReason =
   | { reason: "processor-not-eligible" }                             // processorMultiplier is 0
@@ -287,23 +289,27 @@ type CantMineReason =
 interface Originality {
   circuit: CircuitRef;
   scope: "miner" | "listed" | "pasted"; // why it was checked; only "miner" and "listed" are published
+  mining: { chainId: 56 | 196; contract: Address } | null; // the mining contract a miner is registered in (TapeOut's PoD on 56, FabX's on 196); null for a circuit that isn't a miner. Named on screen from On-chain facts
   result: OriginalityVerdict;
   facts: OriginalityFact[];
   occc: { status: "official"; collection: Address } | { status: "not-listed" } | { status: "not-checked" };
-  index: { circuitsChecked: bigint; upToBlock: { chainId: 56 | 196; block: bigint } };
+  index: { circuitsChecked: bigint; upTo: { chainId: 56 | 196; block: bigint }[] }; // one entry per chain checked, BNB Chain first
   ruleVersion: string;       // every setting that can change the result, spelled out: "hash 2026-11-20, floor 4, chain 10" (hash rule, size floor in gates, wrapper chain step limit)
 }
 ```
 
+*Amended 25 November 2026 by `docs/decisions/2026-11-25-fabx-copy-check.md`: `mining`, `index.upTo` (was `index.upToBlock`, one chain) and `commitment-unconfirmed`. Not yet in `packages/contract`; built with the FabX copy check, and cut with it if it is cut on 1 December. Results that check across both chains carry a new rule version, spelled out like the others.*
+
 - **Rules:** `docs/decisions/2026-11-20-copy-and-wrapper-rules.md` as amended by `docs/decisions/2026-11-20-verdict-scope-and-earliest-design.md`, run in this order: can't check → wrapper → copy or too small to tell → no earlier copy found.
 - **Complete or none:** a result is built whole or not at all. A circuit outside the index, or a failed mining contract read, is a "Can't check" error for the caller, never a partial `Originality`, and is never published. `cant-check` with `outside-index` is for an indexed circuit whose wrapper or REF targets are not indexed; an unreadable netlist still gets a complete result (`docs/decisions/2026-11-20-complete-result-or-none.md`).
-- **Who gets a result:** every miner and every circuit listed on TapeOut's circuit market; anything else pasted into the app is checked on screen with `scope: "pasted"` and never published.
+- **Who gets a result:** every miner (TapeOut's and FabX's) and every circuit listed on TapeOut's circuit market; anything else pasted into the app is checked on screen with `scope: "pasted"` and never published.
+- **FabX facts** (`2026-11-25-fabx-copy-check.md`, decision 10): a FabX miner's results carry `can-mine` as FabX's contract reports it, `tape-out-address` and `design-shared`. Never `design-bonus`, and never the `failed-test-vector` reason. While FabX is frozen (decision 6), FabX results aren't updated or published.
 - **Netlist hash:** `keccak256(abi.encodePacked(uint32 nIn, uint32 nOut, bytes sorted))`, where `sorted` is the netlist with each NAND record's two inputs in ascending order and LATCH and REF records unchanged. A copy with swapped inputs matches; the same bytes with a different `nIn` or `nOut` don't. The byte hash is the same encoding with the bytes as stored, kept as evidence (`bytesIdentical`). Code: `packages/originality/src/hash.ts`.
 - **Wrapper chains:** followed for at most 10 steps on the longest branch; past that the verdict is `cant-check` with `ref-chain-too-long` (`docs/decisions/2026-11-20-wrapper-targets-and-step-limit.md`).
 - **Stated limit:** "Checks identical netlists, including swapped gate inputs. A copy with its gates reordered isn't detected." Shown with every `copy` and `no-earlier-copy`.
 - **Can mine:** the states and their wording are in `docs/decisions/2026-11-20-can-mine-revoked-and-stopped.md`. A revoked miner's evidence is its `Revoked` event; a stopped miner's is `getMiner`'s `stopBlock` and its `Stopped` event.
 - **Contract first for miners:** a miner's `design-bonus` fact is shown before Foreman's verdict, each labelled with its source. Neither overrides the other.
-- **Never "original":** `no-earlier-copy` is shown as "No earlier copy found among N BNB Chain circuits checked, up to block B", using `index`. A circuit taped out after the index's last block is caught up first; one still outside the index is `cant-check` (`docs/decisions/2026-11-20-circuit-index.md`).
+- **Never "original":** `no-earlier-copy` is shown as "No earlier copy found among N BNB Chain circuits checked, up to block B", using `index`; once both chains are checked, "among N circuits checked on BNB Chain and X Layer, up to BNB block B and X Layer block X". A circuit taped out after the index's last block is caught up first; one still outside the index is `cant-check` (`docs/decisions/2026-11-20-circuit-index.md`).
 - **Too small to tell:** shown as "Identical to N earlier circuits; too small to tell", with the floor stated. The floor is 4 gates, measured from the index (`docs/decisions/2026-11-20-size-floor.md`).
 - **Rule version:** spelled out, never a bare label, so a published result can be recomputed without a lookup table. Changing any setting is a new ADR and a new rule version (`2026-11-20-originality-result.md`, decision 2).
 - **How common a design is:** `design-shared` is a count, never a judgement: "1 of 3,021 miners using this design", or for the earliest, "3,020 later miners use this design" (`2026-11-20-originality-result.md`, decision 3).
@@ -325,7 +331,7 @@ interface PublishedResult {
   verdict: {                 // the short verdict in contract storage
     kind: PublishedKind;
     canMine: PublishedCanMine;
-    indexBlock: bigint;      // = originality.index.upToBlock.block
+    indexBlock: bigint;      // = originality.index's BNB Chain (56) block, for FabX results too
     resultHash: Hex32;       // keccak256 of the log's bytes
   };
   publishedAt: { chainId: 196 | 1952; block: bigint; tx: Hex32 }; // X Layer mainnet or testnet
@@ -334,9 +340,10 @@ interface PublishedResult {
 ```
 
 - **Only miners and listed circuits:** a result with `scope: "pasted"` is never published. A "Can't check" error (outside the index, a failed read) is not a result and is never published; a complete `cant-check` result is.
-- **On chain:** storage holds the short verdict per circuit, keyed by `keccak256(abi.encodePacked(processor, circuitId))` (a miner's key). The `Published` event in the same transaction carries the full result: the `Originality` as this contract's wire JSON (bigints as decimal strings), as bytes. BNB Chain circuits only.
-- **The hash ties them:** `resultHash` is `keccak256` of the logged bytes, computed by the contract. A reader decodes the bytes with `parseOriginality` and refuses a `PublishedResult` whose `verdict` disagrees with them: `kind` with `originality.result.verdict`, `canMine` with its can-mine fact, `indexBlock` with `originality.index.upToBlock.block`.
-- **Reproducible:** the logged result includes the verdict, its evidence, `ruleVersion` and `index.upToBlock`, so anyone can recompute it.
+- **On chain:** storage holds the short verdict per circuit, keyed by `keccak256(abi.encodePacked(processor, circuitId))` (a miner's key). The `Published` event in the same transaction carries the full result: the `Originality` as this contract's wire JSON (bigints as decimal strings), as bytes. BNB Chain circuits, and FabX's on X Layer (`2026-11-25-fabx-copy-check.md`, decision 7).
+- **Telling FabX results apart:** by processor (FabX's is `0x87bf…f9a6`), by the logged result's `circuit.chainId` and `mining.contract`, and by rule version. Storage alone doesn't state the chain. The publish job refuses a key already used by a circuit on the other chain.
+- **The hash ties them:** `resultHash` is `keccak256` of the logged bytes, computed by the contract. A reader decodes the bytes with `parseOriginality` and refuses a `PublishedResult` whose `verdict` disagrees with them: `kind` with `originality.result.verdict`, `canMine` with its can-mine fact, `indexBlock` with the BNB Chain entry of `originality.index`, and, for an X Layer circuit, an `index` with no X Layer entry.
+- **Reproducible:** the logged result includes the verdict, its evidence, `ruleVersion` and `index.upTo`, so anyone can recompute it.
 - **When:** every miner and listed circuit once, then again only when its verdict, its evidence or its can-mine state changes. A newer publish replaces the short verdict; every earlier one stays in the log.
 - **Originality only:** no `Valuation` is published.
 
