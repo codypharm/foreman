@@ -12,7 +12,8 @@ import {
 } from "@foreman/contract";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useSearchParams } from "wouter";
-import { ApiProblem, fetchListings } from "../api.ts";
+import { fetchListings } from "../api.ts";
+import { ReadProblem } from "../components/ReadProblem.tsx";
 import { LoadingNote, RowShapes, Shape } from "../components/Shape.tsx";
 import { VerdictLine } from "../components/VerdictLine.tsx";
 import { formatAsk, formatBemRange, formatCount } from "../format.ts";
@@ -97,7 +98,12 @@ export function ListingsPage() {
 					</div>
 				)}
 				{listings.isError && (
-					<Problem error={listings.error} retry={() => listings.refetch()} />
+					<ReadProblem
+						className={s.problem}
+						error={listings.error}
+						fallback="Something went wrong reading the listings."
+						retry={() => listings.refetch()}
+					/>
 				)}
 
 				{first && (
@@ -171,8 +177,10 @@ export function ListingsPage() {
 							</button>
 						)}
 						{listings.isFetchNextPageError && (
-							<Problem
+							<ReadProblem
+								className={s.problem}
 								error={listings.error}
+								fallback="Something went wrong reading the listings."
 								retry={() => listings.fetchNextPage()}
 							/>
 						)}
@@ -316,21 +324,5 @@ function Fragmentless({
 				{value ?? "Reading…"}
 			</dd>
 		</>
-	);
-}
-
-function Problem({ error, retry }: { error: Error | null; retry: () => void }) {
-	const detail =
-		error instanceof ApiProblem
-			? error.problem.detail
-			: "Something went wrong reading the listings.";
-	return (
-		<div className={s.problem} role="alert">
-			{detail}
-			<br />
-			<button type="button" onClick={retry}>
-				Try again
-			</button>
-		</div>
 	);
 }

@@ -28,6 +28,20 @@ export class ApiProblem extends Error {
 	}
 }
 
+/**
+ * A 200 answer this tab's copy of the data contract refuses. The API checks every answer against the
+ * contract before sending it, so this almost always means Foreman was updated after the page was
+ * opened: links change only the part after "#", so the old code stays loaded. A reload fetches the
+ * new code; "Try again" would fail the same way.
+ */
+export class AppOutdated extends Error {
+	constructor() {
+		super(
+			"Foreman was updated since you opened this page, so this page can’t read its answer. Reload to get the new version.",
+		);
+	}
+}
+
 async function get<T>(
 	path: string,
 	parse: (wire: unknown, field: string) => T,
@@ -54,7 +68,11 @@ async function get<T>(
 		}
 		throw new ApiProblem(problem);
 	}
-	return parse(body, "page");
+	try {
+		return parse(body, "page");
+	} catch {
+		throw new AppOutdated();
+	}
 }
 
 export function fetchListings(query: {

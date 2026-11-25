@@ -10,7 +10,8 @@ import type {
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Link } from "wouter";
-import { ApiProblem, fetchCircuit } from "../../api.ts";
+import { fetchCircuit } from "../../api.ts";
+import { ReadProblem } from "../../components/ReadProblem.tsx";
 import { LoadingNote, Shape } from "../../components/Shape.tsx";
 import { formatCount, shortHex } from "../../format.ts";
 import { CAN_MINE } from "./circuit-words.ts";
@@ -77,15 +78,12 @@ export function ResultPage({
 						</span>
 						<h1>Circuit #{id}</h1>
 					</div>
-					<div className={s.problem} role="alert">
-						{page.error instanceof ApiProblem
-							? page.error.problem.detail
-							: "Something went wrong reading this circuit."}
-						<br />
-						<button type="button" onClick={() => page.refetch()}>
-							Try again
-						</button>
-					</div>
+					<ReadProblem
+						className={s.problem}
+						error={page.error}
+						fallback="Something went wrong reading this circuit."
+						retry={() => page.refetch()}
+					/>
 				</main>
 			) : (
 				<PageShape id={id} />

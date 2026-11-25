@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ApiProblem, fetchCheck } from "../api.ts";
+import { ApiProblem, AppOutdated, fetchCheck } from "../api.ts";
 import s from "./TopBar.module.css";
 import { WalletButton } from "./WalletButton.tsx";
 
@@ -122,7 +122,9 @@ function CheckBox() {
 					? error.problem.error === "not-recognised"
 						? "Paste a listing number (28074), a RIG voucher (RIG voucher #19), a miner key or a circuit (its processor, then its id)."
 						: error.problem.detail
-					: "Something went wrong checking that.",
+					: error instanceof AppOutdated
+						? error.message
+						: "Something went wrong checking that.",
 			);
 		} finally {
 			setBusy(false);

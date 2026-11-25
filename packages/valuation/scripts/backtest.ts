@@ -31,7 +31,11 @@ const { windows, summary } = backtest(
 const day = (t: bigint) =>
 	new Date(Number(t) * 1000).toISOString().slice(0, 10);
 const bem = (v: bigint) => (Number(v) / 1e8).toFixed(2).padStart(8);
-const pct = (ppm: bigint) => `${(Number(ppm) / 10_000).toFixed(1)}%`;
+/** Rounded up to one decimal, as the screen shows it, so an error is never understated. */
+const pct = (ppm: bigint) => {
+	const tenths = (ppm + 999n) / 1_000n;
+	return `${tenths / 10n}.${tenths % 10n}%`;
+};
 
 console.log(`Model ${MODEL_VERSION}, ${path}`);
 console.log(

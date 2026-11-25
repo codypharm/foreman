@@ -60,8 +60,10 @@
 	cursor: default;
 	opacity: 0.45;
 }
+/* Above the tab row, which on phones is positioned inside the bar after the search box */
 .problem {
 	position: absolute;
+	z-index: 1;
 	top: calc(100% + 8px);
 	left: 0;
 	right: 0;
@@ -70,6 +72,7 @@
 	background: var(--stale-bg);
 	color: var(--stale);
 	font: 500 13px / 1.45 var(--sans);
+	overflow-wrap: anywhere;
 	box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
 }
 .right {

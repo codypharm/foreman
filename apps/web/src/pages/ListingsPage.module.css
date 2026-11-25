@@ -201,6 +201,7 @@
 	color: var(--stale);
 	font-size: 14px;
 	line-height: 1.5;
+	overflow-wrap: anywhere;
 }
 .problem button {
 	all: unset;

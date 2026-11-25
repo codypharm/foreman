@@ -13,7 +13,8 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { useConnection } from "wagmi";
 import { Link } from "wouter";
-import { ApiProblem, fetchWallet } from "../../api.ts";
+import { fetchWallet } from "../../api.ts";
+import { ReadProblem } from "../../components/ReadProblem.tsx";
 import { LoadingNote, RowShapes, Shape } from "../../components/Shape.tsx";
 import { VerdictLine } from "../../components/VerdictLine.tsx";
 import { WalletButton } from "../../components/WalletButton.tsx";
@@ -86,15 +87,12 @@ function Miners({ address }: { address: string }) {
 						<p>{shortHex(address)}</p>
 					</section>
 					{page.isError ? (
-						<div className={s.problem} role="alert">
-							{page.error instanceof ApiProblem
-								? page.error.problem.detail
-								: "Something went wrong reading this wallet’s miners."}
-							<br />
-							<button type="button" onClick={() => page.refetch()}>
-								Try again
-							</button>
-						</div>
+						<ReadProblem
+							className={s.problem}
+							error={page.error}
+							fallback="Something went wrong reading this wallet’s miners."
+							retry={() => page.refetch()}
+						/>
 					) : (
 						<div aria-busy="true">
 							<LoadingNote>

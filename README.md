@@ -89,7 +89,7 @@ No verdict, value or comparison comes from a model: code decides, from chain dat
 The payout maths mirrors the mining contract and is tested. The forecast, the low / base / high range of network growth, is backtested against what happened:
 
 - **Test:** for every past start date with 30 days of history before it and 30 days after, the 30-day range the app would have shown that day, against what a verified miner of unchanged weight actually earned on the real network.
-- **Result (model 2026-11-24, start dates 21 Sep to 25 Oct 2026):** the range held in **35 of 35** start dates. Base was below what miners earned every time: by 7.0% typically and 41.0% at worst (21 Sep, just after the network stopped growing fast).
+- **Result (model 2026-11-24, start dates 21 Sep to 25 Oct 2026):** the range held in **35 of 35** start dates. Base was below what miners earned every time: by 7.1% typically and 41.0% at worst, rounded up (the worst on 21 Sep, just after the network stopped growing fast).
 - **Read it with care:** neighbouring start dates share most of their 30 days, so 35 start dates aren't 35 independent tests. The high case's rule, no network growth, was chosen after the earlier rule (the slowest week) held in only 13 of 34, on this same history. It would miss if the network shrank, which it hasn't so far.
 - **Not tested:** the "until the 2030 halving" view, about 1,365 days, which 95 days of history can't test, and the low case's loss of the design bonus. The app says so.
 
