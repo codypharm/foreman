@@ -5,12 +5,14 @@ import {
 	type ApiError,
 	type ApiKeyAnswer,
 	type ApiKeyRequest,
+	type ApiKeyStatus,
 	type CheckAnswer,
 	type CircuitPage,
 	type ListingsPage,
 	type ListingVerdict,
 	parseApiError,
 	parseApiKeyAnswer,
+	parseApiKeyStatus,
 	parseCheckAnswer,
 	parseCircuitPage,
 	parseListingsPage,
@@ -113,6 +115,11 @@ export function fetchWallet(address: string): Promise<WalletMiners> {
  * Makes the wallet's API key from its signed message (2026-11-26-self-serve-api-keys.md). The answer
  * holds the key once; it's never stored in the browser.
  */
+/** Whether a wallet has a live API key, and when it was made; never the key. */
+export function readApiKeyStatus(wallet: string): Promise<ApiKeyStatus> {
+	return get(`/keys/${encodeURIComponent(wallet)}`, parseApiKeyStatus);
+}
+
 export function createApiKey(
 	request: Omit<ApiKeyRequest, "signedAt">,
 ): Promise<ApiKeyAnswer> {

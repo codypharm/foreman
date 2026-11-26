@@ -7,17 +7,24 @@ import {
 	type ApiError,
 	LISTING_VERDICTS,
 	type ListingVerdict,
+	parseAddress,
 	parseApiKeyRequest,
 	parseBulkRequest,
 	serialiseApiError,
 	serialiseApiKeyAnswer,
+	serialiseApiKeyStatus,
 	serialiseBulkResults,
 	serialiseCheckAnswer,
 	serialiseCircuitPage,
 	serialiseListingsPage,
 	serialiseWalletMiners,
 } from "@foreman/contract";
-import { createWalletApiKey, findApiKey, recordApiUsage } from "@foreman/index";
+import {
+	createWalletApiKey,
+	findApiKey,
+	readWalletApiKey,
+	recordApiUsage,
+} from "@foreman/index";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -53,7 +60,7 @@ const BULK_ACCEPTS = [
 
 const KEY_ACCEPTS = [
 	'a JSON body {"wallet": "0x…", "message": "…", "signature": "0x…"}',
-	"the message exactly as the For markets page makes it, signed by that wallet",
+	"the message exactly as the API page makes it, signed by that wallet",
 ];
 
 const LISTINGS_ACCEPTS = [
@@ -72,7 +79,7 @@ export function createApp(
 	// Any site may read the open routes. /v1 is server to server only: no CORS, so a key used from a
 	// web page, where it would leak, is refused by the browser (2026-11-26-api-keys.md, decision 7)
 	const open = cors({ origin: "*", allowMethods: ["GET"] });
-	// The For markets page makes a key from the browser
+	// The API page makes a key from the browser
 	const keys = cors({
 		origin: "*",
 		allowMethods: ["POST"],
@@ -85,6 +92,35 @@ export function createApp(
 				? keys(c, next)
 				: open(c, next),
 	);
+
+	// Whether a wallet has a live key, and when it was made, so the API page can say so (data contract,
+	// ApiKeyStatus). Never the key: only its hash is stored
+	app.get("/keys/:wallet", async (c) => {
+		let wallet: ReturnType<typeof parseAddress>;
+		try {
+			wallet = parseAddress(c.req.param("wallet").toLowerCase(), "wallet");
+		} catch {
+			return sendError(c, {
+				error: "not-recognised",
+				detail: "That isn't a wallet address",
+				accepted: [
+					"a wallet address: 0x followed by 40 hexadecimal characters",
+				],
+			});
+		}
+		const live = await readWalletApiKey(deps.pool, wallet);
+		return c.json(
+			serialiseApiKeyStatus(
+				{
+					wallet,
+					madeAt: live
+						? BigInt(Math.floor(live.madeAt.getTime() / 1000))
+						: null,
+				},
+				"body",
+			),
+		);
+	});
 
 	// A key made with a wallet signature (2026-11-26-self-serve-api-keys.md). The key is in the answer
 	// once and never logged; only its hash is stored

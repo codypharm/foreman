@@ -11,7 +11,7 @@ export interface ApiKeyHolder {
 }
 
 export interface ApiKeyRecord extends ApiKeyHolder {
-	/** The wallet that signed for a key made on the For markets page; null for one made by hand. */
+	/** The wallet that signed for a key made on the API page; null for one made by hand. */
 	wallet: string | null;
 	createdAt: Date;
 	revoked: boolean;
@@ -97,6 +97,22 @@ export async function findApiKey(
 		[hash(key)],
 	);
 	return rows[0] ?? null;
+}
+
+/**
+ * Whether `wallet` has a live key made by signature, and when it was made, for the API page
+ * (data contract, `ApiKeyStatus`). Never the key: only its hash is stored. Null when it has none.
+ */
+export async function readWalletApiKey(
+	pool: pg.Pool,
+	wallet: string,
+): Promise<{ id: number; madeAt: Date } | null> {
+	const { rows } = await pool.query<{ id: number; created_at: Date }>(
+		"select id, created_at from api_keys where wallet = $1 and revoked_at is null",
+		[wallet.toLowerCase()],
+	);
+	const row = rows[0];
+	return row ? { id: row.id, madeAt: row.created_at } : null;
 }
 
 /** Revokes a key; false when there's no such key or it was already revoked. */

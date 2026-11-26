@@ -4,6 +4,7 @@ import {
 	parseAddress,
 	parseApiError,
 	parseApiKeyAnswer,
+	parseApiKeyStatus,
 } from "@foreman/contract";
 import { readApiKeys } from "@foreman/index";
 import { TEST_DATABASE_URL } from "@foreman/index/testing";
@@ -158,6 +159,34 @@ describe.skipIf(!TEST_DATABASE_URL)("POST /keys", () => {
 			expect((await readApiKeys(pool)).length).toBe(keysBefore);
 		},
 	);
+
+	test("GET /keys/:wallet says when the wallet's live key was made, never the key", async () => {
+		const set = await setUp();
+		pool = set.pool;
+		const status = async (wallet: string) => {
+			const res = await set.app.request(`/keys/${wallet}`, {
+				headers: { origin: "https://foreman.example" },
+			});
+			expect(res.status).toBe(200);
+			expect(res.headers.get("access-control-allow-origin")).toBe("*");
+			const body = await res.json();
+			expect(JSON.stringify(body)).not.toContain("fmn_");
+			return parseApiKeyStatus(body, "body");
+		};
+		expect((await status(set.wallet.address)).madeAt).toBeNull();
+
+		const made = await post(set.app, await signed(set.wallet, NOW));
+		expect(made.status).toBe(200);
+		const after = await status(set.wallet.address);
+		expect(after.wallet).toBe(set.wallet.address.toLowerCase());
+		expect(after.madeAt).not.toBeNull();
+
+		const bad = await set.app.request("/keys/0x123");
+		expect(bad.status).toBe(400);
+		expect(parseApiError(await bad.json(), "error").error).toBe(
+			"not-recognised",
+		);
+	});
 
 	test("a changed message is not-recognised, 400, and makes no key", async () => {
 		const set = await setUp();

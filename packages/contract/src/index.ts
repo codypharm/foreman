@@ -10,11 +10,14 @@ export {
 	API_KEY_MESSAGE_MAX_AGE_SECONDS,
 	type ApiKeyAnswer,
 	type ApiKeyRequest,
+	type ApiKeyStatus,
 	apiKeyMessage,
 	parseApiKeyAnswer,
 	parseApiKeyRequest,
+	parseApiKeyStatus,
 	serialiseApiKeyAnswer,
 	serialiseApiKeyRequest,
+	serialiseApiKeyStatus,
 } from "./api-key-request.ts";
 export {
 	type ListingAsk,

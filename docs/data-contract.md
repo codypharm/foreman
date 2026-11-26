@@ -360,7 +360,8 @@ interface PublishedResult {
 | `GET /circuit/:processor/:tokenId` | `CircuitPage` | The result page |
 | `GET /wallet/:address/miners` | `WalletMiners` | Your miners and copy alerts |
 | `POST /v1/results`, with an API key | `BulkResults` or `ApiError` | Markets and lenders: up to 100 circuits' results at once (approved by William 26 Nov 2026, `2026-11-26-api-keys.md`) |
-| `POST /keys` | `ApiKeyAnswer` or `ApiError` | The For markets page: a key made with a free wallet signature (approved by William 26 Nov 2026, `2026-11-26-self-serve-api-keys.md`) |
+| `POST /keys` | `ApiKeyAnswer` or `ApiError` | The API page: a key made with a free wallet signature (approved by William 26 Nov 2026, `2026-11-26-self-serve-api-keys.md`) |
+| `GET /keys/:wallet` | `ApiKeyStatus` or `ApiError` | The API page: whether a wallet already has a live key, and when it was made, never the key (approved by William 26 Nov 2026) |
 
 Every response follows the wire format above. Counts of things (listings, circuits, copies) are JSON numbers, as in `Offer` and `Originality`.
 
@@ -563,6 +564,13 @@ type ApiKeyAnswer = {
 - **Refused, 403 `signature-refused`:** a signature from another wallet, a message more than 10 minutes old or more than a minute ahead, or one no newer than the wallet's last key (a signed message can't be sent twice).
 - **One key per wallet:** a new key ends the wallet's old one. Keys don't expire.
 - **Called from the page:** `/keys` allows any origin, unlike `/v1/results`.
+
+```ts
+type ApiKeyStatus = {         // GET /keys/:wallet; a wallet that isn't an address is not-recognised (400)
+  wallet: Address;            // lowercase
+  madeAt: bigint | null;      // a time (Unix seconds) the wallet's live key was made; null when it has none. Never the key
+};
+```
 
 ### `ApiError`
 

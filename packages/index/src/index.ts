@@ -8,6 +8,7 @@ export {
 	createWalletApiKey,
 	findApiKey,
 	readApiKeys,
+	readWalletApiKey,
 	recordApiUsage,
 	revokeApiKey,
 } from "./api-keys.ts";

@@ -5,6 +5,7 @@ import {
 	createWalletApiKey,
 	findApiKey,
 	readApiKeys,
+	readWalletApiKey,
 	recordApiUsage,
 	revokeApiKey,
 } from "./index.ts";
@@ -87,11 +88,28 @@ describe.skipIf(!TEST_DATABASE_URL)("API keys", () => {
 		expect(await createWalletApiKey(pool, W, at(1))).toEqual({ made: false });
 		expect(await findApiKey(pool, second.key)).not.toBeNull();
 
+		// The page asks whether a wallet has a live key, and when it was made; never the key
+		const live = await readWalletApiKey(
+			pool,
+			W.toUpperCase().replace("0X", "0x"),
+		);
+		expect(live?.id).toBe(second.id);
+		expect(live?.madeAt).toBeInstanceOf(Date);
+		expect(Object.keys(live ?? {}).sort()).toEqual(["id", "madeAt"]);
+		expect(
+			await readWalletApiKey(
+				pool,
+				"0x0000000000000000000000000000000000000001",
+			),
+		).toBeNull();
+		await revokeApiKey(pool, second.id);
+		expect(await readWalletApiKey(pool, W)).toBeNull();
+
 		const keys = await readApiKeys(pool);
 		expect(keys.map((k) => [k.wallet, k.revoked])).toEqual([
 			[W, true],
 			[V, false],
-			[W, false],
+			[W, true],
 		]);
 	});
 });

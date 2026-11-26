@@ -1,9 +1,16 @@
-// Making an API key on the For markets page (docs/decisions/2026-11-26-self-serve-api-keys.md): the
+// Making an API key on the API page (docs/decisions/2026-11-26-self-serve-api-keys.md): the
 // message a wallet signs, the request the page sends, and the key that comes back once. The page builds
 // the message with apiKeyMessage and the API rebuilds it the same way, so the two can't drift apart.
 
 import { ContractParseError } from "./errors.ts";
-import { type Address, parseAddress, parseObject, parseText } from "./wire.ts";
+import {
+	type Address,
+	parseAddress,
+	parseObject,
+	parseText,
+	parseUint,
+	serialiseUint,
+} from "./wire.ts";
 
 /** How old a signed message may be when it reaches the API. */
 export const API_KEY_MESSAGE_MAX_AGE_SECONDS = 600;
@@ -99,5 +106,44 @@ export function serialiseApiKeyAnswer(
 ): Record<string, unknown> {
 	const wire = { wallet: answer.wallet, key: answer.key };
 	parseApiKeyAnswer(wire, field);
+	return wire;
+}
+
+/**
+ * Whether a wallet has a live key made by signature, for the API page: when it was made, never the
+ * key (Foreman keeps only its hash). `madeAt` is Unix seconds; null when the wallet has no live key.
+ */
+export interface ApiKeyStatus {
+	wallet: Address;
+	madeAt: bigint | null;
+}
+
+export function parseApiKeyStatus(wire: unknown, field: string): ApiKeyStatus {
+	const w = parseObject(wire, field);
+	if ("key" in w) {
+		throw new ContractParseError(
+			`${field}.key`,
+			"no key: a key is shown only once",
+			"…",
+		);
+	}
+	return {
+		wallet: parseAddress(w.wallet, `${field}.wallet`),
+		madeAt: w.madeAt === null ? null : parseUint(w.madeAt, `${field}.madeAt`),
+	};
+}
+
+export function serialiseApiKeyStatus(
+	status: ApiKeyStatus,
+	field: string,
+): Record<string, unknown> {
+	const wire = {
+		wallet: status.wallet,
+		madeAt:
+			status.madeAt === null
+				? null
+				: serialiseUint(status.madeAt, `${field}.madeAt`),
+	};
+	parseApiKeyStatus(wire, field);
 	return wire;
 }

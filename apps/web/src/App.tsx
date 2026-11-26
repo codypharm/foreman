@@ -1,6 +1,6 @@
 // Hash routes until DeWEB's path handling is checked (docs/decisions/2026-11-22-web-scaffold.md).
 
-import { Route, Router, Switch } from "wouter";
+import { Redirect, Route, Router, Switch } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { TopBar } from "./components/TopBar.tsx";
 import { ListingsPage } from "./pages/ListingsPage.tsx";
@@ -19,7 +19,11 @@ export function App() {
 					{(p) => <ResultPage key={`${p.processor}/${p.tokenId}`} {...p} />}
 				</Route>
 				<Route path="/wallet" component={WalletPage} />
-				<Route path="/markets" component={MarketsPage} />
+				<Route path="/api" component={MarketsPage} />
+				{/* The page was "For markets" at #/markets until 26 Nov 2026 */}
+				<Route path="/markets">
+					<Redirect to="/api" replace />
+				</Route>
 				<Route component={NotFound} />
 			</Switch>
 		</Router>

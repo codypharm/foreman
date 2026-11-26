@@ -1,14 +1,20 @@
-// For markets (docs/mocks/2026-11-26-for-markets.html, option C, chosen 26 Nov 2026): what Foreman's
+// API, at #/api (docs/mocks/2026-11-26-for-markets.html, option C, chosen 26 Nov 2026; called "For markets" until the same day): what Foreman's
 // API answers, shown with a real answer, then a key made with a free wallet signature
 // (docs/decisions/2026-11-26-self-serve-api-keys.md). The key is shown once and kept only in this
 // page's memory: never stored in the browser, never logged.
 
 import { apiKeyMessage, parseAddress } from "@foreman/contract";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useConnection, useSignMessage } from "wagmi";
-import { API_URL, ApiProblem, createApiKey } from "../../api.ts";
+import {
+	API_URL,
+	ApiProblem,
+	createApiKey,
+	readApiKeyStatus,
+} from "../../api.ts";
 import { WalletButton } from "../../components/WalletButton.tsx";
-import { shortHex } from "../../format.ts";
+import { formatDate, shortHex } from "../../format.ts";
 import s from "./MarketsPage.module.css";
 
 /** The live answer for circuit #8044 on 26 Nov 2026, from POST /v1/results (README, "API for markets and lenders"). */
@@ -19,7 +25,7 @@ const EXAMPLE = {
 
 export function MarketsPage() {
 	useEffect(() => {
-		document.title = "Foreman · For markets";
+		document.title = "Foreman · API";
 		return () => {
 			document.title = "Foreman · Live listings";
 		};
@@ -109,6 +115,15 @@ function MakeKey() {
 	const sign = useSignMessage();
 	const [step, setStep] = useState<Step>({ at: "idle" });
 	const [copied, setCopied] = useState(false);
+	const queries = useQueryClient();
+	// Whether this wallet already has a key, so the band says so rather than offering a first one. If
+	// the read fails the band still says a new key ends the old
+	const status = useQuery({
+		queryKey: ["api-key", address?.toLowerCase()],
+		queryFn: () => readApiKeyStatus((address as string).toLowerCase()),
+		enabled: Boolean(address),
+	});
+	const madeAt = address ? (status.data?.madeAt ?? null) : null;
 
 	// A different wallet starts over, and the shown key goes with the wallet that made it
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reset on a change of wallet only
@@ -140,6 +155,7 @@ function MakeKey() {
 		try {
 			const made = await createApiKey({ wallet, message, signature });
 			setStep({ at: "made", key: made.key });
+			void queries.invalidateQueries({ queryKey: ["api-key"] });
 		} catch (error) {
 			setStep({
 				at: "problem",
@@ -207,14 +223,18 @@ function MakeKey() {
 	return (
 		<section className={s.band} aria-labelledby="make-key">
 			<div>
-				<h2 id="make-key">Make your key</h2>
+				<h2 id="make-key">
+					{madeAt !== null ? "This wallet has a key" : "Make your key"}
+				</h2>
 				<p>
-					{address
-						? `Sign a message with ${shortHex(address.toLowerCase())}.`
-						: "Connect a wallet, then sign a message."}{" "}
-					Signing is free: no transaction, no gas. One key per wallet, shown
-					once; it doesn’t expire, and a new one ends the old. 60 calls a
-					minute.
+					{madeAt !== null
+						? `Made ${formatDate(madeAt)} for ${shortHex((address as string).toLowerCase())}. Foreman keeps only a scrambled copy, so it can’t show the key again. Lost it? Sign to make a new one; the old one stops working at once.`
+						: address
+							? `Sign a message with ${shortHex(address.toLowerCase())}.`
+							: "Connect a wallet, then sign a message."}{" "}
+					{madeAt !== null
+						? "Signing is free: no transaction, no gas."
+						: "Signing is free: no transaction, no gas. One key per wallet, shown once; it doesn’t expire, and a new one ends the old. 60 calls a minute."}
 				</p>
 			</div>
 			<div>
@@ -233,7 +253,9 @@ function MakeKey() {
 							? "Waiting for your wallet…"
 							: step.at === "making"
 								? "Making your key…"
-								: "Sign to make a key"}
+								: madeAt !== null
+									? "Sign to make a new key"
+									: "Sign to make a key"}
 					</button>
 				)}
 				{step.at === "problem" && (

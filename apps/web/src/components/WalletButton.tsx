@@ -1,7 +1,7 @@
 // Connect wallet (docs/decisions/2026-11-23-wallet-connect.md): one wallet found connects at once,
 // several open a short list with OKX Wallet first, none says how to get one. Connected, it shows the
 // address with a menu for Your miners and Disconnect. Foreman reads the address; it never asks the
-// wallet to send anything, and asks for a signature only on For markets, to make an API key
+// wallet to send anything, and asks for a signature only on the API page, to make an API key
 // (docs/decisions/2026-11-26-self-serve-api-keys.md).
 
 import { useEffect, useRef, useState } from "react";
