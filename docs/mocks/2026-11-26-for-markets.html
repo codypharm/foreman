@@ -1,0 +1,269 @@
+<!--
+  "For markets" (docs/decisions/2026-11-26-self-serve-api-keys.md). Chosen by William on 26 November 2026:
+  option C, "answer first", of three (A "docs with a key panel", B "key first"). Opens on what a market
+  gets: the call beside the answer in plain words, from the live POST /v1/results for circuit #8044 on
+  26 Nov 2026. Then one band to make a key with a free wallet signature. The top bar, and the phone's tab
+  row, gain "For markets". The wallet menu's line changes as shown at the end.
+  The key, once made: the band becomes it (drawn below the page). Chosen by William on 26 November 2026,
+  option 1 "band becomes key", after trying a small key box in the built page: the key large with Copy,
+  three notes (shown once, from your server, no expiry), the call with the key's place marked, and
+  "Make a new key (ends this one)".
+  States not drawn here: no wallet connected (the band's button connects one), signing, and a refused or
+  failed signature (said in plain words).
+  Build to this; a layout or flow change is a new mock and a new choice.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foreman · For markets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --raise:#F5F5F5; --ink:#000000; --ink-2:#6B6B6B; --ink-3:#9A9A9A; --line:#EBEBEB;
+  --accent:#C2F24B; --on-accent:#000000; --new:#567300; --live:#14A44D;
+  --btn:#000000; --on-btn:#FFFFFF; --frame:#F0F0F0; --code:#FAFAFA;
+  --sans:"Geist",system-ui,sans-serif; --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+    --live:#3DDC84; --new:#C2F24B; --btn:#FFFFFF; --on-btn:#000000; --frame:#0A0A0A; --code:#0A0A0A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+  --live:#3DDC84; --new:#C2F24B; --btn:#FFFFFF; --on-btn:#000000; --frame:#0A0A0A; --code:#0A0A0A;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--frame);color:var(--ink);font:400 15px/1.5 var(--sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{background:var(--frame)}
+button{font:inherit;color:inherit}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+
+/* the picker around the directions */
+.pick{max-width:1200px;margin:0 auto;padding:24px 16px 16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.pick h1{font:600 20px/1.2 var(--sans);letter-spacing:-.02em}
+.pick p{margin-top:4px;font-size:13px;color:var(--ink-2);max-width:70ch}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{all:unset;cursor:pointer;font:600 13px/1 var(--sans);padding:10px 14px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line)}
+.tabs button[aria-pressed=true]{background:var(--btn);color:var(--on-btn);box-shadow:none}
+.about{max-width:1200px;margin:0 auto 14px;padding:0 16px;font-size:13px;color:var(--ink-2)}
+.about b{color:var(--ink);font-weight:600}
+.dir{display:none}
+.dir.on{display:block}
+.frame{max-width:1200px;margin:0 auto 48px;background:var(--bg);border-radius:20px;box-shadow:0 0 0 1px var(--line);overflow:hidden}
+@media (max-width:640px){ .frame{border-radius:0;box-shadow:none} }
+
+/* top bar, as shipped, with the new nav item */
+.top{display:grid;grid-template-columns:auto minmax(0,420px) auto;justify-content:space-between;align-items:center;gap:24px;height:64px;padding:0 32px;border-bottom:1px solid var(--line)}
+.mark{display:flex;align-items:center;gap:9px;font:700 18px/1 var(--sans);letter-spacing:-.02em}
+.search{display:flex;align-items:center;gap:10px;height:40px;padding:0 6px 0 14px;border-radius:999px;background:var(--raise)}
+.search svg{flex:none;color:var(--ink-2)}
+.search span{flex:1;min-width:0;font:500 14px/1 var(--sans);color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search b{font:600 13px/1 var(--sans);padding:8px 12px;border-radius:999px;background:var(--btn);color:var(--on-btn)}
+.right{display:flex;align-items:center;gap:6px}
+.right nav{display:flex;gap:2px;margin-right:8px}
+.right nav a{font:500 14px/1 var(--sans);color:var(--ink-2);text-decoration:none;padding:9px 12px;border-radius:999px;white-space:nowrap}
+.right nav a[aria-current=page]{color:var(--ink);background:var(--raise)}
+.wallet{display:flex;align-items:center;gap:8px;font:600 13px/1 var(--sans);padding:10px 14px;border-radius:999px;background:var(--raise);white-space:nowrap}
+.wallet i{width:7px;height:7px;border-radius:50%;background:var(--live)}
+.wallet.off{background:var(--btn);color:var(--on-btn)}
+@media (max-width:1040px){ .right nav{display:none} }
+@media (max-width:760px){
+  .top{grid-template-columns:auto auto;height:auto;padding:12px 16px;gap:12px}
+  .search{grid-column:1/-1;grid-row:2}
+}
+
+/* shared page pieces */
+.page{padding:40px 32px 56px}
+@media (max-width:760px){ .page{padding:24px 16px 40px} }
+h2.t{font:600 30px/1.12 var(--sans);letter-spacing:-.025em;text-wrap:balance}
+.lead{margin-top:10px;font-size:16px;line-height:1.5;color:var(--ink-2);max-width:58ch}
+.lead b{color:var(--ink);font-weight:600}
+.sec{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--line);margin-top:36px}
+.sec h3{font:600 17px/1.2 var(--sans)}
+.sec .meta{font:500 12px/1.3 var(--sans);color:var(--ink-2)}
+.holds{list-style:none;padding:0}
+.holds li{display:grid;grid-template-columns:minmax(0,180px) minmax(0,1fr);gap:16px;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+.holds li span{color:var(--ink-2)}
+@media (max-width:760px){ .holds li{grid-template-columns:minmax(0,1fr);gap:2px} }
+.limit{margin-top:12px;font-size:13px;line-height:1.5;color:var(--ink-2);max-width:68ch}
+pre{margin-top:14px;padding:16px 18px;border-radius:14px;background:var(--code);box-shadow:inset 0 0 0 1px var(--line);font:400 12.5px/1.65 var(--mono);overflow-x:auto;white-space:pre}
+pre .k{color:var(--ink-2)}
+pre .c{color:var(--ink-3)}
+
+/* the answer, in plain words */
+.answer{margin-top:14px;padding:18px;border-radius:18px;background:var(--raise)}
+.answer .who{font:600 13px/1 var(--sans);color:var(--ink-2)}
+.answer h4{margin-top:10px;font:600 21px/1.2 var(--sans);letter-spacing:-.02em}
+.answer p{margin-top:8px;font-size:14px;line-height:1.5}
+.answer .ev{margin-top:8px;font-size:13px;color:var(--ink-2)}
+.answer .ev b{color:var(--ink);font-weight:600}
+.answer ul{list-style:none;padding:0;margin-top:12px}
+.answer li{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:13px}
+.answer li span{color:var(--ink-2)}
+.answer li b{font-weight:600;text-align:right}
+.mono{font-family:var(--mono);font-size:12px}
+
+/* the key panel */
+.key{padding:20px;border-radius:18px;background:var(--raise)}
+.key h3{font:600 17px/1.2 var(--sans)}
+.key>p{margin-top:8px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.cta{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:46px;margin-top:16px;border-radius:999px;background:var(--btn);color:var(--on-btn);font:600 15px/1 var(--sans)}
+.ghost{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:42px;margin-top:10px;border-radius:999px;font:600 14px/1 var(--sans);box-shadow:inset 0 0 0 1px var(--line);background:var(--bg)}
+.fine{margin-top:12px;font-size:12px;line-height:1.5;color:var(--ink-2)}
+.facts{display:grid;grid-template-columns:1fr auto;margin-top:14px}
+.facts dt,.facts dd{padding:10px 0;border-top:1px solid var(--line);font-size:13px}
+.facts dt{color:var(--ink-2)}
+.facts dd{text-align:right;font-weight:600}
+
+/* A: docs with a key panel */
+.a-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:56px;align-items:start}
+.a-grid aside{position:sticky;top:24px}
+@media (max-width:900px){ .a-grid{grid-template-columns:minmax(0,1fr);gap:32px} .a-grid aside{position:static;order:-1} }
+
+/* B: key first */
+.b-col{max-width:760px}
+.steps{list-style:none;padding:0;margin-top:28px;border-radius:18px;background:var(--raise);padding:6px 20px}
+.steps li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:14px;padding:16px 0;border-bottom:1px solid var(--line)}
+.steps li:last-child{border-bottom:0}
+.steps .n{display:grid;place-items:center;width:28px;height:28px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line);font:700 12px/1 var(--sans)}
+.steps .n.done{background:var(--ink);color:var(--bg);box-shadow:none}
+.steps h4{font:600 15px/1.3 var(--sans);padding-top:4px}
+.steps p{margin-top:4px;font-size:13px;color:var(--ink-2)}
+.keybox{display:flex;align-items:center;gap:8px;margin-top:10px;padding:6px 6px 6px 14px;border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line)}
+.keybox code{flex:1;min-width:0;font:500 13px/1.4 var(--mono);overflow-wrap:anywhere}
+.keybox button{all:unset;cursor:pointer;flex:none;font:600 13px/1 var(--sans);padding:10px 14px;border-radius:999px;background:var(--btn);color:var(--on-btn)}
+.warn{margin-top:10px;font-size:13px;line-height:1.5}
+.warn b{font-weight:600}
+
+/* C: the answer first */
+.c-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;margin-top:28px;align-items:start}
+.c-pair .label{font:600 13px/1 var(--sans);color:var(--ink-2)}
+@media (max-width:900px){ .c-pair{grid-template-columns:minmax(0,1fr)} }
+.c-row{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:32px;align-items:center;margin-top:40px;padding:24px;border-radius:20px;background:var(--raise)}
+.c-row h3{font:600 21px/1.2 var(--sans);letter-spacing:-.02em}
+.c-row p{margin-top:8px;font-size:14px;line-height:1.5;color:var(--ink-2)}
+.c-row .cta{margin-top:0}
+@media (max-width:760px){ .c-row{grid-template-columns:minmax(0,1fr);gap:16px} }
+
+/* C, the key once made: the band becomes it */
+.c-made{margin-top:40px;padding:24px;border-radius:20px;background:var(--raise)}
+.c-made .head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.c-made h3{font:600 21px/1.2 var(--sans);letter-spacing:-.02em}
+.c-made .for{font:600 13px/1 var(--sans);color:var(--new)}
+.bigkey{display:flex;align-items:center;gap:12px;margin-top:16px;padding:10px 10px 10px 18px;border-radius:14px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line)}
+.bigkey code{flex:1;min-width:0;font:500 15px/1.4 var(--mono);word-break:break-all}
+.bigkey button{all:unset;cursor:pointer;flex:none;font:600 14px/1 var(--sans);padding:12px 18px;border-radius:999px;background:var(--btn);color:var(--on-btn)}
+.notes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:16px}
+.notes p{font-size:13px;line-height:1.5;color:var(--ink-2)}
+.notes b{display:block;margin-bottom:2px;color:var(--ink);font-weight:600}
+.c-made pre{margin-top:16px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line)}
+.again{all:unset;cursor:pointer;display:inline-block;margin-top:14px;font:600 13px/1 var(--sans);color:var(--ink-2);text-decoration:underline;text-underline-offset:3px}
+@media (max-width:760px){ .notes{grid-template-columns:minmax(0,1fr)} .c-made{padding:20px 16px} .bigkey{flex-wrap:wrap;padding:14px} .bigkey code{flex-basis:100%} .bigkey button{flex:1;text-align:center} }
+
+/* the wallet menu's line, changed */
+.menu{max-width:1200px;margin:-28px auto 48px;padding:0 16px}
+.menu div{max-width:380px;padding:16px;border-radius:16px;background:var(--bg);box-shadow:0 0 0 1px var(--line)}
+.menu h4{font:600 13px/1.3 var(--sans);color:var(--ink-2)}
+.menu p{margin-top:8px;font-size:13px;line-height:1.5}
+.menu s{color:var(--ink-3)}
+</style>
+</head>
+<body>
+<section class="dir on" id="c">
+<div class="frame">
+  <header class="top">
+    <div class="mark"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="9" height="9" rx="2" fill="currentColor"/><rect x="12" y="1" width="9" height="9" rx="2" fill="currentColor" opacity=".35"/><rect x="1" y="12" width="9" height="9" rx="2" fill="currentColor" opacity=".35"/><rect x="12" y="12" width="9" height="9" rx="2" fill="#C2F24B"/></svg>Foreman</div>
+    <div class="search"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Paste a listing, miner or RIG voucher</span><b>Check</b></div>
+    <div class="right"><nav><a href="#">Live listings</a><a href="#">Your miners</a><a href="#" aria-current="page">For markets</a></nav><span class="wallet"><i></i>0x077e…2ea5</span></div>
+  </header>
+  <div class="page">
+    <h2 class="t">Check every circuit before it's listed</h2>
+    <p class="lead">For markets, wallets and lenders: up to 100 circuits a call, each with <b>its evidence and the X Layer transaction</b> where it was published. Free today.</p>
+
+    <div class="c-pair">
+      <div>
+        <div class="label">Your server asks</div>
+<pre><span class="k">curl</span> -X POST \
+  https://api-production-7065c976.up.railway.app/v1/results \
+  -H <span class="k">"Authorization: Bearer $FOREMAN_KEY"</span> \
+  -H "Content-Type: application/json" \
+  -d '{"circuits": [{
+    "chainId": 56,
+    "processor": "0xb102…a14c",
+    "tokenId": "8044"
+  }]}'</pre>
+      </div>
+      <div>
+        <div class="label">Foreman answers, live on 26 Nov 2026</div>
+        <div class="answer">
+          <div class="who">Circuit #8044 · processor ×1 · BNB Chain</div>
+          <h4>Copy of circuit #53, taped out 4 days earlier</h4>
+          <p>Byte-identical netlist <span class="mono">0x9679…e346</span>. The earliest proven design is the original.</p>
+          <ul>
+            <li><span>Can mine</span><b>Mining now, without the design bonus</b></li>
+            <li><span>Checked</span><b>87,647 circuits, to BNB block 135,854,947</b></li>
+            <li><span>Published</span><b>X Layer testnet, <span class="mono">0x3d9a…2196</span></b></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <p class="limit">Checks identical netlists, including swapped gate inputs. A copy with its gates reordered isn't detected. A circuit Foreman can't check says why, never a verdict.</p>
+
+    <div class="c-row">
+      <div>
+        <h3>Make your key</h3>
+        <p>Sign a message with 0x077e…2ea5. Signing is free: no transaction, no gas. One key per wallet, shown once; it doesn't expire, and a new one ends the old. 60 calls a minute.</p>
+      </div>
+      <div>
+        <button class="cta" type="button">Sign to make a key</button>
+        <p class="fine">Use the key from your server, never in a web page.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="dir on" aria-label="The key, once made">
+<div class="frame">
+  <div class="page">
+    <section class="c-made">
+      <div class="head"><h3>Your API key</h3><span class="for">Made for 0x077e…2ea5</span></div>
+      <div class="bigkey"><code>fmn_Sample0nlyNotARealKey000000000000</code><button type="button">Copy key</button></div>
+      <div class="notes">
+        <p><b>Shown once</b>Save it now. Foreman keeps only a scrambled copy and can't show it again.</p>
+        <p><b>From your server</b>Send it as Authorization: Bearer. Never put it in a web page.</p>
+        <p><b>No expiry</b>It works until this wallet makes a new key. 60 calls a minute.</p>
+      </div>
+<pre><span class="k">curl</span> -X POST https://api-production-7065c976.up.railway.app/v1/results \
+  -H <span class="k">"Authorization: Bearer fmn_…"</span> -H "Content-Type: application/json" \
+  -d '{"circuits": [{"chainId": 56, "processor": "0xb102…a14c", "tokenId": "8044"}]}'</pre>
+      <button class="again" type="button">Make a new key (ends this one)</button>
+    </section>
+  </div>
+</div>
+</section>
+
+<section class="menu" aria-label="Changed wallet menu line">
+  <div>
+    <h4>The wallet menu's line changes, in every direction</h4>
+    <p><s>Foreman only reads your address to show your miners. It never asks you to sign or send anything.</s></p>
+    <p>Foreman reads your address to show your miners. It never asks you to send anything, and asks for a signature only when you make an API key.</p>
+  </div>
+</section>
+
+<script>
+if(location.hash==="#light")document.documentElement.dataset.theme="light";
+if(location.hash==="#dark")document.documentElement.dataset.theme="dark";
+</script>
+</body>
+</html>

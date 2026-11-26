@@ -5,6 +5,7 @@ export {
 	type ApiKeyHolder,
 	type ApiKeyRecord,
 	createApiKey,
+	createWalletApiKey,
 	findApiKey,
 	readApiKeys,
 	recordApiUsage,

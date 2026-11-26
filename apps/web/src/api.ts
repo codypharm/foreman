@@ -3,19 +3,23 @@
 
 import {
 	type ApiError,
+	type ApiKeyAnswer,
+	type ApiKeyRequest,
 	type CheckAnswer,
 	type CircuitPage,
 	type ListingsPage,
 	type ListingVerdict,
 	parseApiError,
+	parseApiKeyAnswer,
 	parseCheckAnswer,
 	parseCircuitPage,
 	parseListingsPage,
 	parseWalletMiners,
+	serialiseApiKeyRequest,
 	type WalletMiners,
 } from "@foreman/contract";
 
-const API_URL = (
+export const API_URL = (
 	import.meta.env.VITE_API_URL ?? "http://localhost:8787"
 ).replace(/\/$/, "");
 
@@ -45,10 +49,11 @@ export class AppOutdated extends Error {
 async function get<T>(
 	path: string,
 	parse: (wire: unknown, field: string) => T,
+	init?: RequestInit,
 ): Promise<T> {
 	let res: Response;
 	try {
-		res = await fetch(`${API_URL}${path}`);
+		res = await fetch(`${API_URL}${path}`, init);
 	} catch {
 		throw new ApiProblem({
 			error: "read-failed",
@@ -102,4 +107,18 @@ export function fetchCheck(q: string): Promise<CheckAnswer> {
 /** A wallet's miners and their copy alerts, from the owner follow and a live RIG voucher read. */
 export function fetchWallet(address: string): Promise<WalletMiners> {
 	return get(`/wallet/${address}/miners`, parseWalletMiners);
+}
+
+/**
+ * Makes the wallet's API key from its signed message (2026-11-26-self-serve-api-keys.md). The answer
+ * holds the key once; it's never stored in the browser.
+ */
+export function createApiKey(
+	request: Omit<ApiKeyRequest, "signedAt">,
+): Promise<ApiKeyAnswer> {
+	return get("/keys", parseApiKeyAnswer, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify(serialiseApiKeyRequest(request, "body")),
+	});
 }

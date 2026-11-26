@@ -7,6 +7,16 @@ export {
 	serialiseApiError,
 } from "./api-error.ts";
 export {
+	API_KEY_MESSAGE_MAX_AGE_SECONDS,
+	type ApiKeyAnswer,
+	type ApiKeyRequest,
+	apiKeyMessage,
+	parseApiKeyAnswer,
+	parseApiKeyRequest,
+	serialiseApiKeyAnswer,
+	serialiseApiKeyRequest,
+} from "./api-key-request.ts";
+export {
 	type ListingAsk,
 	MULTIPLIERS,
 	type Multiplier,

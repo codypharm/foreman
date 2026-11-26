@@ -2,6 +2,7 @@ import type pg from "pg";
 import { afterEach, describe, expect, test } from "vitest";
 import {
 	createApiKey,
+	createWalletApiKey,
 	findApiKey,
 	readApiKeys,
 	recordApiUsage,
@@ -59,5 +60,38 @@ describe.skipIf(!TEST_DATABASE_URL)("API keys", () => {
 			["TapePool", false, []],
 		]);
 		expect(keys[1]?.id).toBe(b.id);
+	});
+
+	test("a wallet has one live key: a new one revokes the old, and other wallets' keys are untouched", async () => {
+		pool = await freshDatabase();
+		const W = "0x077ea6b4c1dfc7f7ec253d736c56898dfc192ea5";
+		const V = "0xc1c59c6ec5d37ef390282cbf2ae2908df3dbdf98";
+		const at = (s: number) => new Date(Date.UTC(2026, 10, 27, 12, 0, s));
+		const made = async (wallet: string, s: number) => {
+			const r = await createWalletApiKey(pool as pg.Pool, wallet, at(s));
+			if (!r.made) throw new Error("no key made");
+			return r;
+		};
+		const first = await made(W, 0);
+		const other = await made(V, 1);
+		const second = await made(W, 2);
+		expect(await findApiKey(pool, first.key)).toBeNull();
+		expect(await findApiKey(pool, second.key)).toEqual({
+			id: second.id,
+			holder: W,
+		});
+		expect(await findApiKey(pool, other.key)).not.toBeNull();
+
+		// A message no newer than the wallet's last one is refused: a signature can't be sent twice
+		expect(await createWalletApiKey(pool, W, at(2))).toEqual({ made: false });
+		expect(await createWalletApiKey(pool, W, at(1))).toEqual({ made: false });
+		expect(await findApiKey(pool, second.key)).not.toBeNull();
+
+		const keys = await readApiKeys(pool);
+		expect(keys.map((k) => [k.wallet, k.revoked])).toEqual([
+			[W, true],
+			[V, false],
+			[W, false],
+		]);
 	});
 });

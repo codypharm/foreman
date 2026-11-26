@@ -14,6 +14,8 @@ export const API_ERRORS = [
 	// The keyed API (docs/decisions/2026-11-26-api-keys.md, decisions 6 and 7)
 	"no-key",
 	"too-many-calls",
+	// Making a key on the For markets page (2026-11-26-self-serve-api-keys.md)
+	"signature-refused",
 ] as const;
 
 export type ApiError =

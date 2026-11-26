@@ -1,6 +1,7 @@
 // Wallet connection (docs/decisions/2026-11-23-wallet-connect.md): wagmi with injected wallets only,
-// found through EIP-6963, OKX Wallet first. Foreman only reads the connected address to show its
-// miners; it never asks a wallet to sign or send anything.
+// found through EIP-6963, OKX Wallet first. Foreman reads the connected address to show its miners;
+// it never asks a wallet to send anything, and asks for a signature only to make an API key on For
+// markets (docs/decisions/2026-11-26-self-serve-api-keys.md).
 
 import {
 	type Connector,

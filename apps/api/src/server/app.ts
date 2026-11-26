@@ -3,21 +3,25 @@
 // serialiser, so the API never sends what the app would refuse. Any site may read it.
 
 import {
+	API_KEY_MESSAGE_MAX_AGE_SECONDS,
 	type ApiError,
 	LISTING_VERDICTS,
 	type ListingVerdict,
+	parseApiKeyRequest,
 	parseBulkRequest,
 	serialiseApiError,
+	serialiseApiKeyAnswer,
 	serialiseBulkResults,
 	serialiseCheckAnswer,
 	serialiseCircuitPage,
 	serialiseListingsPage,
 	serialiseWalletMiners,
 } from "@foreman/contract";
-import { findApiKey, recordApiUsage } from "@foreman/index";
+import { createWalletApiKey, findApiKey, recordApiUsage } from "@foreman/index";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { verifyMessage } from "viem";
 import { resolveCheck } from "../page/check.ts";
 import { type PageDeps, readCircuitPage } from "../page/circuit-page.ts";
 import { readListingsPage } from "../page/listings-page.ts";
@@ -34,6 +38,7 @@ const STATUS: Record<ApiError["error"], ContentfulStatusCode> = {
 	"not-ready": 503,
 	"no-key": 401,
 	"too-many-calls": 429,
+	"signature-refused": 403,
 };
 
 const CIRCUIT_ACCEPTS = [
@@ -44,6 +49,11 @@ const CIRCUIT_ACCEPTS = [
 const BULK_ACCEPTS = [
 	'a JSON body {"circuits": [...]} of 1 to 100 circuits',
 	'each circuit {"chainId": 56 or 196, "processor": "0x…", "tokenId": "1234"}',
+];
+
+const KEY_ACCEPTS = [
+	'a JSON body {"wallet": "0x…", "message": "…", "signature": "0x…"}',
+	"the message exactly as the For markets page makes it, signed by that wallet",
 ];
 
 const LISTINGS_ACCEPTS = [
@@ -62,9 +72,67 @@ export function createApp(
 	// Any site may read the open routes. /v1 is server to server only: no CORS, so a key used from a
 	// web page, where it would leak, is refused by the browser (2026-11-26-api-keys.md, decision 7)
 	const open = cors({ origin: "*", allowMethods: ["GET"] });
+	// The For markets page makes a key from the browser
+	const keys = cors({
+		origin: "*",
+		allowMethods: ["POST"],
+		allowHeaders: ["content-type"],
+	});
 	app.use("*", (c, next) =>
-		c.req.path.startsWith("/v1/") ? next() : open(c, next),
+		c.req.path.startsWith("/v1/")
+			? next()
+			: c.req.path === "/keys"
+				? keys(c, next)
+				: open(c, next),
 	);
+
+	// A key made with a wallet signature (2026-11-26-self-serve-api-keys.md). The key is in the answer
+	// once and never logged; only its hash is stored
+	app.post("/keys", async (c) => {
+		let request: ReturnType<typeof parseApiKeyRequest>;
+		try {
+			request = parseApiKeyRequest(await c.req.json(), "body");
+		} catch (error) {
+			return sendError(c, {
+				error: "not-recognised",
+				detail: error instanceof Error ? error.message : "That body isn't JSON",
+				accepted: KEY_ACCEPTS,
+			});
+		}
+		const age = (now() - request.signedAt.getTime()) / 1000;
+		if (age > API_KEY_MESSAGE_MAX_AGE_SECONDS || age < -60) {
+			return sendError(c, {
+				error: "signature-refused",
+				detail:
+					"The signed message is more than 10 minutes old, or from the future; sign again",
+			});
+		}
+		const valid = await verifyMessage({
+			address: request.wallet,
+			message: request.message,
+			signature: request.signature,
+		}).catch(() => false);
+		if (!valid) {
+			return sendError(c, {
+				error: "signature-refused",
+				detail: `The signature isn't from ${request.wallet}`,
+			});
+		}
+		const made = await createWalletApiKey(
+			deps.pool,
+			request.wallet,
+			request.signedAt,
+		);
+		if (!made.made) {
+			return sendError(c, {
+				error: "signature-refused",
+				detail: "That signed message was already used; sign again",
+			});
+		}
+		return c.json(
+			serialiseApiKeyAnswer({ wallet: request.wallet, key: made.key }, "body"),
+		);
+	});
 
 	// The keyed bulk results call (2026-11-26-api-keys.md). The key is never logged or echoed
 	app.post("/v1/results", async (c) => {

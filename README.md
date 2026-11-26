@@ -175,7 +175,7 @@ curl -X POST https://api-production-7065c976.up.railway.app/v1/results \
 }] }
 ```
 
-Keys are issued by hand: ask for one. Each key may make 60 calls a minute; more is HTTP 429 with `Retry-After`. A missing or revoked key is HTTP 401. The call is server to server only, so a key can't be used from a web page. The shapes are in `docs/data-contract.md`, "API responses".
+Make a key on the site's **For markets** page: connect a wallet and sign a message. Signing is free and sends no transaction. One key per wallet, shown once; it doesn't expire, and making a new one ends the old (`docs/decisions/2026-11-26-self-serve-api-keys.md`). Each key may make 60 calls a minute; more is HTTP 429 with `Retry-After`. A missing or revoked key is HTTP 401. The call is server to server only, so a key can't be used from a web page. The shapes are in `docs/data-contract.md`, "API responses".
 
 ## The forecast backtest
 

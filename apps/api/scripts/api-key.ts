@@ -1,6 +1,7 @@
 // API keys for markets and lenders (docs/decisions/2026-11-26-api-keys.md, decision 5), run by
 // William against the database the API reads. A new key is printed once and never stored or shown
-// again: only its hash is kept. Needs DATABASE_URL.
+// again: only its hash is kept. Needs DATABASE_URL. Keys made on the For markets page with a wallet
+// signature (2026-11-26-self-serve-api-keys.md) are listed too, held by their wallet, and revoked the same way.
 //
 //   pnpm --filter @foreman/api api-key create "<holder>"
 //   pnpm --filter @foreman/api api-key revoke <id>
@@ -40,7 +41,7 @@ try {
 			const circuits = k.days.reduce((n, d) => n + d.circuits, 0);
 			const last = k.days.at(-1)?.day ?? "never";
 			console.log(
-				`${k.id}  ${k.holder}  ${k.revoked ? "revoked" : "live"}  made ${k.createdAt.toISOString().slice(0, 10)}  ${calls} calls, ${circuits} circuits, last used ${last}`,
+				`${k.id}  ${k.holder}  ${k.wallet ? "signed" : "by hand"}  ${k.revoked ? "revoked" : "live"}  made ${k.createdAt.toISOString().slice(0, 10)}  ${calls} calls, ${circuits} circuits, last used ${last}`,
 			);
 		}
 	} else {

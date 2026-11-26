@@ -11,6 +11,8 @@ export interface ApiKeyHolder {
 }
 
 export interface ApiKeyRecord extends ApiKeyHolder {
+	/** The wallet that signed for a key made on the For markets page; null for one made by hand. */
+	wallet: string | null;
 	createdAt: Date;
 	revoked: boolean;
 	/** Calls and circuits per UTC day, oldest first. */
@@ -18,13 +20,14 @@ export interface ApiKeyRecord extends ApiKeyHolder {
 }
 
 const hash = (key: string) => createHash("sha256").update(key).digest();
+const newKey = () => `fmn_${randomBytes(24).toString("base64url")}`;
 
 /** Makes a key for `holder`. The returned key is the only copy: it can't be read back. */
 export async function createApiKey(
 	pool: pg.Pool,
 	holder: string,
 ): Promise<{ id: number; key: string }> {
-	const key = `fmn_${randomBytes(24).toString("base64url")}`;
+	const key = newKey();
 	const { rows } = await pool.query<{ id: number }>(
 		"insert into api_keys (holder, key_hash) values ($1, $2) returning id",
 		[holder, hash(key)],
@@ -32,6 +35,55 @@ export async function createApiKey(
 	const id = rows[0]?.id;
 	if (id === undefined) throw new Error("the new API key wasn't saved");
 	return { id, key };
+}
+
+/**
+ * Makes `wallet`'s key, revoking the one it had (2026-11-26-self-serve-api-keys.md, decision 3). The
+ * caller has checked the wallet's signature over a message made at `signedAt`. A message no newer
+ * than the one behind the wallet's last key is refused ("used"), so a signature can't be sent twice.
+ * The returned key is the only copy.
+ */
+export async function createWalletApiKey(
+	pool: pg.Pool,
+	wallet: string,
+	signedAt: Date,
+): Promise<{ made: true; id: number; key: string } | { made: false }> {
+	const address = wallet.toLowerCase();
+	const key = newKey();
+	const client = await pool.connect();
+	try {
+		await client.query("begin");
+		// Two requests from one wallet at once make one key after the other, never two live keys
+		await client.query("select pg_advisory_xact_lock(hashtext($1))", [
+			`api-key ${address}`,
+		]);
+		const used = await client.query(
+			"select 1 from api_keys where wallet = $1 and signed_at >= $2",
+			[address, signedAt],
+		);
+		if (used.rowCount) {
+			await client.query("rollback");
+			return { made: false };
+		}
+		await client.query(
+			"update api_keys set revoked_at = now() where wallet = $1 and revoked_at is null",
+			[address],
+		);
+		const { rows } = await client.query<{ id: number }>(
+			`insert into api_keys (holder, key_hash, wallet, signed_at) values ($1, $2, $1, $3)
+			 returning id`,
+			[address, hash(key), signedAt],
+		);
+		await client.query("commit");
+		const id = rows[0]?.id;
+		if (id === undefined) throw new Error("the new API key wasn't saved");
+		return { made: true, id, key };
+	} catch (error) {
+		await client.query("rollback");
+		throw error;
+	} finally {
+		client.release();
+	}
 }
 
 /** The holder of a key that exists and isn't revoked; null for any other. */
@@ -79,10 +131,11 @@ export async function readApiKeys(pool: pg.Pool): Promise<ApiKeyRecord[]> {
 	const keys = await pool.query<{
 		id: number;
 		holder: string;
+		wallet: string | null;
 		created_at: Date;
 		revoked: boolean;
 	}>(
-		"select id, holder, created_at, revoked_at is not null as revoked from api_keys order by id",
+		"select id, holder, wallet, created_at, revoked_at is not null as revoked from api_keys order by id",
 	);
 	const usage = await pool.query<{
 		key_id: number;
@@ -95,6 +148,7 @@ export async function readApiKeys(pool: pg.Pool): Promise<ApiKeyRecord[]> {
 	return keys.rows.map((k) => ({
 		id: k.id,
 		holder: k.holder,
+		wallet: k.wallet,
 		createdAt: k.created_at,
 		revoked: k.revoked,
 		days: usage.rows

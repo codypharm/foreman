@@ -360,6 +360,7 @@ interface PublishedResult {
 | `GET /circuit/:processor/:tokenId` | `CircuitPage` | The result page |
 | `GET /wallet/:address/miners` | `WalletMiners` | Your miners and copy alerts |
 | `POST /v1/results`, with an API key | `BulkResults` or `ApiError` | Markets and lenders: up to 100 circuits' results at once (approved by William 26 Nov 2026, `2026-11-26-api-keys.md`) |
+| `POST /keys` | `ApiKeyAnswer` or `ApiError` | The For markets page: a key made with a free wallet signature (approved by William 26 Nov 2026, `2026-11-26-self-serve-api-keys.md`) |
 
 Every response follows the wire format above. Counts of things (listings, circuits, copies) are JSON numbers, as in `Offer` and `Originality`.
 
@@ -537,12 +538,39 @@ type BulkResults = {
 - **A miner with no stored result yet** is "not-checked", as on its result page: a miner is never built as "pasted".
 - **One circuit never fails the call:** a read that fails, a circuit outside the index or on another chain, each is "not-checked" with its reason.
 
+### `ApiKeyRequest` and `ApiKeyAnswer`
+
+*Approved by William on 26 November 2026 (`docs/decisions/2026-11-26-self-serve-api-keys.md`). Parsers in `packages/contract/src/api-key-request.ts`.*
+
+```ts
+// The message the wallet signs, built by apiKeyMessage(wallet, signedAt), three lines:
+//   Make a Foreman API key for <wallet, lowercase>
+//   Time: <signedAt, ISO 8601 UTC>
+//   Signing is free: it sends no transaction. A new key ends this wallet's old one.
+
+type ApiKeyRequest = {        // the body of POST /keys
+  wallet: Address;
+  message: string;            // must be exactly apiKeyMessage(wallet, its Time line); anything else is not-recognised
+  signature: `0x${string}`;   // personal_sign of the message by the wallet itself (a plain address, not a contract wallet)
+};
+
+type ApiKeyAnswer = {
+  wallet: Address;            // lowercase
+  key: string;                // fmn_ and 32 base64url characters; shown once, Foreman keeps only its hash
+};
+```
+
+- **Refused, 403 `signature-refused`:** a signature from another wallet, a message more than 10 minutes old or more than a minute ahead, or one no newer than the wallet's last key (a signed message can't be sent twice).
+- **One key per wallet:** a new key ends the wallet's old one. Keys don't expire.
+- **Called from the page:** `/keys` allows any origin, unlike `/v1/results`.
+
 ### `ApiError`
 
 ```ts
 interface ApiError {
   error: "not-recognised" | "unknown-circuit" | "unknown-wallet-input" | "read-failed" | "not-ready"
     | "no-key" | "too-many-calls";     // POST /v1/results only: 401 for a missing, unknown or revoked key; 429 over 60 calls a minute, with Retry-After
+    | "signature-refused";              // POST /keys only: 403, see ApiKeyRequest
   detail: string;                        // plain words, shown on screen
   accepted?: string[];                   // with not-recognised: what the Check box accepts
 }

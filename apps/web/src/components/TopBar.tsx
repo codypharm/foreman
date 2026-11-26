@@ -68,6 +68,12 @@ export function TopBar() {
 					>
 						Your miners
 					</Link>
+					<Link
+						href="/markets"
+						aria-current={location === "/markets" ? "page" : undefined}
+					>
+						For markets
+					</Link>
 				</nav>
 				<button
 					type="button"
