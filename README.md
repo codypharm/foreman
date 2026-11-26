@@ -2,7 +2,7 @@
 
 **Know what you're buying before you trade a TapeOut miner.**
 
-For any TapeOut miner, listed circuit or RIG voucher, Foreman answers three questions and publishes the answers on X Layer:
+For any TapeOut miner, listed circuit or RIG voucher, Foreman answers three questions and publishes the answers on X Layer. For FabX's miners on X Layer, it answers the first one ([FabX miners on X Layer](#fabx-miners-on-x-layer)).
 
 1. **Is it original?** Exact copies and wrappers, with the evidence: which earlier circuit, both design times and the shared netlist hash.
 2. **What's it worth?** An estimated value range and payback, from the miner's own on-chain weight, with every input shown.
@@ -45,8 +45,8 @@ Foreman is free for buyers and owners. Markets and lenders can read the publishe
 ## How it uses TapeOut and X Layer
 
 - **Reads TapeOut's contracts on BNB Chain:** the Proof of Design mining contract (miners, weights, design commitments), the processor factory and every processor (each circuit's netlist and tape-out), and TapeOut's circuit market (listings and sales).
-- **Reads X Layer:** RIG vouchers (which miner a voucher stands for, and who holds it) and TapePool's lending quotes.
-- **Writes to X Layer:** every miner's and every listed circuit's originality result goes to Foreman's own contract, ForemanResults, which anyone can read and check.
+- **Reads X Layer:** RIG vouchers (which miner a voucher stands for, and who holds it), TapePool's lending quotes, and FabX: its processor in TapeOut's X Layer factory (each circuit's netlist and tape-out) and its mining contract's history (miners, design commitments, and any change to the contract).
+- **Writes to X Layer:** every miner's and every listed circuit's originality result, TapeOut's and FabX's, goes to Foreman's own contract, ForemanResults, which anyone can read and check.
 
 Every address is listed under [Addresses](#addresses), each confirmed on chain before use, and the [architecture diagram](#how-it-works) shows how the pieces connect.
 
@@ -97,11 +97,38 @@ Every result names what was checked, against how many circuits and up to which b
 
 Every result also says whether the circuit can mine: mining now; can't mine (and why); stopped (and when it can start again); or not started.
 
+## FabX miners on X Layer
+
+FabX is a mining system on X Layer that mines FAB with circuits from TapeOut's X Layer factory. It's separate from TapeOut's BEM mining, and its contracts are controlled by their own owner. Foreman shows it as **FabX · X Layer**.
+
+Foreman checks every FabX miner for copies, with the same netlist hash and the same rule as on BNB Chain:
+
+- **Against both chains.** Each FabX miner is compared with every circuit on BNB Chain and every circuit on FabX's processor, and BNB Chain results are compared with FabX's circuits too. Across chains, design times are compared in seconds, each its own block's timestamp. Two circuits designed in the same second on different chains can't be ordered, so neither is called a copy of the other.
+- **Only facts FabX's owner can't edit.** Netlists and tape-outs come from the processor, which runs TapeOut's shared processor code. A FabX design commitment counts only when its `DesignCommitted` event is found in the block it names. Where a commitment without its event would decide the order, the result is **Can't check**.
+- **No value.** Foreman doesn't read FAB's price or FabX's output, so a FabX result page says "Value: not covered yet", and Sell, Lend and Rent say why there's nothing to show.
+
+**What it found.** Of FabX's 7,145 miners, checked against 87,606 circuits up to BNB block 135,430,423 and X Layer block 76,900,680 (26 Nov 2026):
+
+| Verdict | FabX miners |
+| --- | --- |
+| **Copy of an earlier circuit** | 4,982, sharing 256 designs. 625 of them copy a circuit on BNB Chain; 4,673 were taped out by a different address than the earlier circuit |
+| **Too small to tell** (under 4 gates) | 876 |
+| **No earlier copy found** | 1,253 |
+| **Can't check** (a design commitment without its event would decide the order) | 34 |
+
+For example, FabX #24 is byte-identical to circuit #97 on BNB Chain (processor ×1), which taped out 57 days earlier, at BNB block 116,187,134. Both have netlist hash `0xb546f5b9789f61b5a9a497a5545356df53317cf36919a934925411ffdf19184c`.
+
+<img src="docs/screenshots/fabx-result-mobile.png" alt="FabX #24's result page on a phone: the FabX · X Layer mining contract panel with its fact line and caveat, Copy of circuit #97 on BNB Chain with both tape-outs and the shared netlist hash, and Value: not covered yet" width="300">
+
+**The guard.** FabX's mining contract can be upgraded by its owner, a single wallet, and its source isn't verified. Every FabX result says so: "FabX's owner can change its mining contract. Read at X Layer block B; Foreman stops FabX results if it does." The worker follows FabX every 5 minutes. An `Upgraded`, `OwnershipTransferred` or `ProcessorSet` event freezes FabX results and their publishing until the change is reviewed; BNB Chain results carry on.
+
+**Published** to the same ForemanResults contract. A FabX result is told apart by its processor (`0x87bfca3494aa228ff589ab9b642143a5e8c8f9a6`), by the chain and mining contract named in its full result, and by its rule version: "hash 2026-11-20, floor 4, chain 10, BNB Chain and X Layer by second, FabX commitments by event". FabX #24 was published in transaction `0x47763a08ab50a15bb70c2b64eea5b7cd09407a10f2486df9434d8e8c0e2764d7` at X Layer testnet block 47,230,946.
+
 ## Published on X Layer
 
 Every miner's and every listed circuit's result is written to Foreman's results contract, **ForemanResults**, on the **X Layer testnet (chain 1952)**: `0xe1b2343d3da66afec740c0fcaf40a701e2d513e8`. The source is verified on Sourcify (exact match). It isn't upgradeable, and only one publisher address can write to it.
 
-A worker follows BNB Chain every 5 minutes and publishes a circuit again when its verdict, its evidence or its can-mine state changes. A later index block or a higher circuit count alone isn't a change.
+A worker follows BNB Chain and FabX every 5 minutes and publishes a circuit again when its verdict, its evidence or its can-mine state changes. A later index block or a higher circuit count alone isn't a change.
 
 **Re-check any result yourself:**
 
@@ -142,12 +169,17 @@ Every contract address Foreman reads or writes, each confirmed on chain before u
 | BNB Chain (56) | Multicall3 | `0xca11bde05977b3631167028862be2a173976ca11` | Bundled reads at one block |
 | X Layer (196) | RIG voucher | `0x9cfc959cd42b2e1d39a0d850c528210e818ae520` | Which miner a voucher stands for, and who holds it |
 | X Layer (196) | TapePool account factory, pool, quote calculator (third party) | `0xa9014e27dd17ea30e4fa4f71934645b9dcef8ac8`, `0x1a9a9850d597d8e3a03afae48e3ac8e2d4aec9d7`, `0xfcc669bc9cca397cb01804035d5be981d7389ef2` | Lend offers against RIG vouchers |
+| X Layer (196) | TapeOut processor factory (proxy) | `0x1f09daefa827f02cbb40967cc91b259763760761` | X Layer's processors, FabX's among them |
+| X Layer (196) | Processor beacon | `0xf70d1ed4f62cf3780157b0b421b7e2f45bd0991c` | The shared processor code; no owner can change a netlist |
+| X Layer (196) | FabX processor (third party) | `0x87bfca3494aa228ff589ab9b642143a5e8c8f9a6` | FabX's circuits: netlists and tape-outs |
+| X Layer (196) | FabX mining contract (third party, upgradeable, source not verified) | `0x4f6a2312d80753bdafd35ddb1bf4bb14c43f8265` | FabX's miners, design commitments, and changes to the contract |
+| X Layer (196) | Multicall3 | `0xca11bde05977b3631167028862be2a173976ca11` | Bundled reads at one block |
 
 ## How it works
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/architecture-dark.svg">
-  <img src="docs/diagrams/architecture-light.svg" alt="Foreman's architecture: a worker on Railway indexes TapeOut's contracts on BNB Chain every 5 minutes into Postgres and publishes changed results to ForemanResults on the X Layer testnet. The API reads the index, and reads BNB Chain and X Layer live for each page. The web app shows the results and reads published results back from X Layer in the browser." width="100%">
+  <img src="docs/diagrams/architecture-light.svg" alt="Foreman's architecture: a worker on Railway indexes TapeOut's contracts on BNB Chain and FabX's processor and mining contract on X Layer every 5 minutes into Postgres and publishes changed results to ForemanResults on the X Layer testnet. The API reads the index, and reads BNB Chain and X Layer live for each page. The web app shows the results and reads published results back from X Layer in the browser." width="100%">
 </picture>
 
 1. **Index.** Every circuit on every BNB Chain processor, from one scan of `TapedOut` events with each processor's count checked against its `nextId()`. Then each netlist and each miner's design commitment. Followed every 5 minutes.
@@ -164,10 +196,12 @@ No verdict, value or comparison comes from a model: code decides, from chain dat
 ## Limits today
 
 - **Results are on the X Layer testnet**, not mainnet.
-- **BNB Chain circuits only.** Circuits taped out on X Layer aren't indexed yet.
+- **BNB Chain circuits and FabX's.** The other 449 processors in TapeOut's X Layer factory aren't indexed.
+- **FabX isn't valued**, and FabX's market isn't read. FabX results stop if FabX changes its mining contract, until the change is reviewed.
 - **Reordered gates aren't detected.** Only identical netlists, including swapped gate inputs, count as copies.
 - **OCCC status isn't shown.** No deployment of Official Curated Circuit Collections has been confirmed on chain yet.
 - **Copy alerts show in the app** while a wallet is connected. Telegram and browser notifications aren't built.
+- **Your miners shows TapeOut miners and RIG vouchers only.** A FabX miner's result is reached through the Check box ("FabX 1234") or its result page.
 
 ## Run it locally
 
@@ -197,7 +231,7 @@ The web app runs on http://localhost:5173 against the API on port 8787. `pnpm te
 | --- | --- |
 | `packages/contract` | The data contract: the shared types and their parsers |
 | `packages/chain-bnb` | BNB Chain reader: miners, network state and history, the circuit market |
-| `packages/chain-xlayer` | X Layer reader: RIG vouchers, TapePool offers, reading a published result back |
+| `packages/chain-xlayer` | X Layer reader: RIG vouchers, TapePool offers, FabX's logs and miners, reading a published result back |
 | `packages/originality` | Netlist reader, hashing, copy and wrapper checks, the tape-out scan |
 | `packages/index` | The circuit index's storage in Postgres |
 | `packages/valuation` | Estimated value, payback, Sell comparables and the forecast backtest |
