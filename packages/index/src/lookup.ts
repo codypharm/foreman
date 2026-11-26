@@ -101,10 +101,10 @@ export async function findMinerCircuit(
 		 select processor, id::text from fabx_miners where key = decode($1, 'hex')`,
 		[key.slice(2).toLowerCase()],
 	);
-	// Keys are per mining contract: one key on both chains can't be told apart, so it isn't guessed
+	// Keys are keccak256(processor, id) and the chains' processors differ, so a key on both is a fault in the index: refused, never guessed
 	if (rows.length > 1) {
 		throw new Error(
-			"That miner key is a miner on both BNB Chain and X Layer: paste the circuit instead",
+			"Foreman’s index holds that miner key on both BNB Chain and X Layer, which shouldn’t happen. Paste the circuit instead.",
 		);
 	}
 	const r = rows[0];

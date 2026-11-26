@@ -193,7 +193,7 @@ describe.skipIf(!TEST_DATABASE_URL)(
 				error: {
 					error: "read-failed",
 					detail:
-						"That miner key is a miner on both BNB Chain and X Layer: paste the circuit instead",
+						"Foreman’s index holds that miner key on both BNB Chain and X Layer, which shouldn’t happen. Paste the circuit instead.",
 				},
 			});
 		});
