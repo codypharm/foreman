@@ -95,6 +95,13 @@ export {
 	saveOwnerScan,
 } from "./owners.ts";
 export {
+	PRO_DAYS,
+	type ProPayment,
+	proCode,
+	readProUntil,
+	recordProPayment,
+} from "./pro.ts";
+export {
 	type PublishedEntry,
 	type PublishedRow,
 	type ResultsContract,
