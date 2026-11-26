@@ -13,6 +13,9 @@ import { readCheckInput, resolveCheck } from "./check.ts";
 
 const PROCESSOR = "0x1f5cb4aeae1807bf60c3b9c0d8adbcc14e91f12c";
 const KEY = `0x${"72".repeat(32)}`;
+/** FabX's processor on X Layer (CLAUDE.md "On-chain facts"). */
+const FABX = "0x87bfca3494aa228ff589ab9b642143a5e8c8f9a6";
+const FABX_KEY = `0x${"66".repeat(32)}`;
 
 describe("reading what was typed into the Check box", () => {
 	test.each([
@@ -30,6 +33,10 @@ describe("reading what was typed into the Check box", () => {
 			`${PROCESSOR.toUpperCase().replace("0X", "0x")} #2421`,
 			{ kind: "circuit", processor: PROCESSOR, id: 2421n },
 		],
+		// FabX's circuits by their id (2026-11-25-fabx-copy-check.md, decision 8)
+		["FabX 1234", { kind: "circuit", processor: FABX, id: 1234n }],
+		["fabx #1234", { kind: "circuit", processor: FABX, id: 1234n }],
+		[" FABX#1234 ", { kind: "circuit", processor: FABX, id: 1234n }],
 	])("%j", (q, expected) => {
 		expect(readCheckInput(q)).toEqual(expected);
 	});
@@ -44,6 +51,9 @@ describe("reading what was typed into the Check box", () => {
 		[PROCESSOR],
 		[`0x${"72".repeat(31)}`],
 		["https://tapeout.example/listing/28074"],
+		["FabX"],
+		["FabX 0"],
+		["FabX listing 1234"],
 	])("%j is not recognised", (q) => {
 		expect(readCheckInput(q)).toBeNull();
 	});
@@ -136,6 +146,58 @@ describe.skipIf(!TEST_DATABASE_URL)(
 			});
 		});
 
+		/** FabX followed to X Layer block 76,900,680, with one miner, FabX #66. */
+		async function withFabx(p: pg.Pool) {
+			await p.query(
+				`insert into xlayer_state (logs_up_to_block, miners_read_at_block, reviewed_implementation, reviewed_at_block)
+				 values (76900680, 76900680, $1, 76847895)`,
+				[`0x${"90".repeat(20)}`],
+			);
+			await p.query(
+				`insert into fabx_miners (processor, id, key, status, registrant, task_id, commit_block,
+				   first_unused_id, read_at_block, commitment_status)
+				 values ($1, 66, decode($2, 'hex'), 1, $3, 48, 0, 0, 76900680, 'none')`,
+				[FABX, FABX_KEY.slice(2), `0x${"fb".repeat(20)}`],
+			);
+			return p;
+		}
+
+		test("a FabX miner key opens its FabX circuit; an unknown key is in neither chain's miners", async () => {
+			// 2026-11-25-fabx-copy-check.md, decision 8: a miner key works as it is
+			pool = await withFabx(await indexed());
+			expect(await resolveCheck(deps(pool), FABX_KEY)).toEqual({
+				ok: true,
+				answer: { processor: FABX, tokenId: 66n },
+			});
+			expect(await resolveCheck(deps(pool), KEY)).toEqual({
+				ok: true,
+				answer: { processor: PROCESSOR, tokenId: 2421n },
+			});
+			expect(await resolveCheck(deps(pool), `0x${"99".repeat(32)}`)).toEqual({
+				ok: false,
+				error: {
+					error: "unknown-circuit",
+					detail:
+						"No miner with that key in the index up to BNB block 134,895,911 or among FabX’s miners up to X Layer block 76,900,680",
+				},
+			});
+		});
+
+		test("a key stored as a miner on both chains opens neither circuit", async () => {
+			pool = await withFabx(await indexed());
+			await pool.query("update fabx_miners set key = decode($1, 'hex')", [
+				KEY.slice(2),
+			]);
+			expect(await resolveCheck(deps(pool), KEY)).toEqual({
+				ok: false,
+				error: {
+					error: "read-failed",
+					detail:
+						"That miner key is a miner on both BNB Chain and X Layer: paste the circuit instead",
+				},
+			});
+		});
+
 		test("a live RIG voucher opens its miner's circuit, read on X Layer", async () => {
 			pool = await indexed();
 			expect(await resolveCheck(deps(pool), "RIG voucher #19")).toEqual({
@@ -174,7 +236,7 @@ describe.skipIf(!TEST_DATABASE_URL)(
 			expect(read.ok).toBe(false);
 			if (read.ok) return;
 			expect(read.error.error).toBe("not-recognised");
-			expect("accepted" in read.error && read.error.accepted.length).toBe(4);
+			expect("accepted" in read.error && read.error.accepted.length).toBe(5);
 		});
 
 		test("X Layer failing is a failed read, never 'no such voucher'", async () => {

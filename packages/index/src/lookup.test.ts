@@ -140,6 +140,7 @@ describe.skipIf(!TEST_DATABASE_URL)("finding a miner key's circuit", () => {
 		).toEqual({
 			found: false,
 			minersBlock: BLOCK,
+			fabxMinersBlock: null,
 		});
 	});
 

@@ -3,7 +3,7 @@
 // listing number. Whatever isn't found says so in plain words with the block the index reached; a
 // failed read is a failed read, never "not found".
 
-import { readVoucherCircuit } from "@foreman/chain-xlayer";
+import { FABX_PROCESSOR, readVoucherCircuit } from "@foreman/chain-xlayer";
 import {
 	type Address,
 	type ApiError,
@@ -32,6 +32,7 @@ export const CHECK_ACCEPTS = [
 	"a RIG voucher number, such as RIG voucher #19",
 	"a miner key: 0x followed by 64 hexadecimal characters",
 	"a circuit: its processor address, then its id, such as 0x1f5c…912c 2421",
+	"a FabX circuit: FabX, then its id, such as FabX 1234",
 ];
 
 const NUMBER = "#?\\s*([1-9]\\d{0,77})";
@@ -40,6 +41,8 @@ const VOUCHER = new RegExp(
 	`^(?:rig\\s*voucher|rig|voucher)\\s*${NUMBER}$`,
 	"i",
 );
+/** FabX's circuits on X Layer by their id (2026-11-25-fabx-copy-check.md, decision 8). */
+const FABX = new RegExp(`^fabx\\s*${NUMBER}$`, "i");
 const MINER = /^0x[0-9a-f]{64}$/i;
 const CIRCUIT = /^(0x[0-9a-f]{40})\s*(?:[\s/#]|\/#)\s*#?\s*([1-9]\d{0,77})$/i;
 
@@ -54,6 +57,14 @@ export function readCheckInput(q: string): CheckInput | null {
 			kind: "circuit",
 			processor: parseAddress((circuit[1] as string).toLowerCase(), "q"),
 			id: BigInt(circuit[2] as string),
+		};
+	}
+	const fabx = FABX.exec(s);
+	if (fabx) {
+		return {
+			kind: "circuit",
+			processor: parseAddress(FABX_PROCESSOR, "q"),
+			id: BigInt(fabx[1] as string),
 		};
 	}
 	const voucher = VOUCHER.exec(s);
@@ -113,7 +124,11 @@ export async function resolveCheck(
 				if (m.found) return found(m.circuit.processor, m.circuit.id);
 				return fail(
 					"unknown-circuit",
-					`No miner with that key in the index up to BNB block ${count(m.minersBlock)}`,
+					`No miner with that key in the index up to BNB block ${count(m.minersBlock)}${
+						m.fabxMinersBlock === null
+							? ""
+							: ` or among FabX’s miners up to X Layer block ${count(m.fabxMinersBlock)}`
+					}`,
 				);
 			} catch (error) {
 				const detail = plain(error);

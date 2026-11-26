@@ -67,9 +67,17 @@ export async function findListingCircuit(
 
 export type MinerLookup =
 	| { found: true; circuit: CircuitId }
-	| { found: false; minersBlock: bigint };
+	| {
+			found: false;
+			minersBlock: bigint;
+			/** The X Layer block FabX's miners were read at, or null when FabX's aren't stored. */
+			fabxMinersBlock: bigint | null;
+	  };
 
-/** A miner key's circuit, from the miners the index has read up to its miners' block. */
+/**
+ * A miner key's circuit, from the miners the index has read up to its miners' block: TapeOut's on
+ * BNB Chain, then FabX's on X Layer (2026-11-25-fabx-copy-check.md, decision 8).
+ */
 export async function findMinerCircuit(
 	pool: pg.Pool,
 	key: Hex32,
@@ -83,12 +91,30 @@ export async function findMinerCircuit(
 			"The index's miners are not read yet: run the index follow",
 		);
 	}
+	const fabxState = await pool.query<{ miners_read_at_block: string | null }>(
+		"select miners_read_at_block::text from xlayer_state",
+	);
+	const fabxUpTo = fabxState.rows[0]?.miners_read_at_block ?? null;
 	const { rows } = await pool.query<{ processor: string; id: string }>(
-		"select processor, id::text from miners where key = decode($1, 'hex')",
+		`select processor, id::text from miners where key = decode($1, 'hex')
+		 union all
+		 select processor, id::text from fabx_miners where key = decode($1, 'hex')`,
 		[key.slice(2).toLowerCase()],
 	);
+	// Keys are per mining contract: one key on both chains can't be told apart, so it isn't guessed
+	if (rows.length > 1) {
+		throw new Error(
+			"That miner key is a miner on both BNB Chain and X Layer: paste the circuit instead",
+		);
+	}
 	const r = rows[0];
-	if (!r) return { found: false, minersBlock: BigInt(upTo) };
+	if (!r) {
+		return {
+			found: false,
+			minersBlock: BigInt(upTo),
+			fabxMinersBlock: fabxUpTo === null ? null : BigInt(fabxUpTo),
+		};
+	}
 	return {
 		found: true,
 		circuit: {
