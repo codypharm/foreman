@@ -359,6 +359,7 @@ interface PublishedResult {
 | `GET /check?q=…` | `{ processor, tokenId }` or `ApiError` | The Check box: resolves a listing number, miner key, processor and id, or RIG voucher number |
 | `GET /circuit/:processor/:tokenId` | `CircuitPage` | The result page |
 | `GET /wallet/:address/miners` | `WalletMiners` | Your miners and copy alerts |
+| `POST /v1/results`, with an API key | `BulkResults` or `ApiError` | Markets and lenders: up to 100 circuits' results at once (approved by William 26 Nov 2026, `2026-11-26-api-keys.md`) |
 
 Every response follows the wire format above. Counts of things (listings, circuits, copies) are JSON numbers, as in `Offer` and `Originality`.
 
@@ -513,11 +514,35 @@ interface WalletMiners {
 - **The wallet's own listings are left out,** and so are listings that aren't open.
 - **Facts, never accusations:** shown as "1 copy listed", "Identical to your miner, designed 22 hours later". Never "stolen" or "fake".
 
+### `BulkResults`
+
+*Approved by William on 26 November 2026 (`docs/decisions/2026-11-26-api-keys.md`). Parsers in `packages/contract/src/bulk-results.ts`.*
+
+```ts
+type BulkCircuit = { chainId: 56 | 196; processor: Address; tokenId: bigint }; // lowercase processor, whatever case was sent
+
+type BulkRequest = { circuits: BulkCircuit[] };  // 1 to 100 (BULK_MAX); anything else is not-recognised
+
+type BulkResults = {
+  results: {                             // one per circuit asked, in the order asked
+    circuit: BulkCircuit;
+    check: StoredCheck;                  // the stored result; or built on request for a circuit that is neither a miner nor listed
+                                         // (scope "pasted"); "not-checked" with its reason otherwise, never a verdict
+    published: Published;                // "not-published", reason "pasted", for one built on request
+  }[];
+};
+```
+
+- **The key:** `Authorization: Bearer fmn_…`. A missing, unknown or revoked key is `no-key` (401). Over 60 calls a minute per key is `too-many-calls` (429) with `Retry-After`.
+- **A miner with no stored result yet** is "not-checked", as on its result page: a miner is never built as "pasted".
+- **One circuit never fails the call:** a read that fails, a circuit outside the index or on another chain, each is "not-checked" with its reason.
+
 ### `ApiError`
 
 ```ts
 interface ApiError {
-  error: "not-recognised" | "unknown-circuit" | "unknown-wallet-input" | "read-failed" | "not-ready";
+  error: "not-recognised" | "unknown-circuit" | "unknown-wallet-input" | "read-failed" | "not-ready"
+    | "no-key" | "too-many-calls";     // POST /v1/results only: 401 for a missing, unknown or revoked key; 429 over 60 calls a minute, with Retry-After
   detail: string;                        // plain words, shown on screen
   accepted?: string[];                   // with not-recognised: what the Check box accepts
 }

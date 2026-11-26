@@ -48,9 +48,9 @@ The market is small and early, and growing on X Layer: the time to put trust in 
 | --- | --- | --- |
 | Buyers | Every verdict, estimated value, payback and published result | Nothing |
 | Owners | Your miners and copy alerts in the app, and copy alerts by Telegram for one address ([@ForemanCopyAlertsBot](https://t.me/ForemanCopyAlertsBot)) | **Foreman Pro:** Telegram alerts for up to 20 addresses, browser notifications, value history |
-| Markets, wallets, lenders | Reading published results on X Layer | **The API:** a check before a circuit is listed, bulk results, estimated values, and a webhook when a copy is listed |
+| Markets, wallets, lenders | Reading published results on X Layer, and the API with a key on request ([below](#api-for-markets-and-lenders)) | **The paid API:** billing per key, estimated values, and a webhook when a copy is listed |
 
-Owners would keep paying because a copy of their miner can be listed at any time. Markets and lenders would pay because listing or lending against a copy costs them their users' trust, and the API is cheaper than indexing every circuit on two chains themselves. The published results stay free: they are the public record anyone can re-check. Foreman Pro and the API aren't built yet; free Telegram alerts are live.
+Owners would keep paying because a copy of their miner can be listed at any time. Markets and lenders would pay because listing or lending against a copy costs them their users' trust, and the API is cheaper than indexing every circuit on two chains themselves. The published results stay free: they are the public record anyone can re-check. Foreman Pro and billing aren't built yet; free Telegram alerts and the API, with keys on request, are live.
 
 ### Reaching users
 
@@ -157,6 +157,26 @@ For example, circuit #5607 on processor `0xb1024b89886b9a34aa4ff5f31c411d708b20a
 
 Results are on the testnet for the hackathon. ForemanResults isn't deployed on X Layer mainnet (chain 196).
 
+## API for markets and lenders
+
+One call checks up to 100 circuits, for example every circuit about to be listed (`docs/decisions/2026-11-26-api-keys.md`). Each answer is the circuit's result with its evidence, rule version and block, and the X Layer transaction where it was published, so it can be re-checked on chain. A circuit that isn't a miner or listed is checked on request and isn't published. One Foreman can't check says why, never a verdict. Estimated values stay on the result page.
+
+```bash
+curl -X POST https://api-production-7065c976.up.railway.app/v1/results \
+  -H "Authorization: Bearer $FOREMAN_KEY" -H "Content-Type: application/json" \
+  -d '{"circuits": [{"chainId": 56, "processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c", "tokenId": "8044"}]}'
+```
+
+```jsonc
+{ "results": [{
+  "circuit": { "chainId": 56, "processor": "0xb102…a14c", "tokenId": "8044" },
+  "check": { "state": "checked", "originality": { "result": { "verdict": "copy", … }, "facts": […], "index": {…}, "ruleVersion": "…" } },
+  "published": { "state": "older", "verdict": "same", "publishedAt": { "chainId": 1952, "block": "…", "tx": "0x…" }, … }
+}] }
+```
+
+Keys are issued by hand: ask for one. Each key may make 60 calls a minute; more is HTTP 429 with `Retry-After`. A missing or revoked key is HTTP 401. The call is server to server only, so a key can't be used from a web page. The shapes are in `docs/data-contract.md`, "API responses".
+
 ## The forecast backtest
 
 The payout maths mirrors the mining contract and is tested. The forecast, the low / base / high range of network growth, is backtested against what happened:
@@ -216,6 +236,7 @@ No verdict, value or comparison comes from a model: code decides, from chain dat
 - **FabX isn't valued**, and FabX's market isn't read. FabX results stop if FabX changes its mining contract, until the change is reviewed.
 - **Reordered gates aren't detected.** Only identical netlists, including swapped gate inputs, count as copies.
 - **Copy alerts come in the app and by Telegram,** one followed address per chat. Browser notifications aren't built, and Foreman Pro, which raises the limit, isn't either.
+- **API keys are issued by hand,** with no billing, values or webhook yet.
 - **Your miners shows TapeOut miners and RIG vouchers only.** A FabX miner's result is reached through the Check box ("FabX 1234") or its result page.
 
 ## Run it locally

@@ -29,6 +29,17 @@ export {
 } from "./bem-price.ts";
 export type { BnbRead } from "./bnb.ts";
 export {
+	BULK_MAX,
+	type BulkCircuit,
+	type BulkRequest,
+	type BulkResult,
+	type BulkResults,
+	parseBulkRequest,
+	parseBulkResults,
+	serialiseBulkRequest,
+	serialiseBulkResults,
+} from "./bulk-results.ts";
+export {
 	type CheckAnswer,
 	parseCheckAnswer,
 	serialiseCheckAnswer,

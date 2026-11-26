@@ -13,7 +13,8 @@
 		"record:page": "node --env-file-if-exists=../../.env scripts/record-page-fixture.ts",
 		"serve": "node --env-file-if-exists=../../.env scripts/serve.ts",
 		"worker": "node --env-file-if-exists=../../.env scripts/worker.ts",
-		"bot": "node --env-file-if-exists=../../.env scripts/bot.ts"
+		"bot": "node --env-file-if-exists=../../.env scripts/bot.ts",
+		"api-key": "node --env-file-if-exists=../../.env scripts/api-key.ts"
 	},
 	"dependencies": {
 		"@foreman/chain-bnb": "workspace:*",

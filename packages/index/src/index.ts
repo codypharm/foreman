@@ -2,6 +2,15 @@
 // (docs/decisions/2026-11-20-database-access.md).
 
 export {
+	type ApiKeyHolder,
+	type ApiKeyRecord,
+	createApiKey,
+	findApiKey,
+	readApiKeys,
+	recordApiUsage,
+	revokeApiKey,
+} from "./api-keys.ts";
+export {
 	type BackfillOptions,
 	type BackfillResult,
 	backfillNetlists,

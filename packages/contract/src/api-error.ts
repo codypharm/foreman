@@ -11,6 +11,9 @@ export const API_ERRORS = [
 	"unknown-wallet-input",
 	"read-failed",
 	"not-ready",
+	// The keyed API (docs/decisions/2026-11-26-api-keys.md, decisions 6 and 7)
+	"no-key",
+	"too-many-calls",
 ] as const;
 
 export type ApiError =

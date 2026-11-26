@@ -313,7 +313,7 @@ async function storedCheck(
 }
 
 /** Current when the stored result's hash is the one published for this circuit; older otherwise, saying whether its verdict holds. */
-async function publishedState(
+export async function publishedState(
 	deps: PageDeps,
 	check: StoredCheck,
 	key: ReturnType<typeof minerKey>,

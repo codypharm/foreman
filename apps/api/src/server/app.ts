@@ -6,12 +6,15 @@ import {
 	type ApiError,
 	LISTING_VERDICTS,
 	type ListingVerdict,
+	parseBulkRequest,
 	serialiseApiError,
+	serialiseBulkResults,
 	serialiseCheckAnswer,
 	serialiseCircuitPage,
 	serialiseListingsPage,
 	serialiseWalletMiners,
 } from "@foreman/contract";
+import { findApiKey, recordApiUsage } from "@foreman/index";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -19,6 +22,8 @@ import { resolveCheck } from "../page/check.ts";
 import { type PageDeps, readCircuitPage } from "../page/circuit-page.ts";
 import { readListingsPage } from "../page/listings-page.ts";
 import { readWalletMiners } from "../page/wallet-page.ts";
+import { rateLimiter } from "../v1/rate-limit.ts";
+import { readBulkResults } from "../v1/results.ts";
 import { readHealth } from "./health.ts";
 
 const STATUS: Record<ApiError["error"], ContentfulStatusCode> = {
@@ -27,11 +32,18 @@ const STATUS: Record<ApiError["error"], ContentfulStatusCode> = {
 	"unknown-circuit": 404,
 	"read-failed": 502,
 	"not-ready": 503,
+	"no-key": 401,
+	"too-many-calls": 429,
 };
 
 const CIRCUIT_ACCEPTS = [
 	"a processor address: 0x followed by 40 hexadecimal characters",
 	"a token id: a whole number",
+];
+
+const BULK_ACCEPTS = [
+	'a JSON body {"circuits": [...]} of 1 to 100 circuits',
+	'each circuit {"chainId": 56 or 196, "processor": "0x…", "tokenId": "1234"}',
 ];
 
 const LISTINGS_ACCEPTS = [
@@ -40,9 +52,55 @@ const LISTINGS_ACCEPTS = [
 	"cursor: the next value of the page before, or none",
 ];
 
-export function createApp(deps: PageDeps): Hono {
+export function createApp(
+	deps: PageDeps,
+	options: { now?: () => number } = {},
+): Hono {
+	const now = options.now ?? Date.now;
+	const admit = rateLimiter(now);
 	const app = new Hono();
-	app.use("*", cors({ origin: "*", allowMethods: ["GET"] }));
+	// Any site may read the open routes. /v1 is server to server only: no CORS, so a key used from a
+	// web page, where it would leak, is refused by the browser (2026-11-26-api-keys.md, decision 7)
+	const open = cors({ origin: "*", allowMethods: ["GET"] });
+	app.use("*", (c, next) =>
+		c.req.path.startsWith("/v1/") ? next() : open(c, next),
+	);
+
+	// The keyed bulk results call (2026-11-26-api-keys.md). The key is never logged or echoed
+	app.post("/v1/results", async (c) => {
+		const auth = c.req.header("authorization") ?? "";
+		const key = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+		const holder = key ? await findApiKey(deps.pool, key) : null;
+		if (!holder) {
+			return sendError(c, {
+				error: "no-key",
+				detail:
+					"Send an API key as 'Authorization: Bearer fmn_…'. Ask Foreman for a key",
+			});
+		}
+		const admitted = admit(holder.id);
+		if (!admitted.ok) {
+			c.header("Retry-After", String(admitted.retryAfterSeconds));
+			return sendError(c, {
+				error: "too-many-calls",
+				detail: `At most 60 calls a minute per key; try again in ${admitted.retryAfterSeconds} s`,
+			});
+		}
+		let request: ReturnType<typeof parseBulkRequest>;
+		try {
+			request = parseBulkRequest(await c.req.json(), "body");
+		} catch (error) {
+			return sendError(c, {
+				error: "not-recognised",
+				detail: error instanceof Error ? error.message : "That body isn't JSON",
+				accepted: BULK_ACCEPTS,
+			});
+		}
+		const results = await readBulkResults(deps, request);
+		const day = new Date(now()).toISOString().slice(0, 10);
+		await recordApiUsage(deps.pool, holder.id, request.circuits.length, day);
+		return c.json(serialiseBulkResults(results, "body"));
+	});
 
 	// Whether the hosted worker is keeping up (2026-11-23-hosting.md, decision 7)
 	app.get("/health", async (c) => {
