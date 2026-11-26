@@ -47,6 +47,8 @@ export interface WorkerEnv {
 	XLAYER_RPC_URL?: string | undefined;
 	/** FabX's reads on X Layer mainnet, before the public nodes (2026-11-26-fabx-follow.md, decision 2). */
 	XLAYER_MAINNET_RPC_URL?: string | undefined;
+	/** "1" publishes FabX miners' results too; off unless set (2026-11-26-fabx-publishing.md). */
+	PUBLISH_FABX?: string | undefined;
 	/** The publisher's key, from a sealed host variable. Absent: the publish stage is skipped. Never logged. */
 	PUBLISHER_KEY?: string | undefined;
 }
@@ -218,7 +220,9 @@ export function workerStages(
 				);
 			}
 
-			const { results, skipped } = await storedResultsToPublish(pool);
+			const { results, skipped } = await storedResultsToPublish(pool, {
+				fabx: env.PUBLISH_FABX === "1",
+			});
 			if (results.length === 0) {
 				return {
 					status: "failed",

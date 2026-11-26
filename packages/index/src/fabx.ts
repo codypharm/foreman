@@ -447,7 +447,7 @@ export async function readFabxMinerCircuits(
 	pool: Db,
 ): Promise<{ processor: Address; id: bigint }[]> {
 	const { rows } = await pool.query<{ processor: string; id: string }>(
-		"select processor, id::text from fabx_miners order by id",
+		"select processor, id::text from fabx_miners order by fabx_miners.id",
 	);
 	return rows.map((r) => ({
 		processor: r.processor as Address,

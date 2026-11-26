@@ -84,6 +84,33 @@ describe("the publish plan", () => {
 		expect(plan.unchanged).toBe(1);
 	});
 
+	test("a key planned twice stops the publish: nothing is planned, so nothing is sent", () => {
+		// made up: a FabX result on a BNB Chain processor's address, the only way two circuits on
+		// different chains could share a key (2026-11-26-fabx-publishing.md, decision 2)
+		const bnb = result(5n, "mining");
+		const fabx: Originality = {
+			...bnb,
+			circuit: { ...bnb.circuit, chainId: 196 },
+			mining: {
+				chainId: 196,
+				contract: parseAddress(
+					"0x4f6a2312d80753bdafd35ddb1bf4bb14c43f8265",
+					"mining",
+				),
+			},
+			index: {
+				circuitsChecked: 87_602n,
+				upTo: [
+					{ chainId: 56, block: 134_600_000n },
+					{ chainId: 196, block: 76_847_895n },
+				],
+			},
+		};
+		expect(() => planPublish([bnb, fabx], new Map())).toThrow(
+			`key ${minerKey({ processor: MINE6, id: 5n })} is planned twice: circuit ${MINE6} #5 on chain 56 and on chain 196`,
+		);
+	});
+
 	test("an entry carries the miner key, the short verdict and the exact bytes and their hash", () => {
 		const o = result(7n, "not-started");
 		const [entry] = planPublish([o], new Map()).entries;

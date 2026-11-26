@@ -5,7 +5,8 @@
 // It runs once at start too, so a deploy doesn't wait for the clock.
 //
 // Needs DATABASE_URL and BNB_ARCHIVE_RPC_URL (BNB_RECENT_RPC_URL, BNB_ARCHIVE_LOG_BLOCKS and
-// XLAYER_RPC_URL as for the commands; XLAYER_MAINNET_RPC_URL optional, for FabX). PUBLISHER_KEY, set on the host only, lets it publish; without
+// XLAYER_RPC_URL as for the commands; XLAYER_MAINNET_RPC_URL optional, for FabX; PUBLISH_FABX=1
+// publishes FabX results too). PUBLISHER_KEY, set on the host only, lets it publish; without
 // it the publish stage is skipped. The key is never logged.
 //
 //   pnpm --filter @foreman/api worker
@@ -41,6 +42,7 @@ const stages = workerStages(
 		BNB_ARCHIVE_LOG_BLOCKS: process.env.BNB_ARCHIVE_LOG_BLOCKS,
 		XLAYER_RPC_URL: process.env.XLAYER_RPC_URL,
 		XLAYER_MAINNET_RPC_URL: process.env.XLAYER_MAINNET_RPC_URL,
+		PUBLISH_FABX: process.env.PUBLISH_FABX,
 		PUBLISHER_KEY: process.env.PUBLISHER_KEY,
 	},
 	log,
@@ -112,7 +114,7 @@ await boss.work(QUEUE, { localConcurrency: 1 }, async () => {
 });
 await boss.send(QUEUE, null);
 log(
-	`worker started: ${QUEUE} every 5 minutes (UTC)${process.env.PUBLISHER_KEY ? ", publishing to X Layer testnet" : ", not publishing (no PUBLISHER_KEY)"}`,
+	`worker started: ${QUEUE} every 5 minutes (UTC)${process.env.PUBLISHER_KEY ? `, publishing to X Layer testnet${process.env.PUBLISH_FABX === "1" ? ", FabX results included" : ", FabX results not (PUBLISH_FABX unset)"}` : ", not publishing (no PUBLISHER_KEY)"}`,
 );
 
 let stopping = false;

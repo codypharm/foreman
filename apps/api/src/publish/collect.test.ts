@@ -1,6 +1,7 @@
 import { replayClient } from "@foreman/chain-bnb/fixture";
 import { readStoredResult } from "@foreman/index";
 import {
+	fabxIndexedDatabase,
 	fixtureIndexedDatabase,
 	TEST_DATABASE_URL,
 } from "@foreman/index/testing";
@@ -105,5 +106,59 @@ describe.skipIf(!TEST_DATABASE_URL)("the circuits to publish", () => {
 		);
 		const { results } = await storedResultsToPublish(pool);
 		expect(results.map((o) => o.circuit.tokenId)).not.toContain(6534n);
+	});
+});
+
+// FabX's miners #24, #66, #1961 and #4206 beside the fixture's index (fabxIndexedDatabase), their
+// results stored by the results job (2026-11-26-fabx-publishing.md).
+const FABX = "0x87bfca3494aa228ff589ab9b642143a5e8c8f9a6";
+
+describe.skipIf(!TEST_DATABASE_URL)("FabX results to publish", () => {
+	let pool: pg.Pool | undefined;
+	afterEach(async () => {
+		await pool?.end();
+	});
+	async function stored() {
+		pool = await fabxIndexedDatabase();
+		await refreshResults(pool, replayClient(circuits), {
+			mode: "full",
+			now: 1_795_200_000n,
+		});
+		return pool;
+	}
+	const fabxIds = (
+		results: { circuit: { processor: string; tokenId: bigint } }[],
+	) =>
+		results
+			.filter((o) => o.circuit.processor === FABX)
+			.map((o) => o.circuit.tokenId);
+
+	test("none unless PUBLISH_FABX is on", async () => {
+		const p = await stored();
+		expect(fabxIds((await storedResultsToPublish(p)).results)).toEqual([]);
+		expect(
+			fabxIds((await storedResultsToPublish(p, { fabx: false })).results),
+		).toEqual([]);
+	});
+
+	test("with it on, every FabX miner's stored result, exactly as stored", async () => {
+		const p = await stored();
+		const { results } = await storedResultsToPublish(p, { fabx: true });
+		expect(fabxIds(results)).toEqual([24n, 66n, 1961n, 4206n]);
+		const f66 = results.find(
+			(o) =>
+				(o.circuit.processor as string) === FABX && o.circuit.tokenId === 66n,
+		);
+		expect(f66).toEqual(
+			(await readStoredResult(p, { processor: FABX, id: 66n }))?.originality,
+		);
+	});
+
+	test("with it on, none while FabX is frozen", async () => {
+		const p = await stored();
+		await p.query("update xlayer_state set frozen_at_block = 76847896");
+		expect(
+			fabxIds((await storedResultsToPublish(p, { fabx: true })).results),
+		).toEqual([]);
 	});
 });

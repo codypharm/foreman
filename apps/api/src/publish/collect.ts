@@ -3,11 +3,14 @@
 // TapeOut's circuit market that isn't a miner ("listed"). Their results are the stored ones the
 // pages read, never built here, so a page and a published result can't disagree
 // (2026-11-21-stored-results.md; 2026-11-22-publish-from-stored-results.md). A circuit with no
-// stored result is skipped with its reason, never published.
+// stored result is skipped with its reason, never published. FabX miners' results are published only
+// when asked (PUBLISH_FABX), and never while FabX is frozen (2026-11-26-fabx-publishing.md).
 
 import type { Originality } from "@foreman/contract";
 import {
 	readAllStoredResults,
+	readFabxMinerCircuits,
+	readFabxState,
 	readMarketBook,
 	readMiners,
 } from "@foreman/index";
@@ -48,11 +51,17 @@ export async function circuitsToPublish(pool: pg.Pool): Promise<Target[]> {
 /** Each target's stored result, in the targets' order; a target with none is skipped. */
 export async function storedResultsToPublish(
 	pool: pg.Pool,
+	options: {
+		/** Publish FabX miners' results too: PUBLISH_FABX=1 (decision 1). Off unless set. */
+		fabx?: boolean;
+	} = {},
 ): Promise<{ results: Originality[]; skipped: Skipped[] }> {
-	const [targets, stored] = await Promise.all([
+	const [bnbTargets, stored, fabx] = await Promise.all([
 		circuitsToPublish(pool),
 		readAllStoredResults(pool),
+		options.fabx ? fabxTargets(pool) : [],
 	]);
+	const targets = [...bnbTargets, ...fabx];
 	const byCircuit = new Map(stored.map((s) => [name(s.circuit), s]));
 	const results: Originality[] = [];
 	const skipped: Skipped[] = [];
@@ -95,3 +104,13 @@ export async function collectResults(
 }
 
 const name = (c: CircuitId) => `${c.processor.toLowerCase()}/${c.id}`;
+
+/** Every FabX miner, unless FabX's history isn't stored or FabX is frozen (decision 3). */
+async function fabxTargets(pool: pg.Pool): Promise<Target[]> {
+	const state = await readFabxState(pool);
+	if (!state || state.frozenAtBlock !== null) return [];
+	return (await readFabxMinerCircuits(pool)).map((circuit) => ({
+		circuit,
+		scope: "miner",
+	}));
+}

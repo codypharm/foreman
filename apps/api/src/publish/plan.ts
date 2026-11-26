@@ -34,8 +34,18 @@ export function planPublish(
 ): Plan {
 	const entries: PlanEntry[] = [];
 	let unchanged = 0;
+	// Every stored result from both chains is planned at once, so a key two circuits share shows
+	// here: the whole publish stops (2026-11-26-fabx-publishing.md, decision 2)
+	const planned = new Map<Hex32, Originality>();
 	for (const o of results) {
 		const entry = planEntry(o);
+		const other = planned.get(entry.key);
+		if (other) {
+			throw new Error(
+				`key ${entry.key} is planned twice: circuit ${o.circuit.processor} #${o.circuit.tokenId} on chain ${other.circuit.chainId} and on chain ${o.circuit.chainId}`,
+			);
+		}
+		planned.set(entry.key, o);
 		if (published.get(entry.key)?.fingerprint === entry.fingerprint) {
 			unchanged++;
 			continue;

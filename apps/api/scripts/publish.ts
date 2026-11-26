@@ -2,7 +2,8 @@
 //
 // Dry run (no key): takes every miner's and listed circuit's stored result (the results job's, which
 // the pages read), works out what changed since the last publish, and writes the plan to data/.
-// Needs DATABASE_URL; run the results job first.
+// Needs DATABASE_URL; run the results job first. FabX miners' results are planned only with
+// PUBLISH_FABX=1 (2026-11-26-fabx-publishing.md).
 //
 //   pnpm --filter @foreman/api publish-results --chain testnet [--batch 100]
 //
@@ -96,7 +97,9 @@ try {
 
 async function dryRun() {
 	// The stored results the pages read, never built here (2026-11-22-publish-from-stored-results.md)
-	const { results, skipped } = await storedResultsToPublish(pool);
+	const { results, skipped } = await storedResultsToPublish(pool, {
+		fabx: process.env.PUBLISH_FABX === "1",
+	});
 	if (results.length === 0) {
 		console.error("no stored results to publish: run the results job");
 		process.exitCode = 1;
