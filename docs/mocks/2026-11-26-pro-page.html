@@ -1,0 +1,278 @@
+<!--
+  The Foreman Pro page, #/pro/<code> (docs/decisions/2026-11-26-pro-payments.md, decisions 2, 4, 6 and 7).
+  Chosen by William on 26 November 2026: option A, "checkout", of three (B "free beside Pro", a pay panel
+  beside a Free-against-Pro table; C "status first", the chat's Pro and a line of days first). B and C
+  needed a new read of a chat's Pro by its code; A needs nothing new from the API: the new end date comes
+  back from POST /pro/payments once the payment counts.
+  Drawn: before paying (OKX Wallet connected, on the X Layer testnet) and once the payment counts; then
+  #/pro with no code, the Telegram line on Your miners, and the wallet menu's line.
+  Sample data: the chat code 9f1c2a7b…5061 (a made-up sample, no real chat's), the dev wallet 0x077e…2ea5
+  holding 0.42 test OKB, today 26 Nov 2026. ForemanPro is 0x7719…33ac (On-chain facts).
+  States not drawn: no wallet (the button reads "Connect wallet to pay"); another network ("Switch to X
+  Layer testnet"); too little test OKB (the balance and what paying needs, with the testnet faucet
+  named); waiting for the wallet; waiting for a block; refused in the wallet; a payment the API can't
+  read yet ("Paid. Foreman counts it soon", since the worker reads it too); an unknown or malformed code
+  ("This link isn't a chat's pay link. Send /pro to the bot for this chat's").
+  No nav item for Pro (decision 7). Build to this; a layout or flow change is a new mock and a new choice.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foreman · Pro page mocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --raise:#F5F5F5; --ink:#000000; --ink-2:#6B6B6B; --ink-3:#9A9A9A; --line:#EBEBEB;
+  --accent:#C2F24B; --on-accent:#000000; --new:#567300; --live:#14A44D;
+  --btn:#000000; --on-btn:#FFFFFF; --frame:#F0F0F0; --code:#FAFAFA;
+  --sans:"Geist",system-ui,sans-serif; --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+    --live:#3DDC84; --new:#C2F24B; --btn:#FFFFFF; --on-btn:#000000; --frame:#0A0A0A; --code:#0A0A0A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+  --live:#3DDC84; --new:#C2F24B; --btn:#FFFFFF; --on-btn:#000000; --frame:#0A0A0A; --code:#0A0A0A;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--frame);color:var(--ink);font:400 15px/1.5 var(--sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{background:var(--frame)}
+button{font:inherit;color:inherit}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+
+/* the picker around the directions */
+.pick{max-width:1200px;margin:0 auto;padding:24px 16px 16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.pick h1{font:600 20px/1.2 var(--sans);letter-spacing:-.02em}
+.pick p{margin-top:4px;font-size:13px;color:var(--ink-2);max-width:70ch}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{all:unset;cursor:pointer;font:600 13px/1 var(--sans);padding:10px 14px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line)}
+.tabs button[aria-pressed=true]{background:var(--btn);color:var(--on-btn);box-shadow:none}
+.about{max-width:1200px;margin:0 auto 14px;padding:0 16px;font-size:13px;color:var(--ink-2)}
+.about b{color:var(--ink);font-weight:600}
+.dir{display:none}
+.dir.on{display:block}
+.frame{max-width:1200px;margin:0 auto 20px;background:var(--bg);border-radius:20px;box-shadow:0 0 0 1px var(--line);overflow:hidden}
+.cap{max-width:1200px;margin:0 auto 8px;padding:0 16px;font:600 12px/1.3 var(--sans);color:var(--ink-2);text-transform:uppercase;letter-spacing:.06em}
+.gap{height:28px}
+@media (max-width:640px){ .frame{border-radius:0;box-shadow:none} }
+
+/* top bar, as shipped: no nav item for Pro */
+.top{display:grid;grid-template-columns:auto minmax(0,420px) auto;justify-content:space-between;align-items:center;gap:24px;height:64px;padding:0 32px;border-bottom:1px solid var(--line)}
+.mark{display:flex;align-items:center;gap:9px;font:700 18px/1 var(--sans);letter-spacing:-.02em}
+.search{display:flex;align-items:center;gap:10px;height:40px;padding:0 6px 0 14px;border-radius:999px;background:var(--raise)}
+.search svg{flex:none;color:var(--ink-2)}
+.search span{flex:1;min-width:0;font:500 14px/1 var(--sans);color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search b{font:600 13px/1 var(--sans);padding:8px 12px;border-radius:999px;background:var(--btn);color:var(--on-btn)}
+.right{display:flex;align-items:center;gap:6px}
+.right nav{display:flex;gap:2px;margin-right:8px}
+.right nav a{font:500 14px/1 var(--sans);color:var(--ink-2);text-decoration:none;padding:9px 12px;border-radius:999px;white-space:nowrap}
+.wallet{display:flex;align-items:center;gap:8px;font:600 13px/1 var(--sans);padding:10px 14px;border-radius:999px;background:var(--raise);white-space:nowrap}
+.wallet i{width:7px;height:7px;border-radius:50%;background:var(--live)}
+@media (max-width:1040px){ .right nav{display:none} }
+@media (max-width:760px){
+  .top{grid-template-columns:auto auto;height:auto;padding:12px 16px;gap:12px}
+  .search{grid-column:1/-1;grid-row:2}
+}
+
+/* shared page pieces */
+.page{padding:40px 32px 56px}
+@media (max-width:760px){ .page{padding:24px 16px 40px} }
+.eyebrow{font:600 13px/1 var(--sans);color:var(--ink-2)}
+h2.t{margin-top:10px;font:600 30px/1.12 var(--sans);letter-spacing:-.025em;text-wrap:balance}
+.lead{margin-top:10px;font-size:16px;line-height:1.5;color:var(--ink-2);max-width:58ch}
+.lead b{color:var(--ink);font-weight:600}
+.cta{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:48px;margin-top:16px;border-radius:999px;background:var(--btn);color:var(--on-btn);font:600 15px/1 var(--sans)}
+.ghost{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 18px;border-radius:999px;font:600 14px/1 var(--sans);box-shadow:inset 0 0 0 1px var(--line);background:var(--bg)}
+.fine{margin-top:12px;font-size:12px;line-height:1.5;color:var(--ink-2)}
+.mono{font-family:var(--mono);font-size:12.5px}
+.facts{display:grid;grid-template-columns:minmax(0,1fr) auto;margin-top:14px}
+.facts dt,.facts dd{padding:11px 0;border-top:1px solid var(--line);font-size:14px}
+.facts dt{color:var(--ink-2)}
+.facts dd{text-align:right;font-weight:600}
+.ok{display:inline-flex;align-items:center;gap:8px;font:600 13px/1 var(--sans);color:var(--new)}
+.ok i{width:8px;height:8px;border-radius:50%;background:var(--live)}
+.rules{list-style:none;padding:0;margin-top:14px}
+.rules li{display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr);gap:16px;padding:12px 0;border-top:1px solid var(--line);font-size:14px}
+.rules li span{color:var(--ink-2)}
+@media (max-width:760px){ .rules li{grid-template-columns:minmax(0,1fr);gap:2px} }
+.sec{font:600 17px/1.2 var(--sans);margin-top:40px}
+
+/* A: checkout */
+.a-col{max-width:560px;margin:0 auto}
+.bill{margin-top:24px;padding:20px;border-radius:20px;background:var(--raise)}
+.bill .head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.bill h3{font:600 17px/1.2 var(--sans)}
+.bill .facts dt,.bill .facts dd{border-color:color-mix(in srgb,var(--ink) 8%,transparent)}
+.paid{margin-top:24px;padding:24px 20px;border-radius:20px;background:var(--raise)}
+.paid h3{margin-top:12px;font:600 26px/1.15 var(--sans);letter-spacing:-.02em}
+.paid p{margin-top:8px;font-size:14px;line-height:1.5;color:var(--ink-2)}
+.paid .tx{margin-top:14px;font-size:13px;color:var(--ink-2)}
+
+/* B: free beside Pro */
+.b-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:56px;align-items:start}
+.b-grid aside{position:sticky;top:24px;padding:20px;border-radius:20px;background:var(--raise)}
+.b-grid aside h3{font:600 17px/1.2 var(--sans)}
+@media (max-width:900px){ .b-grid{grid-template-columns:minmax(0,1fr);gap:28px} .b-grid aside{position:static;order:-1} }
+.versus{width:100%;margin-top:28px;border-collapse:collapse;font-size:14px}
+.versus th,.versus td{padding:13px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.versus th:first-child,.versus td:first-child{padding-left:0;color:var(--ink-2);font-weight:400;width:34%}
+.versus thead th{font:600 13px/1.2 var(--sans);color:var(--ink-2)}
+.versus thead th.pro{color:var(--ink)}
+.versus td.pro{font-weight:600}
+.tag{display:inline-block;margin-left:6px;padding:3px 8px;border-radius:999px;background:var(--accent);color:var(--on-accent);font:700 11px/1.2 var(--sans);vertical-align:1px}
+
+/* C: status first */
+.status{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;padding-bottom:24px;border-bottom:1px solid var(--line)}
+.status .big{margin-top:10px;font:600 40px/1.05 var(--sans);letter-spacing:-.03em}
+.status .big small{font:500 16px/1.4 var(--sans);color:var(--ink-2);letter-spacing:0;margin-left:6px}
+.status .side{font-size:14px;color:var(--ink-2);text-align:right}
+.status .side b{color:var(--ink);font-weight:600}
+.status .big small{white-space:nowrap}
+@media (max-width:760px){ .status .big{font-size:32px} .status .big small{display:block;margin:6px 0 0} .status .side{text-align:left} }
+.line{margin-top:28px}
+.line .bar{position:relative;display:flex;height:14px;border-radius:999px;background:var(--raise);overflow:hidden;gap:2px}
+.line .bar span{display:block;height:100%}
+.line .bar .have{background:var(--ink-3)}
+.line .bar .adds{background:var(--accent)}
+.line .ticks{display:flex;justify-content:space-between;gap:8px;margin-top:10px;font-size:13px;color:var(--ink-2)}
+.line .ticks b{display:block;color:var(--ink);font-weight:600}
+.line .ticks div:nth-child(2){text-align:center}
+.line .ticks div:last-child{text-align:right}
+.key{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--ink-2)}
+.key span{display:inline-flex;align-items:center;gap:6px}
+.key i{width:10px;height:10px;border-radius:3px}
+.c-row{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:32px;align-items:center;margin-top:32px;padding:24px;border-radius:20px;background:var(--raise)}
+.c-row h3{font:600 21px/1.2 var(--sans);letter-spacing:-.02em}
+.c-row p{margin-top:8px;font-size:14px;line-height:1.5;color:var(--ink-2)}
+.c-row .cta{margin-top:0}
+@media (max-width:760px){ .c-row{grid-template-columns:minmax(0,1fr);gap:16px;padding:20px 16px} }
+
+/* shared: no code */
+.nocode{max-width:620px}
+.bot{display:flex;align-items:center;gap:14px;margin-top:24px;padding:16px;border-radius:18px;background:var(--raise)}
+.bot .ic{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line)}
+.bot div{flex:1;min-width:0}
+.bot b{display:block;font-weight:600;font-size:15px}
+.bot span{font-size:13px;color:var(--ink-2)}
+@media (max-width:520px){ .bot{flex-wrap:wrap} .bot .ghost{width:100%} }
+
+/* the changed lines elsewhere */
+.changes{max-width:1200px;margin:0 auto 48px;padding:0 16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:760px){ .changes{grid-template-columns:minmax(0,1fr)} }
+.changes div{padding:16px;border-radius:16px;background:var(--bg);box-shadow:0 0 0 1px var(--line)}
+.changes h3{font:600 13px/1.3 var(--sans);color:var(--ink-2)}
+.changes p{margin-top:8px;font-size:13px;line-height:1.5}
+.changes s{color:var(--ink-2)}
+</style>
+</head>
+<body>
+
+<!-- ============ A: checkout ============ -->
+<section class="dir on" id="a">
+<p class="about" style="margin-top:24px"><b>A · Checkout, chosen by William on 26 Nov 2026.</b> One narrow column, like paying for anything: what this pays for, one button, then the rules. It doesn't know this chat's Pro before paying, so it needs nothing new from the API.</p>
+<p class="cap">Before paying</p>
+<div class="frame">
+  <header class="top">
+    <div class="mark"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="9" height="9" rx="2" fill="currentColor"/><rect x="12" y="1" width="9" height="9" rx="2" fill="currentColor" opacity=".35"/><rect x="1" y="12" width="9" height="9" rx="2" fill="currentColor" opacity=".35"/><rect x="12" y="12" width="9" height="9" rx="2" fill="#C2F24B"/></svg>Foreman</div>
+    <div class="search"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Paste a listing, miner or RIG voucher</span><b>Check</b></div>
+    <div class="right"><nav><a href="#">Live listings</a><a href="#">Your miners</a><a href="#">API</a></nav><span class="wallet"><i></i>0x077e…2ea5</span></div>
+  </header>
+  <div class="page">
+    <div class="a-col">
+      <div class="eyebrow">Foreman Pro · for one Telegram chat</div>
+      <h2 class="t">Copy alerts for up to 20 addresses</h2>
+      <p class="lead">Without Pro, a chat gets copy alerts for <b>one</b> address. Pro raises that to <b>20</b> for 30 days.</p>
+
+      <div class="bill">
+        <div class="head"><h3>You're paying for</h3><span class="mono">Chat 9f1c…5061</span></div>
+        <dl class="facts">
+          <dt>Foreman Pro</dt><dd>30 days, added to what's left</dd>
+          <dt>Amount</dt><dd>0.01 test OKB</dd>
+          <dt>Network</dt><dd>X Layer testnet</dd>
+          <dt>Your wallet holds</dt><dd>0.42 test OKB</dd>
+        </dl>
+        <button class="cta" type="button">Pay 0.01 test OKB</button>
+        <p class="fine">A test payment: the real price isn't set. It goes to Foreman's contract <span class="mono">0x7719…33ac</span>, which anyone can check, and your wallet adds a small network fee. Anyone can pay for any chat, so Pro can be a gift.</p>
+      </div>
+
+      <h3 class="sec">What Pro changes</h3>
+      <ul class="rules">
+        <li><span>Addresses</span>Up to 20 followed in this chat, each sending its copy alerts</li>
+        <li><span>When it's ending</span>The bot says so 3 days before and on the day, with this link</li>
+        <li><span>When it ends</span>Every follow is kept. Only the first address this chat followed sends; copies listed meanwhile for the rest aren't sent later</li>
+        <li><span>Paying again</span>Adds 30 days and every follow sends again</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<p class="cap">Once the payment counts</p>
+<div class="frame">
+  <div class="page">
+    <div class="a-col">
+      <div class="eyebrow">Foreman Pro · for one Telegram chat</div>
+      <h2 class="t">Copy alerts for up to 20 addresses</h2>
+      <div class="paid">
+        <span class="ok"><i></i>Payment counted</span>
+        <h3>Foreman Pro until 26 Dec 2026</h3>
+        <p>The bot tells the chat now. Send /follow 0x… there to add addresses, up to 20.</p>
+        <p class="tx">Paid in X Layer testnet transaction <a href="#" class="mono">0x5be1…09d4</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="gap"></div>
+</section>
+
+<!-- ============ shared ============ -->
+<p class="about" style="margin-top:8px"><b>In every direction:</b> #/pro with no code, reached from the README or a shared link. It can't pay, since it doesn't know the chat, so it sends people to the bot.</p>
+<div class="frame">
+  <div class="page">
+    <div class="nocode">
+      <div class="eyebrow">Foreman Pro</div>
+      <h2 class="t">Copy alerts for up to 20 addresses</h2>
+      <p class="lead">Foreman's Telegram bot messages a chat when a copy of a followed wallet's miner is listed. One address is free; Pro raises it to 20 for 30 days, for 0.01 test OKB on the X Layer testnet. A test payment: the real price isn't set.</p>
+      <div class="bot">
+        <span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.5 4.2 2.9 11.4c-1 .4-1 1.6.1 1.9l4.6 1.4 1.8 5.6c.3.8 1.3 1 1.9.4l2.6-2.5 4.7 3.5c.7.5 1.7.1 1.9-.7l3.2-15.1c.2-1-.8-1.9-1.7-1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m7.6 14.7 9.6-6.3-6.9 7.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
+        <div><b>@ForemanCopyAlertsBot</b><span>Send /pro in your chat to get its pay link.</span></div>
+        <a class="ghost" href="#">Open the bot</a>
+      </div>
+      <ul class="rules" style="margin-top:28px">
+        <li><span>When it ends</span>Every follow is kept. Only the first address the chat followed sends</li>
+        <li><span>Paying again</span>Adds 30 days and every follow sends again</li>
+      </ul>
+    </div>
+  </div>
+</div>
+<div class="gap"></div>
+
+<section class="changes" aria-label="Changed lines elsewhere">
+  <div>
+    <h3>Your miners: the line under "Get copy alerts on Telegram"</h3>
+    <p><s>Telegram messages you when a copy is listed after you follow. One address free. The bot never asks you to sign anything.</s></p>
+    <p>Telegram messages you when a copy is listed after you follow. One address free, up to 20 with <a href="#">Foreman Pro</a>. The bot never asks you to sign anything.</p>
+  </div>
+  <div>
+    <h3>The wallet menu's line</h3>
+    <p><s>Foreman reads your address to show your miners. It never asks you to send anything, and asks for a signature only when you make an API key.</s></p>
+    <p>Foreman reads your address to show your miners. It asks for a signature only when you make an API key, and sends a payment only when you pay for Foreman Pro.</p>
+  </div>
+</section>
+
+<script>
+const h=location.hash.slice(1);
+if(h==="light"||h==="dark")document.documentElement.dataset.theme=h;
+</script>
+</body>
+</html>

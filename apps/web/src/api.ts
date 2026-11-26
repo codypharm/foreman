@@ -8,16 +8,20 @@ import {
 	type ApiKeyStatus,
 	type CheckAnswer,
 	type CircuitPage,
+	type Hex32,
 	type ListingsPage,
 	type ListingVerdict,
+	type ProPaymentAnswer,
 	parseApiError,
 	parseApiKeyAnswer,
 	parseApiKeyStatus,
 	parseCheckAnswer,
 	parseCircuitPage,
 	parseListingsPage,
+	parseProPaymentAnswer,
 	parseWalletMiners,
 	serialiseApiKeyRequest,
+	serialiseProPaymentRequest,
 	type WalletMiners,
 } from "@foreman/contract";
 
@@ -127,5 +131,18 @@ export function createApiKey(
 		method: "POST",
 		headers: { "content-type": "application/json" },
 		body: JSON.stringify(serialiseApiKeyRequest(request, "body")),
+	});
+}
+
+/**
+ * Reports a Foreman Pro payment by its transaction (2026-11-26-pro-payments.md, decision 5). The API
+ * reads the receipt itself; the answer is when that chat's Pro now ends, or null for a code that is
+ * no chat's. "not-ready" while the transaction isn't in a block the API can read yet.
+ */
+export function reportProPayment(txHash: Hex32): Promise<ProPaymentAnswer> {
+	return get("/pro/payments", parseProPaymentAnswer, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify(serialiseProPaymentRequest({ txHash }, "body")),
 	});
 }

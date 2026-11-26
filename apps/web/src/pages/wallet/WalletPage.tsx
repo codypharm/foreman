@@ -469,7 +469,8 @@ function TelegramFollow({ wallet }: { wallet: string }) {
 			</a>
 			<p className={s.tgLine}>
 				Telegram messages you when a copy is listed after you follow. One
-				address free. The bot never asks you to sign anything.
+				address free, up to 20 with <Link href="/pro">Foreman Pro</Link>. The
+				bot never asks you to sign anything.
 			</p>
 		</>
 	);

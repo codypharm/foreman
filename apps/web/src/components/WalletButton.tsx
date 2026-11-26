@@ -1,8 +1,8 @@
 // Connect wallet (docs/decisions/2026-11-23-wallet-connect.md): one wallet found connects at once,
 // several open a short list with OKX Wallet first, none says how to get one. Connected, it shows the
-// address with a menu for Your miners and Disconnect. Foreman reads the address; it never asks the
-// wallet to send anything, and asks for a signature only on the API page, to make an API key
-// (docs/decisions/2026-11-26-self-serve-api-keys.md).
+// address with a menu for Your miners and Disconnect. Foreman reads the address. It asks for a
+// signature only on the API page, to make an API key (docs/decisions/2026-11-26-self-serve-api-keys.md),
+// and a transaction only on the Pro page, to pay for Foreman Pro (2026-11-26-pro-payments.md).
 
 import { useEffect, useRef, useState } from "react";
 import {
@@ -17,7 +17,14 @@ import { shortHex } from "../format.ts";
 import { walletChoices, walletName } from "../wallet.ts";
 import s from "./WalletButton.module.css";
 
-export function WalletButton({ big = false }: { big?: boolean }) {
+export function WalletButton({
+	big = false,
+	label = "Connect wallet",
+}: {
+	big?: boolean;
+	/** The button's words before a wallet is connected. */
+	label?: string;
+}) {
 	const { address, status } = useConnection();
 	const connectors = useConnectors();
 	const connect = useConnect();
@@ -75,7 +82,7 @@ export function WalletButton({ big = false }: { big?: boolean }) {
 				) : pending ? (
 					"Connecting…"
 				) : (
-					"Connect wallet"
+					label
 				)}
 			</button>
 			{open && (
@@ -136,9 +143,9 @@ export function WalletButton({ big = false }: { big?: boolean }) {
 					)}
 					{!address && (
 						<p className={s.foot}>
-							Foreman reads your address to show your miners. It never asks you
-							to send anything, and asks for a signature only when you make an
-							API key.
+							Foreman reads your address to show your miners. It asks for a
+							signature only when you make an API key, and sends a payment only
+							when you pay for Foreman Pro.
 						</p>
 					)}
 				</div>

@@ -1,8 +1,10 @@
 // Wallet connection (docs/decisions/2026-11-23-wallet-connect.md): wagmi with injected wallets only,
-// found through EIP-6963, OKX Wallet first. Foreman reads the connected address to show its miners;
-// it never asks a wallet to send anything, and asks for a signature only to make an API key on For
-// markets (docs/decisions/2026-11-26-self-serve-api-keys.md).
+// found through EIP-6963, OKX Wallet first. Foreman reads the connected address to show its miners.
+// It asks for a signature only to make an API key on the API page
+// (docs/decisions/2026-11-26-self-serve-api-keys.md), and a transaction only when someone pays for
+// Foreman Pro, on the X Layer testnet (docs/decisions/2026-11-26-pro-payments.md).
 
+import { XLAYER_RPC } from "@foreman/chain-xlayer/results";
 import {
 	type Connector,
 	createConfig,
@@ -11,9 +13,16 @@ import {
 	injected,
 	mock,
 } from "wagmi";
-import { bsc } from "wagmi/chains";
+import { bsc, xLayerTestnet as viemXLayerTestnet } from "wagmi/chains";
 
 const OKX_RDNS = "com.okex.wallet";
+
+/** The X Layer testnet, named as Foreman names it (viem calls it "X1 Testnet"): a wallet asked to switch
+ * to it shows this name. Foreman Pro is paid here (2026-11-26-pro-payments.md). */
+export const xLayerTestnet = {
+	...viemXLayerTestnet,
+	name: "X Layer testnet",
+} as const;
 
 /** Development only: VITE_DEV_WALLET connects a read-only stand-in for that address, so the page can be
  * checked in a browser without a wallet extension. Never in a production build. */
@@ -43,7 +52,7 @@ const safeStorage = {
 };
 
 export const wagmiConfig = createConfig({
-	chains: [bsc],
+	chains: [bsc, xLayerTestnet],
 	// The window.ethereum wallet when it doesn't announce itself through EIP-6963
 	connectors: [
 		injected(),
@@ -58,8 +67,12 @@ export const wagmiConfig = createConfig({
 	],
 	multiInjectedProviderDiscovery: true,
 	storage: createStorage({ storage: safeStorage, key: "foreman.wallet" }),
-	// No reads go through the wallet's chain: the API reads BNB Chain and X Layer
-	transports: { [bsc.id]: http() },
+	// No reads go through the wallet's chain: the API reads BNB Chain and X Layer. The Pro page alone
+	// reads the X Layer testnet here: the payer's balance and the payment's receipt
+	transports: {
+		[bsc.id]: http(),
+		[xLayerTestnet.id]: http(XLAYER_RPC[xLayerTestnet.id]),
+	},
 });
 
 declare module "wagmi" {

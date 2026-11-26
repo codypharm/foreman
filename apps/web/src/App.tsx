@@ -6,6 +6,7 @@ import { TopBar } from "./components/TopBar.tsx";
 import { ListingsPage } from "./pages/ListingsPage.tsx";
 import { MarketsPage } from "./pages/markets/MarketsPage.tsx";
 import { NotFound } from "./pages/NotFound.tsx";
+import { ProPage } from "./pages/pro/ProPage.tsx";
 import { ResultPage } from "./pages/result/ResultPage.tsx";
 import { WalletPage } from "./pages/wallet/WalletPage.tsx";
 
@@ -20,6 +21,7 @@ export function App() {
 				</Route>
 				<Route path="/wallet" component={WalletPage} />
 				<Route path="/api" component={MarketsPage} />
+				<Route path="/pro/:code?" component={ProPage} />
 				{/* The page was "For markets" at #/markets until 26 Nov 2026 */}
 				<Route path="/markets">
 					<Redirect to="/api" replace />
