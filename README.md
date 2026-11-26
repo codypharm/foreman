@@ -199,7 +199,6 @@ No verdict, value or comparison comes from a model: code decides, from chain dat
 - **BNB Chain circuits and FabX's.** The other 449 processors in TapeOut's X Layer factory aren't indexed.
 - **FabX isn't valued**, and FabX's market isn't read. FabX results stop if FabX changes its mining contract, until the change is reviewed.
 - **Reordered gates aren't detected.** Only identical netlists, including swapped gate inputs, count as copies.
-- **OCCC status isn't shown.** No deployment of Official Curated Circuit Collections has been confirmed on chain yet.
 - **Copy alerts show in the app** while a wallet is connected. Telegram and browser notifications aren't built.
 - **Your miners shows TapeOut miners and RIG vouchers only.** A FabX miner's result is reached through the Check box ("FabX 1234") or its result page.
 
