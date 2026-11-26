@@ -5,10 +5,11 @@
 //   pnpm --filter @foreman/api serve        (PORT, default 8787)
 
 import { bnbClient } from "@foreman/chain-bnb";
+import { FOREMAN_PRO } from "@foreman/chain-xlayer/pro";
 import { serve } from "@hono/node-server";
 import pg from "pg";
 import { createPublicClient, http } from "viem";
-import { xLayer } from "viem/chains";
+import { xLayer, xLayerTestnet } from "viem/chains";
 import { RESULTS_CONTRACTS, XLAYER_RPC } from "../src/publish/contracts.ts";
 import { createApp } from "../src/server/app.ts";
 import { cachedResultContext } from "../src/server/result-context.ts";
@@ -38,6 +39,14 @@ const app = createApp({
 	xlayer,
 	results: { chainId: 1952, address: testnet },
 	resultContext: cachedResultContext(pool, bnb),
+	// Foreman Pro's payments, checked on the X Layer testnet (2026-11-26-pro-payments.md)
+	pro: {
+		client: createPublicClient({
+			chain: xLayerTestnet,
+			transport: http(XLAYER_RPC[1952], { retryCount: 3, timeout: 30_000 }),
+		}),
+		contract: FOREMAN_PRO.address,
+	},
 });
 const port = Number(process.env.PORT ?? 8787);
 serve({ fetch: app.fetch, port }, () => {

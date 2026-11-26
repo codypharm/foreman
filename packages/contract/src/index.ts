@@ -118,6 +118,14 @@ export {
 export { type Payback, parsePayback, serialisePayback } from "./payback.ts";
 export { type Price, parsePrice, serialisePrice } from "./price.ts";
 export {
+	type ProPaymentAnswer,
+	type ProPaymentRequest,
+	parseProPaymentAnswer,
+	parseProPaymentRequest,
+	serialiseProPaymentAnswer,
+	serialiseProPaymentRequest,
+} from "./pro-payment.ts";
+export {
 	type ChainId,
 	parseChainId,
 	parseSourced,

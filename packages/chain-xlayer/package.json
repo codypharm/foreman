@@ -6,6 +6,7 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./results": "./src/results.ts",
+		"./pro": "./src/pro.ts",
 		"./fixtures/*": "./fixtures/*"
 	},
 	"scripts": {

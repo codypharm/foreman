@@ -139,3 +139,42 @@ export async function recordProReminder(
 		[chatId, until, kind],
 	);
 }
+
+/** A counted payment its chat hasn't been told about yet. */
+export interface UntoldProPayment {
+	chatId: bigint;
+	txHash: Hex;
+	logIndex: number;
+}
+
+/** Payments counted for a chat that the bot hasn't told it about, oldest first. */
+export async function readUntoldProPayments(
+	pool: pg.Pool,
+): Promise<UntoldProPayment[]> {
+	const { rows } = await pool.query<{
+		chat_id: string;
+		tx_hash: Buffer;
+		log_index: number;
+	}>(
+		`select chat_id, tx_hash, log_index from pro_payments
+		 where chat_id is not null and told_at is null order by block, log_index`,
+	);
+	return rows.map((r) => ({
+		chatId: BigInt(r.chat_id),
+		txHash: `0x${r.tx_hash.toString("hex")}`,
+		logIndex: r.log_index,
+	}));
+}
+
+/** Marks payments as told, so the bot says each one once. */
+export async function markProPaymentsTold(
+	pool: pg.Pool,
+	payments: UntoldProPayment[],
+): Promise<void> {
+	for (const p of payments) {
+		await pool.query(
+			"update pro_payments set told_at = now() where tx_hash = $1 and log_index = $2",
+			[Buffer.from(p.txHash.slice(2), "hex"), p.logIndex],
+		);
+	}
+}

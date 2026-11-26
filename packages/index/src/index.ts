@@ -95,6 +95,7 @@ export {
 	saveOwnerScan,
 } from "./owners.ts";
 export {
+	markProPaymentsTold,
 	PRO_DAYS,
 	type ProPayment,
 	type ProReminder,
@@ -102,8 +103,10 @@ export {
 	proReminderSent,
 	readProChats,
 	readProUntil,
+	readUntoldProPayments,
 	recordProPayment,
 	recordProReminder,
+	type UntoldProPayment,
 } from "./pro.ts";
 export {
 	type PublishedEntry,

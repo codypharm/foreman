@@ -361,6 +361,7 @@ interface PublishedResult {
 | `GET /wallet/:address/miners` | `WalletMiners` | Your miners and copy alerts |
 | `POST /v1/results`, with an API key | `BulkResults` or `ApiError` | Markets and lenders: up to 100 circuits' results at once (approved by William 26 Nov 2026, `2026-11-26-api-keys.md`) |
 | `POST /keys` | `ApiKeyAnswer` or `ApiError` | The API page: a key made with a free wallet signature (approved by William 26 Nov 2026, `2026-11-26-self-serve-api-keys.md`) |
+| `POST /pro/payments` | `ProPaymentAnswer` or `ApiError` | The Pro page: a Foreman Pro payment, by its transaction, and when the paying chat's Pro now ends (approved by William 26 Nov 2026, `2026-11-26-pro-payments.md`, decision 5) |
 | `GET /keys/:wallet` | `ApiKeyStatus` or `ApiError` | The API page: whether a wallet already has a live key, and when it was made, never the key (approved by William 26 Nov 2026) |
 
 Every response follows the wire format above. Counts of things (listings, circuits, copies) are JSON numbers, as in `Offer` and `Originality`.
@@ -571,6 +572,23 @@ type ApiKeyStatus = {         // GET /keys/:wallet; a wallet that isn't an addre
   madeAt: bigint | null;      // a time (Unix seconds) the wallet's live key was made; null when it has none. Never the key
 };
 ```
+
+### `ProPaymentRequest` and `ProPaymentAnswer`
+
+*Approved by William on 26 November 2026 (`docs/decisions/2026-11-26-pro-payments.md`, decision 5). Parsers in `packages/contract/src/pro-payment.ts`.*
+
+```ts
+type ProPaymentRequest = { txHash: Hex32 };   // the body of POST /pro/payments: the transaction that paid
+
+type ProPaymentAnswer = {
+  txHash: Hex32;
+  proUntil: bigint | null;   // a time (Unix seconds) the paying code's chat has Pro until; null when the code is no chat's
+};
+```
+
+- **Only the hash comes from the page.** The API reads the receipt from the X Layer testnet and counts each `Paid` log from the ForemanPro address in On-chain facts with exactly 0.01 OKB, once per transaction and log. The chat is never named.
+- **Refused:** a failed transaction, or one that paid nothing to ForemanPro, is `not-recognised` (400); one not yet in a block is `not-ready` (503); a node that can't be read is `read-failed` (502). None counts anything.
+- **Called from the page:** `/pro/payments` allows any origin.
 
 ### `ApiError`
 

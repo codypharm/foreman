@@ -8,6 +8,7 @@
 
 import { xlayerMainnet } from "@foreman/chain-xlayer";
 import pg from "pg";
+import { sendProConfirmations } from "../src/alerts/confirm.ts";
 import { pollCommands } from "../src/alerts/poll.ts";
 import { sendProReminders } from "../src/alerts/reminders.ts";
 import { sendAlerts } from "../src/alerts/send.ts";
@@ -55,10 +56,22 @@ async function send() {
 }
 
 const timer = setInterval(send, 5 * 60_000);
+const confirm = setInterval(async () => {
+	try {
+		const told = await sendProConfirmations({ pool, telegram }, log);
+		if (told.sent || told.failed)
+			log(`pro: ${told.sent} payments confirmed, ${told.failed} not sent`);
+	} catch (error) {
+		log(
+			`pro: confirmations failed: ${error instanceof Error ? error.message : String(error)}`,
+		);
+	}
+}, 30_000);
 void send();
 log("bot started: answering commands, sending alerts every 5 minutes");
 process.on("SIGINT", async () => {
 	clearInterval(timer);
+	clearInterval(confirm);
 	stop.abort();
 	await pool.end();
 	process.exit(0);

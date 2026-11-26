@@ -19,6 +19,7 @@ import { xlayerMainnet } from "@foreman/chain-xlayer";
 import { migrate, recordStage } from "@foreman/index";
 import pg from "pg";
 import { PgBoss } from "pg-boss";
+import { sendProConfirmations } from "../src/alerts/confirm.ts";
 import { pollCommands } from "../src/alerts/poll.ts";
 import { sendProReminders } from "../src/alerts/reminders.ts";
 import { sendAlerts } from "../src/alerts/send.ts";
@@ -69,6 +70,19 @@ if (telegram) {
 		botStop.signal,
 		log,
 	);
+	// Tell chats their Pro payment counted, soon after the Pro page reports it (2026-11-26-pro-payments.md)
+	const confirm = setInterval(async () => {
+		try {
+			const told = await sendProConfirmations({ pool, telegram }, log);
+			if (told.sent || told.failed)
+				log(`pro: ${told.sent} payments confirmed, ${told.failed} not sent`);
+		} catch (error) {
+			log(
+				`pro: confirmations failed: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
+	}, 30_000);
+	botStop.signal.addEventListener("abort", () => clearInterval(confirm));
 }
 
 const boss = new PgBoss({ connectionString: DATABASE_URL });

@@ -10,6 +10,7 @@ import {
 	parseAddress,
 	parseApiKeyRequest,
 	parseBulkRequest,
+	parseProPaymentRequest,
 	serialiseApiError,
 	serialiseApiKeyAnswer,
 	serialiseApiKeyStatus,
@@ -17,6 +18,7 @@ import {
 	serialiseCheckAnswer,
 	serialiseCircuitPage,
 	serialiseListingsPage,
+	serialiseProPaymentAnswer,
 	serialiseWalletMiners,
 } from "@foreman/contract";
 import {
@@ -33,6 +35,7 @@ import { resolveCheck } from "../page/check.ts";
 import { type PageDeps, readCircuitPage } from "../page/circuit-page.ts";
 import { readListingsPage } from "../page/listings-page.ts";
 import { readWalletMiners } from "../page/wallet-page.ts";
+import { checkProPayment, type ProChain } from "../pro/payment.ts";
 import { rateLimiter } from "../v1/rate-limit.ts";
 import { readBulkResults } from "../v1/results.ts";
 import { readHealth } from "./health.ts";
@@ -70,7 +73,10 @@ const LISTINGS_ACCEPTS = [
 ];
 
 export function createApp(
-	deps: PageDeps,
+	deps: PageDeps & {
+		/** ForemanPro on the X Layer testnet, for Pro payments; without it they are not-ready. */
+		pro?: ProChain;
+	},
 	options: { now?: () => number } = {},
 ): Hono {
 	const now = options.now ?? Date.now;
@@ -79,8 +85,8 @@ export function createApp(
 	// Any site may read the open routes. /v1 is server to server only: no CORS, so a key used from a
 	// web page, where it would leak, is refused by the browser (2026-11-26-api-keys.md, decision 7)
 	const open = cors({ origin: "*", allowMethods: ["GET"] });
-	// The API page makes a key from the browser
-	const keys = cors({
+	// The API page makes a key, and the Pro page reports a payment, from the browser
+	const posts = cors({
 		origin: "*",
 		allowMethods: ["POST"],
 		allowHeaders: ["content-type"],
@@ -88,10 +94,45 @@ export function createApp(
 	app.use("*", (c, next) =>
 		c.req.path.startsWith("/v1/")
 			? next()
-			: c.req.path === "/keys"
-				? keys(c, next)
+			: c.req.path === "/keys" || c.req.path === "/pro/payments"
+				? posts(c, next)
 				: open(c, next),
 	);
+
+	// A Foreman Pro payment reported by the Pro page (2026-11-26-pro-payments.md, decision 5): only the
+	// transaction hash is taken from the page; the chain says what was paid and for which code
+	app.post("/pro/payments", async (c) => {
+		let txHash: ReturnType<typeof parseProPaymentRequest>["txHash"];
+		try {
+			txHash = parseProPaymentRequest(await c.req.json(), "body").txHash;
+		} catch (error) {
+			return sendError(c, {
+				error: "not-recognised",
+				detail: error instanceof Error ? error.message : "That body isn't JSON",
+				accepted: ['a JSON body {"txHash": "0x…"}: the transaction that paid'],
+			});
+		}
+		if (!deps.pro) {
+			return sendError(c, {
+				error: "not-ready",
+				detail: "Foreman Pro payments aren't set up on this server.",
+			});
+		}
+		const checked = await checkProPayment(deps.pool, deps.pro, txHash);
+		if (!checked.ok) return sendError(c, checked.error);
+		return c.json(
+			serialiseProPaymentAnswer(
+				{
+					txHash,
+					proUntil:
+						checked.proUntil === null
+							? null
+							: BigInt(Math.floor(checked.proUntil.getTime() / 1000)),
+				},
+				"body",
+			),
+		);
+	});
 
 	// Whether a wallet has a live key, and when it was made, so the API page can say so (data contract,
 	// ApiKeyStatus). Never the key: only its hash is stored
