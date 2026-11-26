@@ -59,7 +59,7 @@ export async function followAddress(
 	}
 }
 
-/** The addresses a chat follows, oldest first; every chat's when `chatId` is omitted. */
+/** The addresses a chat follows, in the order it followed them; every chat's when `chatId` is omitted. */
 export async function readFollows(
 	pool: pg.Pool,
 	chatId?: bigint,
@@ -71,7 +71,7 @@ export async function readFollows(
 	}>(
 		`select chat_id, address, followed_at_block from telegram_follows
 		 ${chatId === undefined ? "" : "where chat_id = $1"}
-		 order by chat_id, followed_at_block, address`,
+		 order by chat_id, follow_order`,
 		chatId === undefined ? [] : [chatId],
 	);
 	return rows.rows.map((r) => ({

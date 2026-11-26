@@ -101,3 +101,41 @@ export async function readProUntil(
 	}
 	return until === null ? null : new Date(until);
 }
+
+/** Every chat that has paid for Pro at least once. */
+export async function readProChats(pool: pg.Pool): Promise<bigint[]> {
+	const { rows } = await pool.query<{ chat_id: string }>(
+		"select distinct chat_id from pro_payments where chat_id is not null order by chat_id",
+	);
+	return rows.map((r) => BigInt(r.chat_id));
+}
+
+export type ProReminder = "ending" | "ended";
+
+/** Whether this reminder was already sent for this end date. */
+export async function proReminderSent(
+	pool: pg.Pool,
+	chatId: bigint,
+	until: Date,
+	kind: ProReminder,
+): Promise<boolean> {
+	const { rowCount } = await pool.query(
+		"select 1 from telegram_pro_reminders where chat_id = $1 and pro_until = $2 and kind = $3",
+		[chatId, until, kind],
+	);
+	return (rowCount ?? 0) > 0;
+}
+
+/** Records a reminder as sent, once Telegram has accepted it. */
+export async function recordProReminder(
+	pool: pg.Pool,
+	chatId: bigint,
+	until: Date,
+	kind: ProReminder,
+): Promise<void> {
+	await pool.query(
+		`insert into telegram_pro_reminders (chat_id, pro_until, kind) values ($1, $2, $3)
+		 on conflict do nothing`,
+		[chatId, until, kind],
+	);
+}

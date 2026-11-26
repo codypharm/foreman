@@ -8,12 +8,15 @@ import { parseAddress } from "@foreman/contract";
 import {
 	followAddress,
 	marketRead,
+	PRO_DAYS,
+	proCode,
 	readFollows,
+	readProUntil,
 	stopChat,
 	unfollowAddress,
 } from "@foreman/index";
 import type pg from "pg";
-import { shortAddress } from "./message.ts";
+import { formatDay, shortAddress } from "./message.ts";
 
 /** Addresses one chat can follow: free, and with Foreman Pro (2026-11-26-telegram-alerts-for-pro.md). */
 export const FREE_FOLLOWS = 1;
@@ -21,8 +24,28 @@ export const PRO_FOLLOWS = 20;
 
 export interface BotDeps {
 	pool: pg.Pool;
-	/** How many addresses this chat may follow. */
-	limitFor: (chatId: bigint) => Promise<number>;
+	now: () => number;
+	/** The web app's address, for the pay link. */
+	webUrl: string;
+}
+
+/** How many addresses a chat may follow now: PRO_FOLLOWS while its Pro lasts (2026-11-26-pro-payments.md). */
+export async function followLimit(
+	pool: pg.Pool,
+	chatId: bigint,
+	now: number,
+): Promise<number> {
+	const until = await readProUntil(pool, chatId);
+	return until !== null && until.getTime() > now ? PRO_FOLLOWS : FREE_FOLLOWS;
+}
+
+/** The page that pays for this chat's Pro, by its code (decision 4). */
+export async function payLink(
+	deps: { pool: pg.Pool; webUrl: string },
+	chatId: bigint,
+): Promise<string> {
+	const code = await proCode(deps.pool, chatId);
+	return `${deps.webUrl.replace(/\/+$/, "")}/#/pro/${code.slice(2)}`;
 }
 
 export const HELP = [
@@ -31,6 +54,7 @@ export const HELP = [
 	"/follow 0x… follows an address",
 	"/unfollow 0x… stops following it",
 	"/list shows what this chat follows",
+	"/pro shows Foreman Pro, to follow up to 20 addresses",
 	"/stop forgets this chat",
 ].join("\n");
 
@@ -66,6 +90,8 @@ export async function handleCommand(
 				"\n",
 			);
 		}
+		case "/pro":
+			return pro(deps, chatId);
 		case "/stop":
 			await stopChat(deps.pool, chatId);
 			return "Stopped. Foreman has forgotten this chat's follows. Send /follow 0x… to start again.";
@@ -83,7 +109,7 @@ async function follow(
 	if (!address)
 		return `"${arg.slice(0, 50)}" isn't an address. Send /follow 0x… with a 0x address.`;
 	const at = await marketRead(deps.pool);
-	const limit = await deps.limitFor(chatId);
+	const limit = await followLimit(deps.pool, chatId, deps.now());
 	const outcome = await followAddress(deps.pool, {
 		chatId,
 		address,
@@ -98,9 +124,34 @@ async function follow(
 			return `This chat already follows ${who}.`;
 		case "limit":
 			return outcome.limit === FREE_FOLLOWS
-				? `This chat already follows ${FREE_FOLLOWS} address, the most without Foreman Pro. Send /unfollow 0x… first, or /list to see it.`
+				? `This chat already follows ${FREE_FOLLOWS} address, the most without Foreman Pro. Send /pro to follow up to ${PRO_FOLLOWS}, or /unfollow 0x… first.`
 				: `This chat already follows ${outcome.limit} addresses, the most it can. Send /unfollow 0x… first.`;
 	}
+}
+
+/** The chat's Pro: until when, or when it ended, and the pay link. A payment is a test payment. */
+async function pro(deps: BotDeps, chatId: bigint): Promise<string> {
+	const until = await readProUntil(deps.pool, chatId);
+	const active = until !== null && until.getTime() > deps.now();
+	const limit = active ? PRO_FOLLOWS : FREE_FOLLOWS;
+	const n = (await readFollows(deps.pool, chatId)).length;
+	const follows = `This chat follows ${n} of ${limit} ${limit === 1 ? "address" : "addresses"}.`;
+	const terms = `0.01 test OKB on the X Layer testnet: a test payment, as the real price isn't set.`;
+	const link = await payLink(deps, chatId);
+	if (active) {
+		return [
+			`Foreman Pro until ${formatDay(until)}. ${follows}`,
+			"",
+			`Paying again adds ${PRO_DAYS} days, for ${terms}`,
+			link,
+		].join("\n");
+	}
+	return [
+		`${until ? `Foreman Pro ended on ${formatDay(until)}. ` : ""}${follows}`,
+		"",
+		`Foreman Pro lets a chat follow up to ${PRO_FOLLOWS} addresses for ${PRO_DAYS} days, for ${terms} Anyone can pay for this chat with this link:`,
+		link,
+	].join("\n");
 }
 
 function toAddress(arg: string) {

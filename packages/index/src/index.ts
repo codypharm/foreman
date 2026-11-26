@@ -97,9 +97,13 @@ export {
 export {
 	PRO_DAYS,
 	type ProPayment,
+	type ProReminder,
 	proCode,
+	proReminderSent,
+	readProChats,
 	readProUntil,
 	recordProPayment,
+	recordProReminder,
 } from "./pro.ts";
 export {
 	type PublishedEntry,

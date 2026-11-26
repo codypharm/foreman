@@ -19,8 +19,8 @@ import { xlayerMainnet } from "@foreman/chain-xlayer";
 import { migrate, recordStage } from "@foreman/index";
 import pg from "pg";
 import { PgBoss } from "pg-boss";
-import { FREE_FOLLOWS } from "../src/alerts/bot.ts";
 import { pollCommands } from "../src/alerts/poll.ts";
+import { sendProReminders } from "../src/alerts/reminders.ts";
 import { sendAlerts } from "../src/alerts/send.ts";
 import { telegramClient } from "../src/alerts/telegram.ts";
 import { runCycle } from "../src/worker/cycle.ts";
@@ -57,15 +57,15 @@ const stages = workerStages(
 	log,
 );
 
-// The Telegram bot, when its token is set. No chat has Foreman Pro until payments are built, so
-// every chat follows one address.
+// The Telegram bot, when its token is set. A chat follows one address, or up to 20 while its Foreman
+// Pro lasts (2026-11-26-pro-payments.md).
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEB_URL = process.env.WEB_URL ?? "https://foreman-eight-beta.vercel.app";
 const telegram = TELEGRAM_BOT_TOKEN ? telegramClient(TELEGRAM_BOT_TOKEN) : null;
 const botStop = new AbortController();
 if (telegram) {
 	void pollCommands(
-		{ pool, telegram, limitFor: async () => FREE_FOLLOWS },
+		{ pool, telegram, now: Date.now, webUrl: WEB_URL },
 		botStop.signal,
 		log,
 	);
@@ -144,12 +144,18 @@ await boss.work(QUEUE, { localConcurrency: 1 }, async () => {
 					xlayer: xlayerMainnet(process.env.XLAYER_MAINNET_RPC_URL).client,
 					telegram,
 					webUrl: WEB_URL,
+					now: Date.now,
 				},
 				log,
 			);
 			log(
-				`alerts: ${sent.sent} sent, ${sent.failed} not sent, ${sent.stopped} chats forgotten`,
+				`alerts: ${sent.sent} sent, ${sent.failed} not sent, ${sent.stopped} chats forgotten, ${sent.paused} follows paused`,
 			);
+			const reminded = await sendProReminders(
+				{ pool, telegram, webUrl: WEB_URL, now: Date.now },
+				log,
+			);
+			log(`pro: ${reminded.sent} reminders sent, ${reminded.failed} not sent`);
 		} catch (error) {
 			log(
 				`alerts: failed: ${error instanceof Error ? error.message : String(error)}`,

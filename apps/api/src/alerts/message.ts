@@ -44,6 +44,11 @@ export function pageUrl(webUrl: string, circuit: CircuitRef): string {
 	return `${webUrl.replace(/\/+$/, "")}/#/circuit/${circuit.processor}/${circuit.tokenId}`;
 }
 
+/** A date as "26 Dec 2026", in UTC. */
+export function formatDay(date: Date): string {
+	return `${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+}
+
 /** 0x077e…2ea5 */
 export function shortAddress(address: string): string {
 	return `${address.slice(0, 6)}…${address.slice(-4)}`;

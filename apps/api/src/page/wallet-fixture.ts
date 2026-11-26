@@ -21,7 +21,7 @@ export const MARKET = {
 };
 export const WALLET = parseAddress(held.noVouchers, "wallet");
 export const VOUCHER_HOLDER = parseAddress(held.holder, "voucher holder");
-export const OTHER = `0x${"ab".repeat(20)}`;
+export const OTHER = parseAddress(`0x${"ab".repeat(20)}`, "other");
 export const OWNERS_UP_TO = 134_673_279n;
 export const DAY = 86_400n;
 
