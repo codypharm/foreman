@@ -109,6 +109,11 @@ export {
 	type UntoldProPayment,
 } from "./pro.ts";
 export {
+	followProPayments,
+	PRO_FOLLOW_BLOCKS,
+	type ProFollow,
+} from "./pro-follow.ts";
+export {
 	type PublishedEntry,
 	type PublishedRow,
 	type ResultsContract,

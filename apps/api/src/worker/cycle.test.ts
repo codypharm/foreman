@@ -14,6 +14,7 @@ function recorded(overrides: Partial<Record<StageName, Stage>> = {}) {
 	return {
 		ran,
 		stages: {
+			pro: stage("pro"),
 			follow: stage("follow"),
 			fabx: stage("fabx"),
 			refresh: stage("refresh"),
@@ -23,11 +24,25 @@ function recorded(overrides: Partial<Record<StageName, Stage>> = {}) {
 }
 
 describe("runCycle", () => {
-	it("follows BNB Chain, then FabX, then refreshes, then publishes", async () => {
+	it("reads Pro payments, follows BNB Chain, then FabX, then refreshes, then publishes", async () => {
 		const { ran, stages } = recorded();
 		const report = await runCycle(stages, () => {});
-		expect(ran).toEqual(["follow", "fabx", "refresh", "publish"]);
+		expect(ran).toEqual(["pro", "follow", "fabx", "refresh", "publish"]);
 		expect(report.ok).toBe(true);
+	});
+
+	it("a failed read of Pro payments is reported and the run carries on: the page's reports still count", async () => {
+		// docs/decisions/2026-11-26-pro-payments.md, decision 5
+		const { ran, stages } = recorded({
+			pro: async () => ({ status: "failed", detail: "logs: over rate limit" }),
+		});
+		const lines: string[] = [];
+		const report = await runCycle(stages, (l) => lines.push(l));
+		expect(ran).toEqual(["pro", "follow", "fabx", "refresh", "publish"]);
+		expect(report.ok).toBe(true);
+		expect(lines.join("\n")).toContain(
+			"pro: failed: logs: over rate limit; the run carries on",
+		);
 	});
 
 	it("a failed FabX follow is reported and the run carries on: BNB Chain's results go ahead", async () => {
@@ -37,9 +52,9 @@ describe("runCycle", () => {
 		});
 		const lines: string[] = [];
 		const report = await runCycle(stages, (l) => lines.push(l));
-		expect(ran).toEqual(["follow", "fabx", "refresh", "publish"]);
+		expect(ran).toEqual(["pro", "follow", "fabx", "refresh", "publish"]);
 		expect(report.ok).toBe(true);
-		expect(report.stages[1]).toEqual({
+		expect(report.stages[2]).toEqual({
 			name: "fabx",
 			outcome: { status: "failed", detail: "logs: node down" },
 		});
@@ -57,9 +72,9 @@ describe("runCycle", () => {
 		});
 		const lines: string[] = [];
 		const report = await runCycle(stages, (l) => lines.push(l));
-		expect(ran).toEqual(["follow"]);
+		expect(ran).toEqual(["pro", "follow"]);
 		expect(report.ok).toBe(false);
-		expect(report.stages).toEqual([
+		expect(report.stages.slice(1)).toEqual([
 			{
 				name: "follow",
 				outcome: { status: "failed", detail: "tape-outs: node down" },
@@ -76,7 +91,7 @@ describe("runCycle", () => {
 			}),
 		});
 		expect((await runCycle(stages, () => {})).ok).toBe(false);
-		expect(ran).toEqual(["follow", "fabx", "refresh"]);
+		expect(ran).toEqual(["pro", "follow", "fabx", "refresh"]);
 	});
 
 	it("turns a thrown error into a failed stage, never a crash", async () => {
@@ -86,8 +101,8 @@ describe("runCycle", () => {
 			},
 		});
 		const report = await runCycle(stages, () => {});
-		expect(ran).toEqual(["follow", "fabx", "refresh"]);
-		expect(report.stages[2]).toEqual({
+		expect(ran).toEqual(["pro", "follow", "fabx", "refresh"]);
+		expect(report.stages[3]).toEqual({
 			name: "refresh",
 			outcome: { status: "failed", detail: "connection terminated" },
 		});
@@ -102,6 +117,6 @@ describe("runCycle", () => {
 		});
 		const report = await runCycle(stages, () => {});
 		expect(report.ok).toBe(true);
-		expect(report.stages[3]?.outcome.status).toBe("skipped");
+		expect(report.stages[4]?.outcome.status).toBe("skipped");
 	});
 });

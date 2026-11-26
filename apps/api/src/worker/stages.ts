@@ -1,4 +1,4 @@
-// The worker's three stages, each the same function its command runs (docs/decisions/2026-11-23-hosting.md,
+// The worker's stages, each the same function its command runs (docs/decisions/2026-11-23-hosting.md,
 // decisions 2 and 4): the follow (`pnpm --filter @foreman/index follow`), the results job
 // (`refresh-results`) and the publish job's plan and send (`publish-results`), here kept in memory
 // rather than written to a plan file. Publishing is on the X Layer testnet only: mainnet from the host
@@ -6,9 +6,11 @@
 
 import { bnbClient } from "@foreman/chain-bnb";
 import { xlayerMainnet } from "@foreman/chain-xlayer";
+import { FOREMAN_PRO } from "@foreman/chain-xlayer/pro";
 import {
 	followFabx,
 	followIndex,
+	followProPayments,
 	readPublished,
 	recordPublisherBalance,
 } from "@foreman/index";
@@ -39,6 +41,9 @@ import type { Stage, StageName } from "./cycle.ts";
 /** The worker publishes here and nowhere else (hosting ADR, decision 4). */
 const PUBLISH_CHAIN = 1952 as const;
 
+/** ForemanPro's deploy block on the X Layer testnet (On-chain facts): no payment is older. */
+const PRO_DEPLOY_BLOCK = 47_249_535n;
+
 export interface WorkerEnv {
 	BNB_ARCHIVE_RPC_URL: string;
 	BNB_RECENT_RPC_URL?: string | undefined;
@@ -66,6 +71,49 @@ export function workerStages(
 			...options,
 		});
 	return {
+		// The backup read of Foreman Pro payments: those the page never reported still count
+		// (docs/decisions/2026-11-26-pro-payments.md, decision 5)
+		pro: async () => {
+			const rpc = env.XLAYER_RPC_URL ?? XLAYER_RPC[PUBLISH_CHAIN];
+			const client = createPublicClient({
+				transport: http(rpc, { retryCount: 3 }),
+			}) as PublicClient;
+			// The public node as well, when the worker has its own: they share the log reads
+			const logNodes =
+				rpc === XLAYER_RPC[PUBLISH_CHAIN]
+					? [client]
+					: [
+							client,
+							createPublicClient({
+								transport: http(XLAYER_RPC[PUBLISH_CHAIN], { retryCount: 3 }),
+							}),
+						];
+			// Finalized, as the other follows: no counted payment can be undone
+			const { number: toBlock } = await client.getBlock({
+				blockTag: "finalized",
+			});
+			const r = await followProPayments(
+				pool,
+				{ client, logNodes },
+				{
+					contract: FOREMAN_PRO.address,
+					startBlock: PRO_DEPLOY_BLOCK,
+					toBlock,
+				},
+			);
+			if (!r.followed) return { status: "failed", detail: r.detail };
+			return {
+				status: "done",
+				summary: `to X Layer testnet block ${r.toBlock}: ${r.counted} payments the page didn't report`,
+				warnings:
+					r.toBlock < toBlock
+						? [
+								`${toBlock - r.toBlock} blocks still to read; the next runs catch up`,
+							]
+						: [],
+			};
+		},
+
 		follow: async () => {
 			const client = bnb({ batch: true });
 			const { number: toBlock } = await client.getBlock({

@@ -257,6 +257,12 @@ describe.skipIf(!TEST_DATABASE_URL)("GET /health", () => {
 		const at = BigInt(Math.floor(Date.now() / 1000)) - 120n;
 		await recordStage(
 			pool,
+			"pro",
+			{ status: "done", summary: "to X Layer testnet block 47252327" },
+			at,
+		);
+		await recordStage(
+			pool,
 			"follow",
 			{ status: "done", summary: "to BNB block 135256173" },
 			at,
@@ -298,7 +304,7 @@ describe.skipIf(!TEST_DATABASE_URL)("GET /health", () => {
 	test("answers 503, low balance, with the publisher's address and balance, when the wallet is nearly empty", async () => {
 		pool = await freshDatabase();
 		const at = BigInt(Math.floor(Date.now() / 1000)) - 60n;
-		for (const stage of ["follow", "refresh", "publish"] as const) {
+		for (const stage of ["pro", "follow", "refresh", "publish"] as const) {
 			await recordStage(pool, stage, { status: "done", summary: "done" }, at);
 		}
 		await recordPublisherBalance(pool, {

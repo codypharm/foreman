@@ -5,6 +5,7 @@
 import { randomBytes } from "node:crypto";
 import type pg from "pg";
 import type { Hex } from "viem";
+import type { Db } from "./transaction.ts";
 
 /** Days of Pro one payment buys (decision 2). */
 export const PRO_DAYS = 30;
@@ -44,7 +45,7 @@ export interface ProPayment {
  * the worker both report it) is `counted: false`. A code that is no chat's is kept with no chat.
  */
 export async function recordProPayment(
-	pool: pg.Pool,
+	pool: Db,
 	payment: ProPayment,
 ): Promise<{ counted: boolean; chatId: bigint | null }> {
 	const code = Buffer.from(payment.code.slice(2), "hex");

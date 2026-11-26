@@ -20,6 +20,7 @@ describe.skipIf(!TEST_DATABASE_URL)("worker stages", () => {
 	test("a stage that never ran reads as empty, never as done", async () => {
 		pool = await freshDatabase();
 		expect(await readStages(pool)).toEqual([
+			{ stage: "pro", lastDone: null, lastSkipped: null, lastFailed: null },
 			{ stage: "follow", lastDone: null, lastSkipped: null, lastFailed: null },
 			{ stage: "fabx", lastDone: null, lastSkipped: null, lastFailed: null },
 			{ stage: "refresh", lastDone: null, lastSkipped: null, lastFailed: null },
@@ -41,7 +42,7 @@ describe.skipIf(!TEST_DATABASE_URL)("worker stages", () => {
 			{ status: "failed", detail: "node down" },
 			1_300n,
 		);
-		const [follow] = await readStages(pool);
+		const follow = (await readStages(pool)).find((s) => s.stage === "follow");
 		expect(follow).toEqual({
 			stage: "follow",
 			lastDone: { at: 1_000n, text: "to BNB block 100" },

@@ -4,9 +4,11 @@
 // a half-read index, and the next run, 5 minutes later, starts again from the follow. That next run
 // is the retry; nothing here loops. FabX's follow alone carries on when it fails: it saves all or
 // nothing, so FabX stays at one block and BNB Chain's results go ahead
-// (2026-11-26-fabx-follow.md, decision 4).
+// (2026-11-26-fabx-follow.md, decision 4). Before all of them, the backup read of Foreman Pro payments,
+// which carries on too: it reads nothing the others need, and the page's own reports count without it
+// (2026-11-26-pro-payments.md, decision 5).
 
-export type StageName = "follow" | "fabx" | "refresh" | "publish";
+export type StageName = "pro" | "follow" | "fabx" | "refresh" | "publish";
 
 export type StageOutcome =
 	/** Done. `summary` is one plain line for the log: blocks, counts, transaction hashes, never a key. */
@@ -24,9 +26,9 @@ export interface CycleReport {
 	ok: boolean;
 }
 
-const ORDER: StageName[] = ["follow", "fabx", "refresh", "publish"];
+const ORDER: StageName[] = ["pro", "follow", "fabx", "refresh", "publish"];
 /** Stages whose failure is reported without ending the run. */
-const CARRIES_ON: ReadonlySet<StageName> = new Set(["fabx"]);
+const CARRIES_ON: ReadonlySet<StageName> = new Set(["pro", "fabx"]);
 
 export async function runCycle(
 	stages: Record<StageName, Stage>,
