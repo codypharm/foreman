@@ -27,6 +27,40 @@
 .connect {
 	margin-top: 20px;
 }
+/* The Telegram button, to docs/mocks/2026-11-26-telegram-button.html: outline, so alerts stay loudest */
+.tg {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	width: max-content;
+	height: 42px;
+	margin-top: 16px;
+	padding: 0 20px;
+	border-radius: 999px;
+	background: var(--bg);
+	color: var(--ink);
+	font: 600 14px / 1 var(--sans);
+	text-decoration: none;
+	box-shadow: inset 0 0 0 1px var(--line);
+}
+.tg:hover {
+	box-shadow: inset 0 0 0 1px var(--ink-3);
+}
+.tg:focus-visible {
+	outline: 2px solid var(--ink);
+	outline-offset: 2px;
+}
+.tg svg {
+	flex: none;
+}
+.tgLine {
+	margin-top: 10px;
+	max-width: 60ch;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--ink-2);
+}
 .fact {
 	margin-top: 20px;
 	font: 500 15px / 1.45 var(--sans);
@@ -348,6 +382,9 @@
 	}
 	.connect > div > button {
 		display: flex;
+		width: 100%;
+	}
+	.tg {
 		width: 100%;
 	}
 }

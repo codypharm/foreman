@@ -1,0 +1,241 @@
+<!--
+  "Your miners" with a "Get copy alerts on Telegram" button under the page title. Chosen by William on
+  26 November 2026 (option B of three, which were A "in the Copy alerts panel", below all 64 miners on a
+  phone, and C "inside the newest alert", shown only when a copy was listed this week).
+  Refines the chosen 23 Nov mock (2026-11-23-copy-alerts-by-design.html); everything else is unchanged.
+  The button opens https://t.me/ForemanCopyAlertsBot?start=<connected wallet>, which follows that wallet in
+  one tap (2026-11-26-telegram-alerts-for-pro.md, decision 4). An outline button, so the alert cards stay the
+  loudest thing on the page. Its line states only what the bot does: it messages for copies listed after the
+  follow, one address is free, and it never asks for a signature. Shown when the wallet holds a miner.
+  Static, real data: wallet 0x077e…2ea5 as in the 23 Nov mock.
+  Build to this; a layout or flow change is a new mock and a new choice.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foreman · Your miners</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --raise:#F5F5F5; --ink:#000000; --ink-2:#6B6B6B; --ink-3:#9A9A9A; --line:#EBEBEB;
+  --accent:#C2F24B; --on-accent:#000000; --new:#567300; --live:#14A44D;
+  --btn:#000000; --on-btn:#FFFFFF; --frame:#FAFAFA;
+  --sans:"Geist",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+    --live:#3DDC84; --new:#C2F24B; --btn:#FFFFFF; --on-btn:#000000; --frame:#0A0A0A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+  --live:#3DDC84; --new:#C2F24B; --btn:#FFFFFF; --on-btn:#000000; --frame:#0A0A0A;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{background:var(--bg)}
+::selection{background:var(--accent);color:var(--on-accent)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+button{font:inherit;color:inherit}
+a{color:inherit}
+button{font:inherit;color:inherit}
+a{color:inherit}
+
+/* top bar */
+.top{display:grid;grid-template-columns:auto minmax(0,480px) auto;justify-content:space-between;align-items:center;gap:24px;height:64px;padding:0 32px;border-bottom:1px solid var(--line)}
+.mark{display:flex;align-items:center;gap:9px;font:700 18px/1 var(--sans);letter-spacing:-.02em}
+.mark svg{display:block}
+.search{display:flex;align-items:center;gap:10px;height:40px;padding:0 6px 0 14px;border-radius:999px;background:var(--raise)}
+.search svg{flex:none;color:var(--ink-2)}
+.search input{all:unset;flex:1;min-width:0;font:500 14px/1 var(--sans)}
+.search input::placeholder{color:var(--ink-2)}
+.search button{all:unset;cursor:pointer;font:600 13px/1 var(--sans);padding:8px 12px;border-radius:999px;background:var(--btn);color:var(--on-btn)}
+.right{display:flex;align-items:center;gap:6px}
+.right nav{display:flex;gap:2px;margin-right:8px}
+.right nav a{font:500 14px/1 var(--sans);color:var(--ink-2);text-decoration:none;padding:9px 12px;border-radius:999px}
+.right nav a:hover{color:var(--ink)}
+.right nav a[aria-current=page]{color:var(--ink);background:var(--raise)}
+.icon{all:unset;cursor:pointer;display:grid;place-items:center;width:36px;height:36px;border-radius:999px;color:var(--ink-2)}
+.icon:hover{background:var(--raise);color:var(--ink)}
+.wallet{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;font:600 13px/1 var(--sans);padding:10px 14px;border-radius:999px;background:var(--raise);white-space:nowrap;margin-left:4px}
+.wallet i{width:7px;height:7px;border-radius:50%;background:var(--live)}
+.page{max-width:1200px;margin:0 auto;padding:36px 32px 56px;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:56px;align-items:start}
+.watch{position:sticky;top:24px}
+.watch dl{display:grid;grid-template-columns:1fr auto;margin-top:6px}
+.watch dt,.watch dd{padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+.watch dt{color:var(--ink-2)}
+.watch dd{text-align:right;font-weight:600}
+.watch p{margin-top:14px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+@media (max-width:1040px){ .right nav{display:none} .page{grid-template-columns:minmax(0,1fr) 300px;gap:40px} }
+@media (max-width:760px){
+  .top{grid-template-columns:auto auto;height:auto;padding:12px 16px;gap:12px}
+  .search{grid-column:1/-1;grid-row:2}
+  .page{grid-template-columns:minmax(0,1fr);padding:20px 16px 40px;gap:36px}
+  .watch{position:static}
+  .intro h1{font-size:24px}
+}
+.screen{padding:24px 20px 28px}
+@media (max-width:1180px){ .opts{grid-template-columns:minmax(0,1fr);max-width:640px} }
+
+/* the page, in the chosen mock's system */
+.intro h1{font:600 26px/1.15 var(--sans);letter-spacing:-.02em}
+.intro p{margin-top:6px;font-size:14px;color:var(--ink-2)}
+.sec{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.sec h2{font:600 17px/1.2 var(--sans)}
+.sec .meta{font:500 12px/1.3 var(--sans);color:var(--ink-2)}
+.flag{display:inline-block;font:600 12px/1 var(--sans);padding:5px 8px;border-radius:6px;background:var(--accent);color:var(--on-accent);white-space:nowrap}
+.quiet{font:500 12px/1 var(--sans);padding:5px 8px;border-radius:6px;background:var(--raise);color:var(--ink-2);white-space:nowrap}
+.limit{margin-top:14px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.fact{margin-top:16px;font:500 15px/1.45 var(--sans)}
+.fact b{font-weight:600}
+
+/* an alert card (the chosen mock's) */
+.alert{margin-top:20px;padding:18px;border-radius:18px;background:var(--raise)}
+.alert+.alert{margin-top:12px}
+.alert .when{display:flex;align-items:center;gap:8px;font:600 13px/1 var(--sans);color:var(--ink-2)}
+.alert .when i{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--bg)}
+.alert h3{margin-top:10px;font:600 21px/1.2 var(--sans);letter-spacing:-.02em;text-wrap:balance}
+.alert .lead{margin-top:8px;font-size:14px;line-height:1.5}
+.alert .lead b{font-weight:600}
+.alert .own{margin-top:8px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.alert .own b{color:var(--ink);font-weight:600}
+.alert ul{list-style:none;padding:0;margin-top:12px}
+.alert li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.alert li>span{font:600 14px/1.3 var(--sans)}
+.alert li>span small{display:block;font:400 12px/1.4 var(--sans);color:var(--ink-2)}
+.alert li>b{text-align:right;font:600 14px/1.3 var(--sans);white-space:nowrap}
+.alert li>b small{display:block;font:400 12px/1.4 var(--sans);color:var(--ink-2)}
+.alert li>b small .new{color:var(--new);font-weight:600}
+.alert li.ev>span{font-weight:400;color:var(--ink-2)}
+.more{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:42px;margin-top:12px;border-radius:999px;font:600 14px/1 var(--sans);box-shadow:inset 0 0 0 1px var(--line);background:var(--bg)}
+.more:hover{box-shadow:inset 0 0 0 1px var(--ink-3)}
+.cta{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:46px;margin-top:14px;border-radius:999px;background:var(--btn);color:var(--on-btn);font:600 15px/1 var(--sans)}
+.alert .rule{margin-top:6px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.alert .rule b{color:var(--ink);font-weight:600}
+
+/* the miners list */
+.mine{margin-top:32px}
+.rows{list-style:none;padding:0;margin-top:4px}
+.rows li a{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px 10px;margin:0 -10px;border-radius:12px;text-decoration:none;border-bottom:1px solid var(--line)}
+.rows li a:hover{background:var(--raise)}
+.badge{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:999px;background:var(--ink);color:var(--bg);font:700 12px/1 var(--sans)}
+.badge.g{background:var(--raise);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.rows .k{font:600 15px/1.25 var(--sans)}
+.rows .k .flag,.rows .k .quiet{margin-left:8px;padding:0;background:none;border-radius:0;font:600 13px/1.25 var(--sans)}
+.rows .k .flag{color:var(--new)}
+.rows .k .quiet{font-weight:500;color:var(--ink-2)}
+@media (max-width:760px){ .rows .k .flag,.rows .k .quiet{display:block;margin:2px 0 0} }
+.rows .k small{display:block;font:400 13px/1.35 var(--sans);color:var(--ink-2);margin-top:2px}
+.rows .v{text-align:right;font:600 15px/1.25 var(--sans);white-space:nowrap}
+.rows .v small{display:block;font:400 13px/1.35 var(--sans);color:var(--ink-2)}
+.showall{all:unset;cursor:pointer;display:block;padding:14px 0;font:600 14px/1 var(--sans)}
+.showall:hover{text-decoration:underline;text-underline-offset:3px}
+
+.tg{display:flex;align-items:center;justify-content:center;gap:10px;width:max-content;height:42px;margin-top:16px;padding:0 20px;border-radius:999px;background:var(--bg);color:var(--ink);font:600 14px/1 var(--sans);text-decoration:none;box-shadow:inset 0 0 0 1px var(--line)}
+.tg:hover{box-shadow:inset 0 0 0 1px var(--ink-3)}
+.tg svg{flex:none}
+.tg-line{margin-top:10px;max-width:60ch;font-size:13px;line-height:1.5;color:var(--ink-2)}
+@media (max-width:760px){ .tg{width:100%} }
+
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="mark"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="9" height="9" rx="2" fill="currentColor"/><rect x="12" y="1" width="9" height="9" rx="2" fill="currentColor" opacity=".35"/><rect x="1" y="12" width="9" height="9" rx="2" fill="currentColor" opacity=".35"/><rect x="12" y="12" width="9" height="9" rx="2" fill="#C2F24B"/></svg>Foreman</div>
+  <form class="search" role="search" onsubmit="return false">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <input aria-label="Listing, miner or RIG voucher" placeholder="Paste a listing, miner or RIG voucher" value=""><button>Check</button>
+  </form>
+  <div class="right">
+    <nav><a href="#">Live listings</a><a href="#" aria-current="page">Your miners</a></nav>
+    <button class="icon" id="theme" aria-label="Switch light or dark"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M3.7 14.3l1.4-1.4M12.9 5.1l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button class="wallet"><i></i>0x077e…2ea5</button>
+  </div>
+</header>
+
+<div class="page">
+  <main>
+  <section class="intro">
+    <h1>Your miners</h1>
+    <p>64 miners held by 0x077e…2ea5, watched for copies</p>
+    <a class="tg" href="https://t.me/ForemanCopyAlertsBot?start=0x077e…2ea5" target="_blank" rel="noopener"><svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true"><path d="M16.2 2.2 1.6 7.9c-.6.2-.6 1.1 0 1.3l3.6 1.2 1.4 4.4c.2.5.8.7 1.2.3l2-1.9 3.7 2.7c.5.3 1.1.1 1.2-.5l2.4-12.2c.2-.7-.5-1.3-1.1-1Zm-2.7 3-6.4 5.8-.3 2.7-1-3.3 7.7-5.2Z" fill="currentColor"/></svg>Get copy alerts on Telegram</a>
+    <p class="tg-line">Telegram messages you when a copy is listed after you follow. One address free. The bot never asks you to sign anything.</p>
+  </section>
+
+  <article class="alert">
+    <div class="when"><i></i>3 listed this week · BNB block 135,141,389</div>
+    <h3>A copy of your miner was just listed</h3>
+    <p class="lead"><b>7 circuits identical to 16 of your miners</b> are listed on TapeOut’s market, 3 of them since 20 Nov.</p>
+    <p class="own">Your miners on this design, <b>#1877</b> and 15 more, are themselves identical to <b>circuit #6774</b>, designed earlier.</p>
+    <ul>
+      <li><span>#13931 · processor ×1<small>designed 15 Sep 2026</small></span><b>2.36 BNB<small><span class="new">Just listed</span> · 20 Nov</small></b></li>
+      <li><span>#13338 · processor ×1<small>designed 13 Sep 2026</small></span><b>2.36 BNB<small><span class="new">Just listed</span> · 20 Nov</small></b></li>
+      <li><span>#18313 · processor ×1<small>designed 16 Nov 2026</small></span><b>2.36 BNB<small><span class="new">Just listed</span> · 20 Nov</small></b></li>
+    </ul>
+    <button class="more" type="button">Show all 7 listings</button>
+    <p class="rule"><b>The earliest proven design is the original.</b> Your earliest here, #10278, was designed 26 Aug 2026. Netlist hash <span class="mono">0x9564…c85f</span>.</p>
+  </article>
+
+  <article class="alert">
+    <div class="when"><i></i>3 listed this week</div>
+    <h3>A copy of your miner was just listed</h3>
+    <p class="lead"><b>16 circuits identical to 3 of your miners</b> are listed, 3 of them since 19 Nov.</p>
+    <p class="own">Your miners on this design, <b>#10294</b> and 2 more, are themselves identical to <b>circuit #444</b>, designed earlier.</p>
+    <ul>
+      <li><span>#2369 · processor ×6<small>designed 15 Sep 2026</small></span><b>2.331 BNB<small><span class="new">Just listed</span> · 19 Nov</small></b></li>
+      <li><span>#2150 · processor ×6<small>designed 10 Sep 2026</small></span><b>2.33 BNB<small><span class="new">Just listed</span> · 19 Nov</small></b></li>
+      <li><span>#2395 · processor ×6<small>designed 15 Sep 2026</small></span><b>2.33 BNB<small><span class="new">Just listed</span> · 19 Nov</small></b></li>
+    </ul>
+    <button class="more" type="button">Show all 16 listings</button>
+  </article>
+
+  <article class="alert">
+    <h3>30 copies of your miner #96 are listed</h3>
+    <p class="own">Your #96 is itself identical to <b>circuit #12</b>, designed earlier. Newest listed 10 Nov.</p>
+    <button class="more" type="button">Show the 30 listings</button>
+  </article>
+  <article class="alert">
+    <h3>16 copies of your miner #97 are listed</h3>
+    <p class="own">No earlier copy of #97 found. Newest listed 19 Oct.</p>
+    <button class="more" type="button">Show the 16 listings</button>
+  </article>
+
+  <section class="mine">
+    <div class="sec"><h2>All 64 miners</h2><span class="meta">Copies listed first</span></div>
+    <ul class="rows">
+      <li><a href="#"><span class="badge" aria-hidden="true">×6</span><span class="k">Circuit #1877 <span class="flag">7 copies listed</span><small>Copy of #6774 · no design bonus</small></span><span class="v">Mining now<small>941 identical miners</small></span></a></li>
+      <li><a href="#"><span class="badge g" aria-hidden="true">×1</span><span class="k">Circuit #10278 <span class="flag">7 copies listed</span><small>Copy of #6774 · no design bonus</small></span><span class="v">Mining now<small>941 identical miners</small></span></a></li>
+      <li><a href="#"><span class="badge g" aria-hidden="true">×1</span><span class="k">Circuit #96 <span class="quiet">30 copies listed</span><small>Copy of #12 · no design bonus</small></span><span class="v">Mining now<small>166 identical miners</small></span></a></li>
+    </ul>
+    <button class="showall" type="button">Show all 64</button>
+      <p class="limit">Each verdict checked against 80,348 circuits up to BNB block 135,135,809. Checks identical netlists, including swapped gate inputs. A copy with its gates reordered isn’t detected.</p>
+    </section>
+  </main>
+  <aside class="watch" aria-label="Copy alerts">
+    <div class="sec"><h2>Copy alerts</h2></div>
+    <dl>
+      <dt>Watching</dt><dd>64 miners</dd>
+      <dt>Owners read to</dt><dd>BNB block 135,140,617</dd>
+      <dt>Market read to</dt><dd>BNB block 135,141,389</dd>
+      <dt>Listed this week</dt><dd>2 designs</dd>
+    </dl>
+    <p>An alert appears when a circuit identical to one of your miners, with a later design time, is listed on TapeOut’s market. Miners with the same netlist share one alert. Alerts show here while your wallet is connected. Foreman never holds or moves your miners.</p>
+  </aside>
+</div>
+<script>
+document.getElementById("theme").addEventListener("click",()=>{
+  const r=document.documentElement;
+  const dark=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme=dark?"light":"dark";
+});
+</script>
+</body>
+</html>

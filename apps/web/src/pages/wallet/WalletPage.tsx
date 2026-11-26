@@ -1,4 +1,5 @@
-// Your miners (docs/mocks/2026-11-23-copy-alerts-by-design.html, chosen 23 Nov 2026): the connected
+// Your miners (docs/mocks/2026-11-23-copy-alerts-by-design.html, chosen 23 Nov 2026, with the Telegram
+// button from 2026-11-26-telegram-button.html): the connected
 // wallet's miners, one copy alert per design, and every miner with its verdict, from
 // GET /wallet/:address/miners. Facts, never accusations; nothing here decides a verdict.
 
@@ -123,6 +124,7 @@ function Miners({ address }: { address: string }) {
 						{formatCount(n)} miner{n === 1 ? "" : "s"} held by{" "}
 						{shortHex(w.wallet)}, watched for copies
 					</p>
+					{n > 0 && <TelegramFollow wallet={w.wallet} />}
 				</section>
 
 				{n === 0 ? (
@@ -438,6 +440,38 @@ function MinerRow({
 				</span>
 			</Link>
 		</li>
+	);
+}
+
+/** Foreman's Telegram bot; its /start follows the address it is given. */
+const TELEGRAM_BOT = "ForemanCopyAlertsBot";
+
+/**
+ * "Get copy alerts on Telegram" (docs/mocks/2026-11-26-telegram-button.html, chosen 26 Nov 2026):
+ * opens the bot already following this wallet (2026-11-26-telegram-alerts-for-pro.md, decision 4).
+ */
+function TelegramFollow({ wallet }: { wallet: string }) {
+	return (
+		<>
+			<a
+				className={s.tg}
+				href={`https://t.me/${TELEGRAM_BOT}?start=${wallet.toLowerCase()}`}
+				target="_blank"
+				rel="noopener noreferrer"
+			>
+				<svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true">
+					<path
+						d="M16.2 2.2 1.6 7.9c-.6.2-.6 1.1 0 1.3l3.6 1.2 1.4 4.4c.2.5.8.7 1.2.3l2-1.9 3.7 2.7c.5.3 1.1.1 1.2-.5l2.4-12.2c.2-.7-.5-1.3-1.1-1Zm-2.7 3-6.4 5.8-.3 2.7-1-3.3 7.7-5.2Z"
+						fill="currentColor"
+					/>
+				</svg>
+				Get copy alerts on Telegram
+			</a>
+			<p className={s.tgLine}>
+				Telegram messages you when a copy is listed after you follow. One
+				address free. The bot never asks you to sign anything.
+			</p>
+		</>
 	);
 }
 
