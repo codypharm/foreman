@@ -3,11 +3,14 @@
 // published on X Layer.
 
 import {
+	type BnbCircuitPage,
 	bnbIndexBlock,
 	type CircuitPage,
+	type FabxCircuitPage,
 	type LendNoneReason,
 	type Offer,
 } from "@foreman/contract";
+import { Fragment } from "react";
 import { VerdictLine } from "../../components/VerdictLine.tsx";
 import {
 	formatAmount,
@@ -20,7 +23,52 @@ import s from "./ResultPage.module.css";
 
 type Lend = Extract<Offer, { option: "lend" }>;
 
-export function Options({ page }: { page: CircuitPage }) {
+/**
+ * A FabX miner's options as they really are: FabX isn't valued, its market isn't read, and TapePool
+ * lends only against RIG vouchers (docs/mocks/2026-11-25-fabx-result.html, B).
+ */
+export function FabxOptions({ page }: { page: FabxCircuitPage }) {
+	return (
+		<aside className={s.side} aria-label="Options">
+			<div className={s.sec}>
+				<h2>Options</h2>
+			</div>
+			<ul className={s.opts}>
+				<NoneOption name="Hold" state="Not covered yet" />
+				<NoneOption name="Sell" state="Not read">
+					FabX’s market isn’t checked.
+				</NoneOption>
+				<NoneOption name="Lend" state="No offer">
+					TapePool lends against RIG vouchers, which stand for BNB Chain miners.
+				</NoneOption>
+				<NoneOption name="Rent" state="No rental market yet" />
+			</ul>
+			<Published page={page} />
+		</aside>
+	);
+}
+
+function NoneOption({
+	name,
+	state,
+	children,
+}: {
+	name: string;
+	state: string;
+	children?: string;
+}) {
+	return (
+		<li>
+			<div className={s.h}>
+				<strong>{name}</strong>
+				<em className={s.none}>{state}</em>
+			</div>
+			{children && <p>{children}</p>}
+		</li>
+	);
+}
+
+export function Options({ page }: { page: BnbCircuitPage }) {
 	return (
 		<aside className={s.side} aria-label="Options">
 			<div className={s.sec}>
@@ -46,7 +94,7 @@ export function Options({ page }: { page: CircuitPage }) {
 	);
 }
 
-function Hold({ hold }: { hold: CircuitPage["hold"] }) {
+function Hold({ hold }: { hold: BnbCircuitPage["hold"] }) {
 	if (hold.state !== "shown") {
 		return (
 			<li>
@@ -75,7 +123,7 @@ function Hold({ hold }: { hold: CircuitPage["hold"] }) {
 	);
 }
 
-function Sell({ sell }: { sell: CircuitPage["options"]["sell"] }) {
+function Sell({ sell }: { sell: BnbCircuitPage["options"]["sell"] }) {
 	const { bid, sales } = sell;
 	const r = sales.range;
 	return (
@@ -227,6 +275,14 @@ function Published({ page }: { page: CircuitPage }) {
 							<>
 								<dt>Read at BNB block</dt>
 								<dd>{formatCount(bnbIndexBlock(check.originality.index))}</dd>
+								{check.originality.index.upTo
+									.filter((u) => u.chainId === 196)
+									.map((u) => (
+										<Fragment key="xlayer">
+											<dt>Read at X Layer block</dt>
+											<dd>{formatCount(u.block)}</dd>
+										</Fragment>
+									))}
 								<dt>Rule</dt>
 								<dd>{check.originality.ruleVersion}</dd>
 							</>

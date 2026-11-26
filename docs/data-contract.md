@@ -425,8 +425,10 @@ interface ListingsPage {
 ### `CircuitPage`
 
 ```ts
-interface CircuitPage {
-  circuit: CircuitRef;
+type CircuitPage = BnbCircuitPage | FabxCircuitPage; // told apart by `fabx` (2026-11-26-fabx-circuit-page.md)
+
+interface BnbCircuitPage {
+  circuit: CircuitRef;                   // chainId 56
   multiplier: number;
   check: StoredCheck;
   published: Published;
@@ -451,6 +453,26 @@ interface CircuitPage {
 - **Hold needs a mining miner:** `hold` is `shown` or `not-valued` only when `miner.status` is `active`; both windows use the same `miner` read.
 - **Not valued is the unverified pool, and only that:** `hold` is `not-valued` only for an active miner whose `pool` is `unverified`, with the reason "Foreman doesn't value the unverified pool yet". Then `payback` is `not-valued` too, and no other page has a `not-valued` payback. Never a made-up number, never "not mining".
 - **One circuit, one page:** the page exists for every indexed circuit. A circuit outside the index is an `ApiError` (`unknown-circuit`), never an empty page.
+
+```ts
+interface FabxCircuitPage {
+  circuit: CircuitRef;                   // chainId 196, on FabX's processor
+  check: StoredCheck;
+  published: Published;
+  miner: { taskId: number; readAtBlock: bigint } | null; // FabX's stored miner record; null when it isn't a FabX miner
+  fabx: {
+    contract: Address;                   // FabX's mining contract, from On-chain facts
+    followedTo: bigint;                  // the X Layer block FabX's history is stored up to
+    frozenAtBlock: bigint | null;        // a change to FabX's contract nobody has reviewed; null when not frozen
+  };
+}
+```
+
+*Added 26 November 2026 by `docs/decisions/2026-11-26-fabx-circuit-page.md`.*
+
+- **Stored, never live:** every part comes from what is stored with FabX's history. No value, payback or offer: FabX isn't valued, and the page says "not covered yet" (`2026-11-25-fabx-copy-check.md`, decision 8).
+- **One circuit, one mining contract:** the result is this circuit's; a miner's result names FabX's mining contract and comes with FabX's miner record, and a circuit that isn't a FabX miner has no record and a `pasted` result. No FabX result is `listed`: FabX's market isn't read.
+- **Frozen:** while `frozenAtBlock` is set, the page shows the last stored result with the notice (decision 6 of the FabX ADR).
 
 ### `WalletMiners`
 

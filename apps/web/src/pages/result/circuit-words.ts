@@ -9,11 +9,19 @@ const ELIGIBLE: Readonly<Record<string, Exclude<Multiplier, 0>>> = {
 	"0xb1024b89886b9a34aa4ff5f31c411d708b20a14c": 1,
 };
 
-/** "processor ×6", or the processor's short address when it isn't eligible. */
+/** FabX's processor on X Layer (CLAUDE.md, "On-chain facts", 25 Nov 2026). */
+const FABX_PROCESSOR = "0x87bfca3494aa228ff589ab9b642143a5e8c8f9a6";
+
+/** "processor ×6", "FabX’s processor", or the processor's short address when it isn't eligible. */
 export function processorLabel(processor: string): string {
+	if (processor.toLowerCase() === FABX_PROCESSOR) return "FabX’s processor";
 	const m = ELIGIBLE[processor.toLowerCase()];
 	return m ? `processor ×${m}` : `processor ${shortHex(processor)}`;
 }
+
+export const CHAIN = { 56: "BNB Chain", 196: "X Layer" } as const;
+/** How a block is named on screen: "BNB block", "X Layer block". */
+export const BLOCK = { 56: "BNB block", 196: "X Layer block" } as const;
 
 /**
  * A circuit's design time: its design commitment when the mining contract accepted one, otherwise its
@@ -30,6 +38,12 @@ export function designTime(c: CircuitRef): {
 }
 
 export const circuitName = (c: CircuitRef) => `#${c.tokenId.toString()}`;
+
+/** "#97", or "#97 on BNB Chain" when it is on another chain than the result's own circuit. */
+export const circuitFrom = (c: CircuitRef, me: CircuitRef) =>
+	c.chainId === me.chainId
+		? circuitName(c)
+		: `${circuitName(c)} on ${CHAIN[c.chainId]}`;
 
 /** The can-mine fact in the product's words (CLAUDE.md, "Domain language"). */
 export const CAN_MINE = {

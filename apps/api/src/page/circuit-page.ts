@@ -13,14 +13,21 @@ import {
 	readNetworkState,
 	UnknownMinerError,
 } from "@foreman/chain-bnb";
-import { readLendOffers, readVoucher } from "@foreman/chain-xlayer";
+import {
+	FABX_MINING,
+	readLendOffers,
+	readVoucher,
+} from "@foreman/chain-xlayer";
 import {
 	type ApiError,
+	type BnbCircuitPage,
 	type CircuitPage,
+	type FabxCircuitPage,
 	type Miner,
 	type Multiplier,
 	type Originality,
 	type Published,
+	parseAddress,
 	parseCircuitPage,
 	parseMultiplier,
 	type StoredCheck,
@@ -31,6 +38,8 @@ import {
 	type ResultsContract,
 	readCircuitListing,
 	readCircuitRef,
+	readFabxMiner,
+	readFabxState,
 	readNetworkDays,
 	readPublishedRow,
 	readSellMarket,
@@ -87,6 +96,7 @@ export async function readCircuitPage(
 			`Circuit #${circuit.id} on processor ${circuit.processor} isn't in Foreman's index`,
 		);
 	}
+	if (ref.chainId === 196) return readFabxPage(deps, circuit, ref);
 	let at: Awaited<ReturnType<typeof marketRead>>;
 	try {
 		at = await marketRead(pool);
@@ -134,8 +144,8 @@ export async function readCircuitPage(
 		if (!lend7 || !lend14) throw new Error("Lend gave fewer than two terms");
 
 		const active = miner?.status === "active";
-		let hold: CircuitPage["hold"];
-		let paybackRead: CircuitPage["payback"];
+		let hold: BnbCircuitPage["hold"];
+		let paybackRead: BnbCircuitPage["payback"];
 		if (active && miner.pool === "unverified") {
 			hold = { state: "not-valued", reason: NOT_VALUED_REASON };
 			paybackRead = {
@@ -176,7 +186,7 @@ export async function readCircuitPage(
 			});
 		}
 
-		const page: CircuitPage = {
+		const page: BnbCircuitPage = {
 			circuit: ref,
 			multiplier,
 			check,
@@ -198,6 +208,47 @@ export async function readCircuitPage(
 				: { state: "no-price", reason: bemPrice.reason },
 		};
 		// The contract's checks: one circuit, one key, values and payback agreeing with the miner
+		return {
+			ok: true,
+			page: parseCircuitPage(serialiseCircuitPage(page, "page"), "page"),
+		};
+	} catch (error) {
+		return fail("read-failed", plain(error));
+	}
+}
+
+/**
+ * A FabX circuit's page, entirely from what is stored with FabX's history: its result, FabX's miner
+ * record and FabX's state. No live read, and no value or offer (2026-11-26-fabx-circuit-page.md).
+ */
+async function readFabxPage(
+	deps: PageDeps,
+	circuit: CircuitId,
+	ref: FabxCircuitPage["circuit"],
+): Promise<PageRead> {
+	try {
+		const state = await readFabxState(deps.pool);
+		if (!state) return fail("not-ready", "FabX's history isn't stored yet");
+		const record = await readFabxMiner(deps.pool, circuit);
+		const check = await storedCheck(deps, circuit, {
+			isMiner: record !== null,
+			isListed: false,
+		});
+		const published = await publishedState(deps, check, minerKey(circuit));
+		const page: FabxCircuitPage = {
+			circuit: ref,
+			check,
+			published,
+			miner: record && {
+				taskId: record.taskId,
+				readAtBlock: record.readAtBlock,
+			},
+			fabx: {
+				contract: parseAddress(FABX_MINING, "FABX_MINING"),
+				followedTo: state.logsUpToBlock,
+				frozenAtBlock: state.frozenAtBlock,
+			},
+		};
 		return {
 			ok: true,
 			page: parseCircuitPage(serialiseCircuitPage(page, "page"), "page"),

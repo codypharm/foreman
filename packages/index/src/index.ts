@@ -10,6 +10,7 @@ export {
 } from "./backfill.ts";
 export {
 	backfillFabxNetlists,
+	type FabxMinerRecord,
 	type FabxState,
 	FREEZING,
 	fillFabxClaimTimes,

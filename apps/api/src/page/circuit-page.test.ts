@@ -1,8 +1,13 @@
 import { minerKey } from "@foreman/chain-bnb";
 import { replayClient } from "@foreman/chain-bnb/fixture";
-import { parseAddress, parseHex32 } from "@foreman/contract";
+import {
+	type BnbCircuitPage,
+	isFabxPage,
+	parseAddress,
+	parseHex32,
+} from "@foreman/contract";
 import { readStoredResult, recordPublished } from "@foreman/index";
-import { TEST_DATABASE_URL } from "@foreman/index/testing";
+import { fabxIndexedDatabase, TEST_DATABASE_URL } from "@foreman/index/testing";
 import circuits from "@foreman/originality/fixtures/bnb-circuits-134673279.json" with {
 	type: "json",
 };
@@ -12,6 +17,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import fixture from "../../fixtures/circuit-page.json" with { type: "json" };
 import { planEntry } from "../publish/plan.ts";
 import { loadResultContext } from "../result.ts";
+import { refreshResults } from "../results/refresh.ts";
 import { type PageDeps, readCircuitPage } from "./circuit-page.ts";
 import { PAGE_CIRCUITS, pageIndex, TEST_LISTING } from "./page-fixture.ts";
 
@@ -53,6 +59,17 @@ async function setUp(bnb: PublicClient = replayClient(fixture.bnb)) {
 	return { pool, deps };
 }
 
+/** A BNB Chain circuit's page, or the test fails. */
+async function bnbPage(
+	deps: PageDeps,
+	circuit: Parameters<typeof readCircuitPage>[1],
+): Promise<BnbCircuitPage> {
+	const read = await readCircuitPage(deps, circuit);
+	if (!read.ok) throw new Error(read.error.detail);
+	if (isFabxPage(read.page)) throw new Error("a FabX page");
+	return read.page;
+}
+
 describe.skipIf(!TEST_DATABASE_URL)("the result page", () => {
 	let pool: pg.Pool | undefined;
 	afterEach(async () => {
@@ -62,8 +79,7 @@ describe.skipIf(!TEST_DATABASE_URL)("the result page", () => {
 	test("a mining miner with a listing: its stored result, value and payback, and every BNB part read at the market index's block", async () => {
 		const set = await setUp();
 		pool = set.pool;
-		const read = await readCircuitPage(set.deps, PAGE_CIRCUITS.mining);
-		if (!read.ok) throw new Error(read.error.detail);
+		const read = { page: await bnbPage(set.deps, PAGE_CIRCUITS.mining) };
 		const { page } = read;
 		const stored = await readStoredResult(pool, PAGE_CIRCUITS.mining);
 		expect(page.check).toEqual({
@@ -170,8 +186,7 @@ describe.skipIf(!TEST_DATABASE_URL)("the result page", () => {
 	test("a stopped miner has no value and no payback, never a zero", async () => {
 		const set = await setUp();
 		pool = set.pool;
-		const read = await readCircuitPage(set.deps, PAGE_CIRCUITS.cooling);
-		if (!read.ok) throw new Error(read.error.detail);
+		const read = { page: await bnbPage(set.deps, PAGE_CIRCUITS.cooling) };
 		expect(read.page.miner?.status).toBe("cooling");
 		expect(read.page.listing).toBeNull();
 		expect(read.page.hold).toEqual({ state: "not-mining" });
@@ -182,8 +197,7 @@ describe.skipIf(!TEST_DATABASE_URL)("the result page", () => {
 	test("a circuit that is neither a miner nor listed is checked on request as pasted, and never published", async () => {
 		const set = await setUp();
 		pool = set.pool;
-		const read = await readCircuitPage(set.deps, PAGE_CIRCUITS.pasted);
-		if (!read.ok) throw new Error(read.error.detail);
+		const read = { page: await bnbPage(set.deps, PAGE_CIRCUITS.pasted) };
 		expect(read.page.check).toMatchObject({
 			state: "checked",
 			originality: { scope: "pasted", result: { verdict: "wrapper" } },
@@ -206,8 +220,7 @@ describe.skipIf(!TEST_DATABASE_URL)("the result page", () => {
 			"delete from circuit_results where processor = $1 and id = $2",
 			[PAGE_CIRCUITS.mining.processor, PAGE_CIRCUITS.mining.id.toString()],
 		);
-		const read = await readCircuitPage(set.deps, PAGE_CIRCUITS.mining);
-		if (!read.ok) throw new Error(read.error.detail);
+		const read = { page: await bnbPage(set.deps, PAGE_CIRCUITS.mining) };
 		expect(read.page.check).toEqual({
 			state: "not-checked",
 			detail: "Foreman hasn't checked this circuit yet",
@@ -249,5 +262,94 @@ describe.skipIf(!TEST_DATABASE_URL)("the result page", () => {
 		);
 		const read = await readCircuitPage(set.deps, PAGE_CIRCUITS.mining);
 		expect(read).toMatchObject({ ok: false, error: { error: "not-ready" } });
+	});
+});
+
+// A FabX circuit's page (2026-11-26-fabx-circuit-page.md) on FabX's five circuits beside the
+// fixture's index (@foreman/index/testing, fabxIndexedDatabase): miners #24, #66, #1961 and #4206,
+// and the wrapper #6147, which isn't a miner. Everything comes from what is stored with FabX's
+// history, so both nodes refuse every call.
+const FABX = parseAddress("0x87bfca3494aa228ff589ab9b642143a5e8c8f9a6", "p");
+const FABX_MINING = "0x4f6a2312d80753bdafd35ddb1bf4bb14c43f8265";
+
+async function fabxSetUp() {
+	const pool = await fabxIndexedDatabase();
+	await refreshResults(pool, replayClient(circuits), {
+		mode: "full",
+		now: 1_795_200_000n,
+	});
+	const deps: PageDeps = {
+		pool,
+		bnb: deadClient,
+		xlayer: deadClient,
+		results: TESTNET,
+		resultContext: () => loadResultContext(pool, replayClient(circuits)),
+	};
+	return { pool, deps };
+}
+
+describe.skipIf(!TEST_DATABASE_URL)("a FabX circuit's result page", () => {
+	let pool: pg.Pool | undefined;
+	afterEach(async () => {
+		await pool?.end();
+	});
+
+	test("a FabX miner: its stored result, FabX's miner record and FabX's state, with no live read", async () => {
+		const set = await fabxSetUp();
+		pool = set.pool;
+		const read = await readCircuitPage(set.deps, { processor: FABX, id: 24n });
+		if (!read.ok) throw new Error(read.error.detail);
+		const page = read.page;
+		if (!isFabxPage(page)) throw new Error("not a FabX page");
+		const stored = await readStoredResult(pool, { processor: FABX, id: 24n });
+		expect(page.check).toEqual({
+			state: "checked",
+			originality: stored?.originality,
+		});
+		expect(page.miner).toEqual({
+			taskId: expect.any(Number),
+			readAtBlock: 76_847_895n,
+		});
+		expect(page.fabx).toEqual({
+			contract: FABX_MINING,
+			followedTo: 76_847_895n,
+			frozenAtBlock: null,
+		});
+		expect(page.published).toEqual({
+			state: "not-published",
+			reason: "not-yet",
+		});
+	});
+
+	test("while FabX is frozen, the page carries the block it froze at and its last stored result", async () => {
+		const set = await fabxSetUp();
+		pool = set.pool;
+		await pool.query("update xlayer_state set frozen_at_block = 76847896");
+		const read = await readCircuitPage(set.deps, { processor: FABX, id: 24n });
+		if (!read.ok) throw new Error(read.error.detail);
+		expect(isFabxPage(read.page) && read.page.fabx.frozenAtBlock).toBe(
+			76_847_896n,
+		);
+		expect(read.page.check.state).toBe("checked");
+	});
+
+	test("a FabX circuit that isn't a miner is checked on request as pasted, with no miner record", async () => {
+		const set = await fabxSetUp();
+		pool = set.pool;
+		const read = await readCircuitPage(set.deps, {
+			processor: FABX,
+			id: 6147n,
+		});
+		if (!read.ok) throw new Error(read.error.detail);
+		const page = read.page;
+		if (!isFabxPage(page)) throw new Error("not a FabX page");
+		expect(page.miner).toBeNull();
+		expect(page.check.state === "checked" && page.check.originality.scope).toBe(
+			"pasted",
+		);
+		expect(page.published).toEqual({
+			state: "not-published",
+			reason: "pasted",
+		});
 	});
 });

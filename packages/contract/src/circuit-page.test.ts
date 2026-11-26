@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { parseCircuitPage, serialiseCircuitPage } from "./index.ts";
+import { isFabxPage, parseCircuitPage, serialiseCircuitPage } from "./index.ts";
 
 // The result page's response (docs/data-contract.md, "API responses"; docs/decisions/2026-11-21-api-endpoints.md).
 // Its parts are the contract's existing shapes; these tests prove the page holds together as one circuit.
@@ -493,6 +493,7 @@ describe("a mining miner in the unverified pool", () => {
 
 	test("is shown as not valued yet, with the reason, never as a number or as not mining", () => {
 		const page = parseCircuitPage(wireMiningListed(notValued), "page");
+		if (isFabxPage(page)) throw new Error("a BNB Chain page");
 		expect(page.hold).toEqual({ state: "not-valued", reason: NOT_VALUED });
 		expect(page.payback.state).toBe("not-valued");
 		const sent = JSON.parse(JSON.stringify(serialiseCircuitPage(page, "page")));
@@ -518,4 +519,152 @@ describe("a mining miner in the unverified pool", () => {
 			).toThrow(expect.objectContaining({ name: "ContractParseError", field }));
 		},
 	);
+});
+
+// A FabX circuit's page (2026-11-26-fabx-circuit-page.md): its result, whether it was published,
+// FabX's stored miner record and FabX's state. No value and no options: FabX isn't valued.
+
+const FABX = "0x87bfca3494aa228ff589ab9b642143a5e8c8f9a6";
+const FABX_MINING = "0x4f6a2312d80753bdafd35ddb1bf4bb14c43f8265";
+
+function fabxCircuit(tokenId = "24") {
+	return {
+		chainId: 196,
+		processor: FABX,
+		tokenId,
+		tapedOutAt: {
+			block: "73044971",
+			txIndex: 1,
+			logIndex: 2,
+			time: "1791800000",
+		},
+		tapedOutBy: `0x${"34".repeat(20)}`,
+		designCommittedAt: null,
+	};
+}
+
+function fabxOriginality(scope: "miner" | "pasted", tokenId = "24") {
+	return {
+		...originality("pasted"),
+		circuit: fabxCircuit(tokenId),
+		scope,
+		mining: scope === "miner" ? { chainId: 196, contract: FABX_MINING } : null,
+		facts: [{ fact: "can-mine", state: "mining" }],
+		index: {
+			circuitsChecked: "87602",
+			upTo: [
+				{ chainId: 56, block: "135390773" },
+				{ chainId: 196, block: "76839338" },
+			],
+		},
+		ruleVersion: "fabx: hash 2026-11-20, floor 4, chain 10",
+	};
+}
+
+function wireFabx(overrides: Record<string, unknown> = {}) {
+	return {
+		circuit: fabxCircuit(),
+		check: { state: "checked", originality: fabxOriginality("miner") },
+		published: { state: "not-published", reason: "not-yet" },
+		miner: { taskId: 0, readAtBlock: "76839338" },
+		fabx: {
+			contract: FABX_MINING,
+			followedTo: "76839338",
+			frozenAtBlock: null,
+		},
+		...overrides,
+	};
+}
+
+describe("a FabX circuit's page", () => {
+	test("reads back unchanged and is told apart from a BNB Chain page", () => {
+		const page = parseCircuitPage(wireFabx(), "page");
+		expect(isFabxPage(page)).toBe(true);
+		expect(serialiseCircuitPage(page, "page")).toEqual(wireFabx());
+		expect(isFabxPage(parseCircuitPage(wireNeverMined(), "page"))).toBe(false);
+	});
+
+	test("while FabX is frozen, carries the block it froze at", () => {
+		const wire = wireFabx({
+			fabx: {
+				contract: FABX_MINING,
+				followedTo: "76839338",
+				frozenAtBlock: "76912004",
+			},
+		});
+		const page = parseCircuitPage(wire, "page");
+		expect(isFabxPage(page) && page.fabx.frozenAtBlock).toBe(76_912_004n);
+	});
+
+	test("a FabX circuit that isn't a miner has no miner record and a pasted result", () => {
+		const wire = wireFabx({
+			check: { state: "checked", originality: fabxOriginality("pasted") },
+			published: { state: "not-published", reason: "pasted" },
+			miner: null,
+		});
+		expect(
+			serialiseCircuitPage(parseCircuitPage(wire, "page"), "page"),
+		).toEqual(wire);
+	});
+
+	test.each([
+		[
+			"a result about another circuit",
+			{
+				check: {
+					state: "checked",
+					originality: fabxOriginality("miner", "66"),
+				},
+			},
+			"page.check.originality.circuit",
+		],
+		[
+			"a result naming another mining contract",
+			{
+				check: {
+					state: "checked",
+					originality: {
+						...fabxOriginality("miner"),
+						mining: { chainId: 196, contract: `0x${"99".repeat(20)}` },
+					},
+				},
+			},
+			"page.check.originality.mining",
+		],
+		[
+			"a miner's result on a page with no miner record",
+			{ miner: null },
+			"page.miner",
+		],
+		[
+			"a listed result, though FabX's market isn't read",
+			{
+				check: {
+					state: "checked",
+					originality: {
+						...fabxOriginality("miner"),
+						scope: "listed",
+						mining: null,
+					},
+				},
+				miner: null,
+			},
+			"page.check.originality.scope",
+		],
+		["a BNB Chain circuit", { circuit: circuit() }, "page.circuit.chainId"],
+	])("is refused when it carries %s", (_, overrides, field) => {
+		expect(() => parseCircuitPage(wireFabx(overrides), "page")).toThrow(field);
+	});
+
+	test("a BNB Chain page whose circuit is on X Layer is refused", () => {
+		expect(() =>
+			parseCircuitPage(
+				wireNeverMined({
+					circuit: { ...circuit(), chainId: 196 },
+					check: { state: "not-checked", detail: "not yet" },
+				}),
+				"page",
+			),
+		).toThrow();
+	});
 });

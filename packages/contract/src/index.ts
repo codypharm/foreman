@@ -34,7 +34,10 @@ export {
 	serialiseCheckAnswer,
 } from "./check-answer.ts";
 export {
+	type BnbCircuitPage,
 	type CircuitPage,
+	type FabxCircuitPage,
+	isFabxPage,
 	parseCircuitPage,
 	serialiseCircuitPage,
 } from "./circuit-page.ts";

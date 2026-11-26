@@ -428,10 +428,15 @@ export async function backfillFabxNetlists(
 export async function readFabxMiner(
 	pool: pg.Pool,
 	circuit: { processor: Address; id: bigint },
-): Promise<FabxMinerState | null> {
+): Promise<FabxMinerRecord | null> {
 	const r = (
-		await pool.query<{ status: number; stop_block: string | null }>(
-			"select status, stop_block from fabx_miners where processor = $1 and id = $2",
+		await pool.query<{
+			status: number;
+			stop_block: string | null;
+			task_id: number;
+			read_at_block: string;
+		}>(
+			"select status, stop_block, task_id, read_at_block from fabx_miners where processor = $1 and id = $2",
 			[circuit.processor.toLowerCase(), circuit.id.toString()],
 		)
 	).rows[0];
@@ -439,7 +444,16 @@ export async function readFabxMiner(
 	return {
 		status: r.status as FabxMinerState["status"],
 		stopBlock: r.stop_block === null ? null : BigInt(r.stop_block),
+		taskId: r.task_id,
+		readAtBlock: BigInt(r.read_at_block),
 	};
+}
+
+/** A FabX miner's stored record: its status, and the task and block shown beside its result. */
+export interface FabxMinerRecord extends FabxMinerState {
+	taskId: number;
+	/** The X Layer block the record was read at. */
+	readAtBlock: bigint;
 }
 
 /** Every circuit FabX has a miner record for, in id order: the FabX results the job stores. */

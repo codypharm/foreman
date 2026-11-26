@@ -1,6 +1,6 @@
 import { readNetworkState } from "@foreman/chain-bnb";
 import { replayClient } from "@foreman/chain-bnb/fixture";
-import { parseAddress } from "@foreman/contract";
+import { isFabxPage, parseAddress } from "@foreman/contract";
 import { TEST_DATABASE_URL } from "@foreman/index/testing";
 import circuits from "@foreman/originality/fixtures/bnb-circuits-134673279.json" with {
 	type: "json",
@@ -221,7 +221,7 @@ describe.skipIf(!TEST_DATABASE_URL)("the listings page", () => {
 			PAGE_CIRCUITS.mining,
 		);
 		if (!live.ok) throw new Error(live.error.detail);
-		if (live.page.hold.state !== "shown")
+		if (isFabxPage(live.page) || live.page.hold.state !== "shown")
 			throw new Error("the page's miner isn't valued");
 		expect(listed?.value30d).toEqual({
 			state: "shown",

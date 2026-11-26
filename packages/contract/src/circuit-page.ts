@@ -49,7 +49,11 @@ import {
 	parseUint,
 } from "./wire.ts";
 
-export interface CircuitPage {
+/** A result page: a BNB Chain circuit's, or a FabX circuit's on X Layer (2026-11-26-fabx-circuit-page.md). */
+export type CircuitPage = BnbCircuitPage | FabxCircuitPage;
+
+/** A TapeOut circuit on BNB Chain: its result, and the live reads behind its value and options. */
+export interface BnbCircuitPage {
 	circuit: CircuitRef;
 	multiplier: Multiplier;
 	check: StoredCheck;
@@ -78,11 +82,54 @@ export interface CircuitPage {
 	bemPrice: BemPrice | { state: "no-price"; reason: string };
 }
 
+/**
+ * A circuit on FabX's processor on X Layer: its result, whether it was published, FabX's stored
+ * miner record and FabX's state. FabX isn't valued, so there is no value, payback or offer
+ * (2026-11-25-fabx-copy-check.md, decision 8).
+ */
+export interface FabxCircuitPage {
+	/** chainId 196. */
+	circuit: CircuitRef;
+	check: StoredCheck;
+	published: Published;
+	/** FabX's stored miner record; null when the circuit isn't a FabX miner. */
+	miner: { taskId: number; readAtBlock: bigint } | null;
+	fabx: {
+		/** FabX's mining contract, from CLAUDE.md's On-chain facts. */
+		contract: Address;
+		/** The X Layer block FabX's history is stored up to. */
+		followedTo: bigint;
+		/** The block of a change to FabX's contract nobody has reviewed; null when not frozen. */
+		frozenAtBlock: bigint | null;
+	};
+}
+
+export function isFabxPage(page: CircuitPage): page is FabxCircuitPage {
+	return "fabx" in page;
+}
+
 export function parseCircuitPage(wire: unknown, field: string): CircuitPage {
 	const w = parseObject(wire, field);
 	const circuit = parseCircuitRef(w.circuit, `${field}.circuit`);
+	return "fabx" in w
+		? parseFabxPage(w, circuit, field)
+		: parseBnbPage(w, circuit, field);
+}
+
+function parseBnbPage(
+	w: Record<string, unknown>,
+	circuit: CircuitRef,
+	field: string,
+): BnbCircuitPage {
+	if (circuit.chainId !== 56) {
+		throw new ContractParseError(
+			`${field}.circuit.chainId`,
+			"56 on a BNB Chain page",
+			circuit.chainId,
+		);
+	}
 	const options = parseObject(w.options, `${field}.options`);
-	const page: CircuitPage = {
+	const page: BnbCircuitPage = {
 		circuit,
 		multiplier: parseMultiplier(w.multiplier, `${field}.multiplier`),
 		check: parseStoredCheck(w.check, `${field}.check`),
@@ -111,11 +158,106 @@ export function parseCircuitPage(wire: unknown, field: string): CircuitPage {
 	return page;
 }
 
+function parseFabxPage(
+	w: Record<string, unknown>,
+	circuit: CircuitRef,
+	field: string,
+): FabxCircuitPage {
+	if (circuit.chainId !== 196) {
+		throw new ContractParseError(
+			`${field}.circuit.chainId`,
+			"196 on a FabX page",
+			circuit.chainId,
+		);
+	}
+	const fabx = parseObject(w.fabx, `${field}.fabx`);
+	const page: FabxCircuitPage = {
+		circuit,
+		check: parseStoredCheck(w.check, `${field}.check`),
+		published: parsePublished(w.published, `${field}.published`),
+		miner: w.miner === null ? null : parseFabxMiner(w.miner, `${field}.miner`),
+		fabx: {
+			contract: parseAddress(fabx.contract, `${field}.fabx.contract`),
+			followedTo: parseUint(fabx.followedTo, `${field}.fabx.followedTo`),
+			frozenAtBlock:
+				fabx.frozenAtBlock === null
+					? null
+					: parseUint(fabx.frozenAtBlock, `${field}.fabx.frozenAtBlock`),
+		},
+	};
+	checkFabxResult(page, field);
+	checkPublished(page, field);
+	return page;
+}
+
+function parseFabxMiner(
+	wire: unknown,
+	field: string,
+): NonNullable<FabxCircuitPage["miner"]> {
+	const w = parseObject(wire, field);
+	const taskId = w.taskId;
+	if (
+		typeof taskId !== "number" ||
+		!Number.isSafeInteger(taskId) ||
+		taskId < 0
+	) {
+		throw new ContractParseError(`${field}.taskId`, "a task number", taskId);
+	}
+	return {
+		taskId,
+		readAtBlock: parseUint(w.readAtBlock, `${field}.readAtBlock`),
+	};
+}
+
+/**
+ * A FabX page's result is this circuit's, names FabX's mining contract when it is a miner's, and is
+ * a miner's exactly when the page has FabX's miner record. FabX's market isn't read, so no FabX
+ * result is "listed".
+ */
+function checkFabxResult(page: FabxCircuitPage, field: string): void {
+	const { check, circuit, miner, fabx } = page;
+	if (check.state !== "checked") return;
+	const o = check.originality;
+	if (!sameWire(o.circuit, circuit)) {
+		throw new ContractParseError(
+			`${field}.check.originality.circuit`,
+			`this page's circuit (${circuit.processor} #${circuit.tokenId})`,
+			`${o.circuit.processor} #${o.circuit.tokenId}`,
+		);
+	}
+	if (o.scope === "listed") {
+		throw new ContractParseError(
+			`${field}.check.originality.scope`,
+			'"miner" or "pasted" on a FabX page',
+			o.scope,
+		);
+	}
+	if (
+		o.mining &&
+		(o.mining.chainId !== 196 || o.mining.contract !== fabx.contract)
+	) {
+		throw new ContractParseError(
+			`${field}.check.originality.mining`,
+			`FabX's mining contract (${fabx.contract})`,
+			`${o.mining.contract} on chain ${o.mining.chainId}`,
+		);
+	}
+	if ((o.scope === "miner") !== (miner !== null)) {
+		throw new ContractParseError(
+			`${field}.miner`,
+			o.scope === "miner"
+				? "FabX's miner record for a miner's result"
+				: "null for a circuit that isn't a miner",
+			miner === null ? "null" : `task ${miner.taskId}`,
+		);
+	}
+}
+
 /**
  * An active miner has a value, over 30 days and to the 2030 halving, or in the unverified pool is
  * "not valued yet"; nothing else has one.
  */
-function checkValue(page: CircuitPage, field: string): void {
+function checkValue(page: BnbCircuitPage, field: string): void {
 	const active = page.miner?.status === "active";
 	if (active === (page.hold.state === "not-mining")) {
 		throw new ContractParseError(
@@ -151,7 +293,7 @@ function checkValue(page: CircuitPage, field: string): void {
 }
 
 /** Payback is for this page's own buyable listing, at its asking price, and only for an active miner. */
-function checkPayback(page: CircuitPage, field: string): void {
+function checkPayback(page: BnbCircuitPage, field: string): void {
 	const { payback, listing } = page;
 	const active = page.miner?.status === "active";
 	if (active === (payback.state === "not-mining")) {
@@ -205,7 +347,10 @@ function checkPayback(page: CircuitPage, field: string): void {
 }
 
 /** Only miners and listed circuits are published; a pasted result never is, and only a stored result can be current. */
-function checkPublished(page: CircuitPage, field: string): void {
+function checkPublished(
+	page: Pick<CircuitPage, "check" | "published">,
+	field: string,
+): void {
 	const { published, check } = page;
 	const scope = check.state === "checked" ? check.originality.scope : null;
 	if (published.state !== "not-published") {
@@ -231,7 +376,7 @@ function checkPublished(page: CircuitPage, field: string): void {
 }
 
 /** Lend names this page's RIG voucher, or says there isn't one. */
-function checkVoucher(page: CircuitPage, field: string): void {
+function checkVoucher(page: BnbCircuitPage, field: string): void {
 	page.options.lend.forEach((offer, i) => {
 		const named =
 			offer.state === "live"
@@ -253,7 +398,7 @@ function checkVoucher(page: CircuitPage, field: string): void {
 }
 
 /** Every part is about this page's circuit: the stored result, the miner read, and every miner key. */
-function checkOneCircuit(page: CircuitPage, field: string): void {
+function checkOneCircuit(page: BnbCircuitPage, field: string): void {
 	const { check, circuit, miner } = page;
 	if (
 		check.state === "checked" &&
@@ -306,7 +451,23 @@ export function serialiseCircuitPage(
 	page: CircuitPage,
 	field: string,
 ): Record<string, unknown> {
-	const wire = {
+	const wire = isFabxPage(page) ? fabxWire(page, field) : bnbWire(page, field);
+	parseCircuitPage(wire, field);
+	return wire;
+}
+
+function fabxWire(page: FabxCircuitPage, field: string) {
+	return {
+		circuit: toWire(page.circuit, `${field}.circuit`),
+		check: serialiseStoredCheck(page.check, `${field}.check`),
+		published: serialisePublished(page.published, `${field}.published`),
+		miner: page.miner && toWire(page.miner, `${field}.miner`),
+		fabx: toWire(page.fabx, `${field}.fabx`),
+	};
+}
+
+function bnbWire(page: BnbCircuitPage, field: string) {
+	return {
 		circuit: toWire(page.circuit, `${field}.circuit`),
 		multiplier: page.multiplier,
 		check: serialiseStoredCheck(page.check, `${field}.check`),
@@ -344,14 +505,12 @@ export function serialiseCircuitPage(
 				? { state: page.bemPrice.state, reason: page.bemPrice.reason }
 				: serialiseBemPrice(page.bemPrice, `${field}.bemPrice`),
 	};
-	parseCircuitPage(wire, field);
-	return wire;
 }
 
 function parseVoucher(
 	wire: unknown,
 	field: string,
-): NonNullable<CircuitPage["voucher"]> {
+): NonNullable<BnbCircuitPage["voucher"]> {
 	const w = parseObject(wire, field);
 	return {
 		voucherId: parseUint(w.voucherId, `${field}.voucherId`),
@@ -360,7 +519,7 @@ function parseVoucher(
 	};
 }
 
-function parseHold(wire: unknown, field: string): CircuitPage["hold"] {
+function parseHold(wire: unknown, field: string): BnbCircuitPage["hold"] {
 	const w = parseObject(wire, field);
 	const state = parseOneOf(w.state, `${field}.state`, [
 		"shown",
@@ -397,7 +556,7 @@ function parseOption<O extends "sell" | "rent">(
 function parseLend(
 	wire: unknown,
 	field: string,
-): CircuitPage["options"]["lend"] {
+): BnbCircuitPage["options"]["lend"] {
 	if (!Array.isArray(wire) || wire.length !== 2) {
 		throw new ContractParseError(
 			field,
@@ -415,7 +574,7 @@ function parseLend(
 			);
 		}
 		return offer;
-	}) as CircuitPage["options"]["lend"];
+	}) as BnbCircuitPage["options"]["lend"];
 	if (seven.termDays !== 7 || fourteen.termDays !== 14) {
 		throw new ContractParseError(
 			field,
@@ -429,7 +588,7 @@ function parseLend(
 function parsePageBemPrice(
 	wire: unknown,
 	field: string,
-): CircuitPage["bemPrice"] {
+): BnbCircuitPage["bemPrice"] {
 	const w = parseObject(wire, field);
 	if ("state" in w) {
 		parseOneOf(w.state, `${field}.state`, ["no-price"] as const);

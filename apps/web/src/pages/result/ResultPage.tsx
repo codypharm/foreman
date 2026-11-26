@@ -1,11 +1,13 @@
 // One circuit's result page (docs/mocks/2026-11-21-result-page.html; a miner held for a RIG voucher as
-// in 2026-11-22-voucher-held.html): Original?, Worth?, What it's based on, Options and Published, all
+// in 2026-11-22-voucher-held.html; the mining contract panel and a FabX circuit's page as in
+// 2026-11-25-fabx-result.html, B): Original?, Worth?, What it's based on, Options and Published, all
 // from GET /circuit/:processor/:tokenId. Nothing here decides a verdict or a value.
 
-import type {
-	CantMineReason,
-	CircuitPage,
-	OriginalityFact,
+import {
+	type CantMineReason,
+	type CircuitPage,
+	isFabxPage,
+	type OriginalityFact,
 } from "@foreman/contract";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -15,7 +17,8 @@ import { ReadProblem } from "../../components/ReadProblem.tsx";
 import { LoadingNote, Shape } from "../../components/Shape.tsx";
 import { formatCount, shortHex } from "../../format.ts";
 import { CAN_MINE } from "./circuit-words.ts";
-import { Options } from "./Options.tsx";
+import { MiningContract } from "./MiningContract.tsx";
+import { FabxOptions, Options } from "./Options.tsx";
 import { Originality } from "./Originality.tsx";
 import s from "./ResultPage.module.css";
 import { Worth } from "./Worth.tsx";
@@ -65,10 +68,19 @@ export function ResultPage({
 				<>
 					<main>
 						<Header page={page.data} />
+						<MiningContract page={page.data} />
 						<Originality check={page.data.check} />
-						<Worth page={page.data} />
+						{isFabxPage(page.data) ? (
+							<NotCovered />
+						) : (
+							<Worth page={page.data} />
+						)}
 					</main>
-					<Options page={page.data} />
+					{isFabxPage(page.data) ? (
+						<FabxOptions page={page.data} />
+					) : (
+						<Options page={page.data} />
+					)}
 				</>
 			) : page.isError ? (
 				<main>
@@ -142,7 +154,24 @@ function PageShape({ id }: { id: string }) {
 	);
 }
 
+/** FabX isn't valued: no FAB price or FabX output is read (2026-11-25-fabx-copy-check.md, decision 8). */
+function NotCovered() {
+	return (
+		<section className={s.q} aria-label="Worth?">
+			<div className={s.sec}>
+				<h2>Worth?</h2>
+			</div>
+			<p className={s.notCovered}>Value: not covered yet</p>
+			<p>
+				Foreman values TapeOut’s BEM miners only. It doesn’t read FAB’s price or
+				FabX’s output.
+			</p>
+		</section>
+	);
+}
+
 function Header({ page }: { page: CircuitPage }) {
+	const bnb = isFabxPage(page) ? null : page;
 	const facts =
 		page.check.state === "checked" ? page.check.originality.facts : [];
 	const canMine = facts.find(
@@ -171,9 +200,9 @@ function Header({ page }: { page: CircuitPage }) {
 								{CAN_MINE[canMine.state]}
 							</span>
 						)}
-						{page.voucher && (
+						{bnb?.voucher && (
 							<span className={`${s.chip} ${s.rig}`}>
-								RIG voucher #{page.voucher.voucherId.toString()}
+								RIG voucher #{bnb.voucher.voucherId.toString()}
 							</span>
 						)}
 						{bonus && (
@@ -186,17 +215,16 @@ function Header({ page }: { page: CircuitPage }) {
 						{page.miner?.taskId != null && (
 							<span className={s.chip}>Task {page.miner.taskId}</span>
 						)}
-						<span className={s.chip}>Processor ×{page.multiplier}</span>
+						{bnb && <span className={s.chip}>Processor ×{bnb.multiplier}</span>}
 					</div>
 				</div>
 			</div>
-			{page.voucher && (
+			{bnb?.voucher && (
 				<p className={s.held}>
 					Held in the rig vault for{" "}
-					<b>RIG voucher #{page.voucher.voucherId.toString()}</b> on X Layer.
-					The holder,{" "}
-					<span className={s.mono}>{shortHex(page.voucher.holder)}</span>, gets
-					its BEM.
+					<b>RIG voucher #{bnb.voucher.voucherId.toString()}</b> on X Layer. The
+					holder, <span className={s.mono}>{shortHex(bnb.voucher.holder)}</span>
+					, gets its BEM.
 				</p>
 			)}
 			{canMine?.state === "cant-mine" && (

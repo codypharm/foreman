@@ -2,7 +2,11 @@
 // weight, with every input and where it came from (CLAUDE.md, "No chain data, no number", "Ranges, not
 // prices", "No invented copy discount"). The values come from the API; this only formats them.
 
-import type { CircuitPage, Sourced, Valuation } from "@foreman/contract";
+import type {
+	BnbCircuitPage as CircuitPage,
+	Sourced,
+	Valuation,
+} from "@foreman/contract";
 import { type ReactNode, useState } from "react";
 import {
 	formatAmount,

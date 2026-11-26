@@ -501,10 +501,13 @@ describe.skipIf(!TEST_DATABASE_URL)("loading FabX into the index", () => {
 		expect(await readFabxMiner(pool, { processor: P, id: 24n })).toEqual({
 			status: 3,
 			stopBlock: 74_423_691n,
+			taskId: 48,
+			readAtBlock: 76_847_895n,
 		});
-		expect(await readFabxMiner(pool, f1961)).toEqual({
+		expect(await readFabxMiner(pool, f1961)).toMatchObject({
 			status: 1,
 			stopBlock: null,
+			readAtBlock: 76_847_895n,
 		});
 		expect(await readFabxMiner(pool, { processor: P, id: 25n })).toBeNull();
 	});

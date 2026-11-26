@@ -7,10 +7,15 @@ import type {
 	Originality as OriginalityResult,
 	StoredCheck,
 } from "@foreman/contract";
-import { bnbIndexBlock } from "@foreman/contract";
 import type { ReactNode } from "react";
 import { formatCount, formatDate, formatGap, shortHex } from "../../format.ts";
-import { circuitName, designTime, processorLabel } from "./circuit-words.ts";
+import {
+	BLOCK,
+	CHAIN,
+	circuitFrom,
+	designTime,
+	processorLabel,
+} from "./circuit-words.ts";
 import s from "./ResultPage.module.css";
 
 const LIMIT =
@@ -24,8 +29,10 @@ export function Originality({ check }: { check: StoredCheck }) {
 				{check.state === "checked" && (
 					<span className={s.meta}>
 						{formatCount(check.originality.index.circuitsChecked)} circuits
-						checked · BNB block{" "}
-						{formatCount(bnbIndexBlock(check.originality.index))}
+						checked
+						{check.originality.index.upTo.map(
+							(u) => ` · ${BLOCK[u.chainId]} ${formatCount(u.block)}`,
+						)}
 					</span>
 				)}
 			</div>
@@ -37,7 +44,16 @@ export function Originality({ check }: { check: StoredCheck }) {
 				<Checked result={check.originality} />
 			)}
 			<p className={s.limit}>
-				<b>The earliest proven design is the original.</b> {LIMIT}
+				{check.state === "checked" &&
+				check.originality.index.upTo.length > 1 ? (
+					<>
+						<b>The earliest proven design is the original,</b> on either chain,
+						by the time of its block.
+					</>
+				) : (
+					<b>The earliest proven design is the original.</b>
+				)}{" "}
+				{LIMIT}
 			</p>
 		</section>
 	);
@@ -46,6 +62,7 @@ export function Originality({ check }: { check: StoredCheck }) {
 function Checked({ result: o }: { result: OriginalityResult }) {
 	const r = o.result;
 	const me = o.circuit;
+	const name = (c: CircuitRef) => circuitFrom(c, me);
 	const sharedMiners = fact(o.facts, "design-shared")?.miners;
 	const minersRow = sharedMiners !== undefined && (
 		<Row label="Miners on this design">{formatCount(sharedMiners)}</Row>
@@ -67,20 +84,16 @@ function Checked({ result: o }: { result: OriginalityResult }) {
 			const gap = mine.time - theirs.time;
 			return (
 				<>
-					<Verdict
-						mark={<CopyMark />}
-						title={`Copy of circuit ${circuitName(r.of)}`}
-					>
+					<Verdict mark={<CopyMark />} title={`Copy of circuit ${name(r.of)}`}>
 						{r.bytesIdentical
 							? "Byte-identical netlist"
 							: "Identical netlist once swapped gate inputs are put in order"}
-						,{" "}
+						, {theirs.by === "commitment" ? "designed" : "taped out"}{" "}
+						{r.of.chainId !== me.chainId && `on ${CHAIN[r.of.chainId]} `}
 						{gap > 0n ? (
-							<>
-								designed <b>{formatGap(gap)} earlier</b>
-							</>
+							<b>{formatGap(gap)} earlier</b>
 						) : (
-							"designed earlier in the same block"
+							"earlier in the same block"
 						)}{" "}
 						on {processorLabel(r.of.processor)}.
 						{sameAddress && " Taped out by the same address."}
@@ -117,7 +130,7 @@ function Checked({ result: o }: { result: OriginalityResult }) {
 							{formatCount(r.sameAs)} earlier circuit{r.sameAs === 1 ? "" : "s"}
 						</b>
 						, below the size floor of {r.floor} gates. The earliest is circuit{" "}
-						{circuitName(r.earliest)},{" "}
+						{name(r.earliest)},{" "}
 						{earliest.by === "commitment" ? "designed" : "taped out"}{" "}
 						{formatDate(earliest.time)}.
 					</Verdict>
@@ -143,23 +156,23 @@ function Checked({ result: o }: { result: OriginalityResult }) {
 				<>
 					<Verdict
 						mark={<WrapperMark />}
-						title={`Wrapper of circuit ${first ? circuitName(first) : ""}`}
+						title={`Wrapper of circuit ${first ? name(first) : ""}`}
 					>
 						Its netlist is only REF records, pointing to{" "}
-						{list(r.pointsTo.map(circuitName))}. The gates are in{" "}
-						<b>{list(r.finalTargets.map(circuitName))}</b>
+						{list(r.pointsTo.map(name))}. The gates are in{" "}
+						<b>{list(r.finalTargets.map(name))}</b>
 						{r.chainSteps > 1 && `, ${r.chainSteps} steps along`}.
-						{also && ` Also identical to circuit ${circuitName(also.to)}.`}
+						{also && ` Also identical to circuit ${name(also.to)}.`}
 					</Verdict>
 					<ul className={s.evidence}>
 						<Row label="Points to">
-							{list(r.pointsTo.map(circuitName))}
+							{list(r.pointsTo.map(name))}
 							{more.length > 0 && (
 								<small>{formatCount(r.pointsTo.length)} circuits</small>
 							)}
 						</Row>
 						<Row label="Gates held by">
-							{list(r.finalTargets.map(circuitName))}
+							{list(r.finalTargets.map(name))}
 							<small>
 								{r.chainSteps} step{r.chainSteps === 1 ? "" : "s"} along
 							</small>
@@ -168,7 +181,7 @@ function Checked({ result: o }: { result: OriginalityResult }) {
 						{also && (
 							<Row label="Netlist hash">
 								<span className={s.mono}>{shortHex(also.netlistHash)}</span>
-								<small>same as {circuitName(also.to)}</small>
+								<small>same as {name(also.to)}</small>
 							</Row>
 						)}
 						{minersRow}
@@ -181,8 +194,8 @@ function Checked({ result: o }: { result: OriginalityResult }) {
 				<>
 					<Verdict mark={<NoCopyMark />} title="No earlier copy found">
 						No earlier circuit among{" "}
-						<b>{formatCount(o.index.circuitsChecked)} checked</b>, up to BNB
-						block {formatCount(bnbIndexBlock(o.index))}, has the same netlist.
+						<b>{formatCount(o.index.circuitsChecked)} checked</b>
+						{coverage(o)}, has the same netlist.
 						{usesRefLine}
 					</Verdict>
 					<ul className={s.evidence}>
@@ -210,7 +223,7 @@ const CANT_CHECK: Record<
 	"netlist-unreadable": () =>
 		"Its netlist couldn’t be read, so it can’t be compared.",
 	"outside-index": (o) =>
-		`It isn’t in the index of ${formatCount(o.index.circuitsChecked)} circuits up to BNB block ${formatCount(bnbIndexBlock(o.index))}.`,
+		`It isn’t in the index of ${formatCount(o.index.circuitsChecked)} circuits${coverage(o)}.`,
 	"read-failed": () => "Reading its netlist failed. It will be checked again.",
 	"ref-chain-too-long": () =>
 		"Its REF records chain more than 10 steps, further than Foreman follows.",
@@ -218,6 +231,18 @@ const CANT_CHECK: Record<
 	"commitment-unconfirmed": () =>
 		"FabX’s record of this design commitment doesn’t match its event history.",
 };
+
+/**
+ * ", up to BNB block B", or ", on BNB Chain and X Layer, up to BNB block B and X Layer block X" once
+ * both chains are checked (docs/data-contract.md, "Never original").
+ */
+function coverage(o: OriginalityResult): string {
+	const { upTo } = o.index;
+	const blocks = upTo.map((u) => `${BLOCK[u.chainId]} ${formatCount(u.block)}`);
+	return upTo.length > 1
+		? ` on ${list(upTo.map((u) => CHAIN[u.chainId]))}, up to ${list(blocks)}`
+		: `, up to ${blocks[0] ?? ""}`;
+}
 
 function Verdict({
 	mark,
@@ -253,11 +278,11 @@ function DesignedRow({ c }: { c: CircuitRef }) {
 	const t = designTime(c);
 	return (
 		<Row
-			label={`${circuitName(c)} ${t.by === "commitment" ? "designed" : "taped out"}`}
+			label={`#${c.tokenId.toString()} ${t.by === "commitment" ? "designed" : "taped out"}`}
 		>
 			{formatDate(t.time)}
 			<small>
-				BNB block {formatCount(t.block)} ·{" "}
+				{BLOCK[c.chainId]} {formatCount(t.block)} ·{" "}
 				{t.by === "commitment"
 					? "design commitment"
 					: processorLabel(c.processor)}
