@@ -1,6 +1,7 @@
 import { replayClient } from "@foreman/chain-bnb/fixture";
 import { readResultsState, readStoredResult } from "@foreman/index";
 import {
+	fabxIndexedDatabase,
 	fixtureIndexedDatabase,
 	TEST_DATABASE_URL,
 } from "@foreman/index/testing";
@@ -10,6 +11,7 @@ import circuits from "@foreman/originality/fixtures/bnb-circuits-134673279.json"
 import type pg from "pg";
 import { createPublicClient, custom } from "viem";
 import { afterEach, describe, expect, test } from "vitest";
+import { storedResultsToPublish } from "../publish/collect.ts";
 import { buildResult, loadResultContext } from "../result.ts";
 import { refreshResults } from "./refresh.ts";
 
@@ -27,8 +29,10 @@ const HOUR = 3_600n;
  * log 5, test vector 140; packages/originality/fixtures/README.md), which the fixture database
  * leaves out. Without it that miner's result can't be built.
  */
-async function fixtureIndex() {
-	const pool = await fixtureIndexedDatabase();
+async function fixtureIndex(withFabx = false) {
+	const pool = withFabx
+		? await fabxIndexedDatabase()
+		: await fixtureIndexedDatabase();
 	await pool.query(
 		`update miners set revoked_block = 118590677, revoked_tx = 2, revoked_log = 5,
 		   revoked_vector = 140 where processor = $1 and id = 1965`,
@@ -150,6 +154,7 @@ describe.skipIf(!TEST_DATABASE_URL)("the results job", () => {
 			changesUpTo: INDEX_BLOCK,
 			fullUpTo: INDEX_BLOCK,
 			fullAt: NOW,
+			fabxChangesUpTo: null,
 		});
 	});
 
@@ -202,5 +207,67 @@ describe.skipIf(!TEST_DATABASE_URL)("the results job", () => {
 		).toBe(NOW);
 		// Nothing moved: the next run tries the full rebuild again
 		expect((await readResultsState(pool)).fullAt).toBe(NOW);
+	});
+});
+
+// FabX's five circuits beside the fixture's index (@foreman/index/testing, fabxIndexedDatabase):
+// miners #24, #66, #1961 and #4206, and the wrapper #6147, which isn't a miner.
+const FABX = "0x87bfca3494aa228ff589ab9b642143a5e8c8f9a6";
+
+describe.skipIf(!TEST_DATABASE_URL)("the results job with FabX", () => {
+	let pool: pg.Pool | undefined;
+	afterEach(async () => {
+		await pool?.end();
+	});
+	const fabxRows = async (p: pg.Pool) =>
+		(
+			await p.query<{ id: string; built_at: string }>(
+				"select id::text, built_at::text from circuit_results where processor = $1 order by circuit_results.id",
+				[FABX],
+			)
+		).rows;
+
+	test("stores every FabX miner's result, never a FabX circuit that isn't a miner, and publishes none of them yet", async () => {
+		pool = await fixtureIndex(true);
+		const run = await refreshResults(pool, replayClient(circuits), {
+			mode: "auto",
+			now: NOW,
+		});
+		if (!run.refreshed) throw new Error(run.detail);
+		expect(run.skipped).toEqual([]);
+		expect((await fabxRows(pool)).map((r) => r.id)).toEqual([
+			"24",
+			"66",
+			"1961",
+			"4206",
+		]);
+		expect(
+			(await readStoredResult(pool, { processor: FABX, id: 66n }))?.originality
+				.mining,
+		).toEqual({
+			chainId: 196,
+			contract: "0x4f6a2312d80753bdafd35ddb1bf4bb14c43f8265",
+		});
+		expect((await readResultsState(pool)).fabxChangesUpTo).toBe(76_847_895n);
+		// FabX publishing is its own step: key collisions are refused first (2026-11-25-fabx-copy-check.md, decision 7)
+		const { results } = await storedResultsToPublish(pool);
+		expect(results.some((o) => o.circuit.chainId === 196)).toBe(false);
+	});
+
+	test("while FabX is frozen, its stored results are neither rebuilt nor removed; BNB Chain's carry on", async () => {
+		pool = await fixtureIndex(true);
+		await refreshResults(pool, replayClient(circuits), {
+			mode: "auto",
+			now: NOW,
+		});
+		const before = await fabxRows(pool);
+		await pool.query("update xlayer_state set frozen_at_block = 76847896");
+		const run = await refreshResults(pool, replayClient(circuits), {
+			mode: "full",
+			now: NOW + HOUR,
+		});
+		if (!run.refreshed) throw new Error(run.detail);
+		expect(await fabxRows(pool)).toEqual(before);
+		expect(run.built).toBe(16);
 	});
 });

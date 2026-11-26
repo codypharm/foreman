@@ -5,7 +5,9 @@
 // needs a new decision, so it isn't reachable from here.
 
 import { bnbClient } from "@foreman/chain-bnb";
+import { xlayerMainnet } from "@foreman/chain-xlayer";
 import {
+	followFabx,
 	followIndex,
 	readPublished,
 	recordPublisherBalance,
@@ -41,7 +43,10 @@ export interface WorkerEnv {
 	BNB_ARCHIVE_RPC_URL: string;
 	BNB_RECENT_RPC_URL?: string | undefined;
 	BNB_ARCHIVE_LOG_BLOCKS?: string | undefined;
+	/** The publisher's X Layer node (the testnet). */
 	XLAYER_RPC_URL?: string | undefined;
+	/** FabX's reads on X Layer mainnet, before the public nodes (2026-11-26-fabx-follow.md, decision 2). */
+	XLAYER_MAINNET_RPC_URL?: string | undefined;
 	/** The publisher's key, from a sealed host variable. Absent: the publish stage is skipped. Never logged. */
 	PUBLISHER_KEY?: string | undefined;
 }
@@ -92,6 +97,41 @@ export function workerStages(
 				summary: `to BNB block ${r.toBlock}: ${r.tapeOuts} tape-outs, ${r.starts} miner starts, ${r.revokes} revokes${r.market.followed ? `; market to ${r.market.toBlock}, ${r.market.listings} listings touched, ${r.market.sales} sales` : ""}`,
 				warnings,
 			};
+		},
+
+		fabx: async () => {
+			const xlayer = xlayerMainnet(env.XLAYER_MAINNET_RPC_URL);
+			// Finalized, as BNB Chain's follow: no stored event can be undone (decision 3)
+			const { number: toBlock } = await xlayer.client.getBlock({
+				blockTag: "finalized",
+			});
+			const r = await followFabx(pool, xlayer, { toBlock });
+			switch (r.followed) {
+				case "absent":
+					return {
+						status: "skipped",
+						summary:
+							"FabX's history isn't stored, so there is nothing to follow",
+					};
+				case "frozen":
+					return {
+						status: "skipped",
+						summary: `frozen: FabX changed its mining contract at X Layer block ${r.frozenAtBlock}; stored up to ${r.upToBlock}`,
+					};
+				case false:
+					return { status: "failed", detail: r.detail };
+				case true:
+					return {
+						status: "done",
+						summary: `to X Layer block ${r.toBlock}: ${r.newCircuits.length} new circuits`,
+						warnings:
+							r.frozenAtBlock === null
+								? []
+								: [
+										`FabX changed its mining contract at X Layer block ${r.frozenAtBlock}: FabX results are frozen until William reviews it`,
+									],
+					};
+			}
 		},
 
 		refresh: async () => {

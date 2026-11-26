@@ -7,7 +7,7 @@
 import { writeFileSync } from "node:fs";
 import { type RpcCall, recordingClient } from "@foreman/chain-bnb/fixture";
 
-const RPC = process.env.XLAYER_RPC_URL || "https://rpc.xlayer.tech";
+const RPC = process.env.XLAYER_MAINNET_RPC_URL || "https://rpc.xlayer.tech";
 const calls: RpcCall[] = [];
 const client = recordingClient(RPC, calls);
 for (const blockNumber of [73_053_971n, 73_050_416n, 73_115_351n]) {

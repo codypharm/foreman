@@ -25,6 +25,7 @@
 		"save-fabx-miners": "node --env-file-if-exists=../../.env scripts/save-fabx-miners.ts",
 		"record:fabx-netlists": "node --env-file-if-exists=../../.env scripts/record-fabx-netlists-fixture.ts",
 		"backfill-fabx-netlists": "node --env-file-if-exists=../../.env scripts/backfill-fabx-netlists.ts",
+		"record:fabx-follow": "node --env-file-if-exists=../../.env scripts/record-fabx-follow-fixture.ts",
 		"record:fabx-claim-times": "node --env-file-if-exists=../../.env scripts/record-fabx-claim-times-fixture.ts"
 	},
 	"dependencies": {

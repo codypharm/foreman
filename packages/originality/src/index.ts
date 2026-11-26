@@ -14,8 +14,10 @@ export {
 	type CircuitId,
 	checkWrapper,
 	MAX_CHAIN_STEPS,
+	type NetlistSource,
 	type WrapperCheck,
 } from "./check-wrapper.ts";
+export { type FabxMinerState, fabxCanMine } from "./fabx-can-mine.ts";
 export {
 	type CommitmentCheck,
 	type CommitmentEvent,

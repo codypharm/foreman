@@ -7,10 +7,12 @@ import {
 	type CircuitId,
 	HASH_RULE_VERSION,
 	hashNetlist,
+	type NetlistRead,
 	readNetlist,
 } from "@foreman/originality";
 import type pg from "pg";
 import type { Address, Hex, PublicClient } from "viem";
+import type { Db } from "./transaction.ts";
 
 export interface BackfillResult {
 	/** The block every netlist was read at: the index's last block. */
@@ -103,40 +105,13 @@ export async function backfillTable(
 		);
 		for (const [k, r] of reads.entries()) {
 			const circuit = batch[k] as CircuitId;
-			const key = [circuit.processor, circuit.id.toString()];
-			if (r.readable) {
-				const n = r.netlist;
-				const h = hashNetlist(n);
-				await pool.query(
-					`update ${table} set netlist_status = 'read', netlist_read_at_block = $3,
-					   n_in = $4, n_out = $5, n_state = $6, gate_count = $7, netlist = $8,
-					   netlist_hash = $9, byte_hash = $10, hash_rule = $11
-					 where processor = $1 and id = $2 and netlist_status is null`,
-					[
-						...key,
-						atBlock.toString(),
-						n.nIn,
-						n.nOut,
-						n.nState,
-						n.gateCount,
-						bytes(n.bytes),
-						bytes(h.netlistHash),
-						bytes(h.byteHash),
-						HASH_RULE_VERSION,
-					],
-				);
-				result.read++;
-			} else if (r.reason === "netlist-unreadable") {
-				await pool.query(
-					`update ${table} set netlist_status = 'unreadable', netlist_read_at_block = $3,
-					   netlist_detail = $4
-					 where processor = $1 and id = $2 and netlist_status is null`,
-					[...key, atBlock.toString(), r.detail],
-				);
-				result.unreadable++;
-			} else {
-				result.failed.push({ circuit, detail: r.detail });
-			}
+			const saved = await saveNetlistRead(pool, table, circuit, atBlock, r);
+			if (saved === "failed")
+				result.failed.push({
+					circuit,
+					detail: (r as { detail: string }).detail,
+				});
+			else result[saved]++;
 		}
 		options.onProgress?.(Math.min(i + step, circuits.length), circuits.length);
 	}
@@ -165,9 +140,14 @@ export async function readStoredNetlist(
 		byte_hash: Buffer;
 		hash_rule: string;
 	}>(
+		// Processor addresses differ between the two factories, so at most one table has it
 		`select netlist_status, netlist_read_at_block, netlist_detail, n_in, n_out, n_state,
 		   gate_count, netlist, netlist_hash, byte_hash, hash_rule
-		 from circuits where processor = $1 and id = $2`,
+		 from circuits where processor = $1 and id = $2
+		 union all
+		 select netlist_status, netlist_read_at_block, netlist_detail, n_in, n_out, n_state,
+		   gate_count, netlist, netlist_hash, byte_hash, hash_rule
+		 from xlayer_circuits where processor = $1 and id = $2`,
 		[circuit.processor.toLowerCase(), circuit.id.toString()],
 	);
 	const row = r.rows[0];
@@ -197,3 +177,50 @@ export async function readStoredNetlist(
 
 const bytes = (h: string) => Buffer.from(h.slice(2), "hex");
 const hex = (b: Buffer): Hex => `0x${b.toString("hex")}`;
+
+/**
+ * Stores one netlist read at `atBlock`: its records, counts and hashes, or "unreadable" with why.
+ * A failed read stores nothing. Only a circuit whose netlist isn't stored yet is changed.
+ */
+export async function saveNetlistRead(
+	db: Db,
+	table: "circuits" | "xlayer_circuits",
+	circuit: CircuitId,
+	atBlock: bigint,
+	r: NetlistRead,
+): Promise<"read" | "unreadable" | "failed"> {
+	const key = [circuit.processor, circuit.id.toString()];
+	if (r.readable) {
+		const n = r.netlist;
+		const h = hashNetlist(n);
+		await db.query(
+			`update ${table} set netlist_status = 'read', netlist_read_at_block = $3,
+			   n_in = $4, n_out = $5, n_state = $6, gate_count = $7, netlist = $8,
+			   netlist_hash = $9, byte_hash = $10, hash_rule = $11
+			 where processor = $1 and id = $2 and netlist_status is null`,
+			[
+				...key,
+				atBlock.toString(),
+				n.nIn,
+				n.nOut,
+				n.nState,
+				n.gateCount,
+				bytes(n.bytes),
+				bytes(h.netlistHash),
+				bytes(h.byteHash),
+				HASH_RULE_VERSION,
+			],
+		);
+		return "read";
+	}
+	if (r.reason === "netlist-unreadable") {
+		await db.query(
+			`update ${table} set netlist_status = 'unreadable', netlist_read_at_block = $3,
+			   netlist_detail = $4
+			 where processor = $1 and id = $2 and netlist_status is null`,
+			[...key, atBlock.toString(), r.detail],
+		);
+		return "unreadable";
+	}
+	return "failed";
+}

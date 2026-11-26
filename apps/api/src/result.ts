@@ -1,5 +1,8 @@
 // One circuit's complete Originality from the stored index, with its can-mine facts read from the
-// mining contract at the index's block, so every part of the result says the same block. A result
+// mining contract at the index's block, so every part of the result says the same block. A FabX
+// circuit's whole result comes from what is stored with FabX's history, read at one X Layer block:
+// its netlist and any REF chain from the stored netlists, its can-mine fact from its stored miner
+// record (2026-11-25-fabx-can-mine.md). A result
 // is whole or not at all (docs/decisions/2026-11-20-complete-result-or-none.md): a circuit outside
 // the index, a netlist not read yet or a failed chain read is an error for the caller, never a
 // result, and is never published.
@@ -8,6 +11,7 @@ import type { Originality } from "@foreman/contract";
 import {
 	loadCircuitIndex,
 	readCircuitRef,
+	readFabxMiner,
 	readMiners,
 	readStoredNetlist,
 } from "@foreman/index";
@@ -18,7 +22,9 @@ import {
 	type CircuitIndex,
 	checkWrapper,
 	decodeNetlist,
+	fabxCanMine,
 	type MinerRevoke,
+	type NetlistSource,
 	originalityVerdict,
 	readCanMine,
 	type WrapperCheck,
@@ -65,10 +71,18 @@ export async function buildResult(
 	circuit: CircuitId,
 	scope: Originality["scope"],
 ): Promise<ResultRead> {
-	const at = { blockNumber: bnbBlockOf(ctx.index) };
 	const ref = await readCircuitRef(ctx.pool, circuit);
 	if (!ref)
 		return { ok: false, detail: `${name(circuit)} is outside the index` };
+	const fabx = ref.chainId === 196;
+	const xlayerBlock = fabx
+		? (ctx.index.upTo.find((u) => u.chainId === 196)?.block ?? null)
+		: null;
+	if (fabx && xlayerBlock === null) {
+		// Stored, but FabX's history isn't loaded into this index
+		return { ok: false, detail: `${name(circuit)}: FabX isn't in the index` };
+	}
+	const at = { blockNumber: xlayerBlock ?? bnbBlockOf(ctx.index) };
 
 	const stored = await readStoredNetlist(ctx.pool, circuit);
 	if (!stored || stored.status === "not-read") {
@@ -93,7 +107,7 @@ export async function buildResult(
 		}
 		usesRef = decoded.records.some((r) => r.op === "ref");
 		wrapper = await checkWrapper(
-			ctx.client,
+			fabx ? storedNetlists(ctx.pool) : ctx.client,
 			{
 				processor: circuit.processor,
 				id: circuit.id,
@@ -116,11 +130,13 @@ export async function buildResult(
 		index: ctx.index,
 		wrapper,
 	});
-	const mining = await readCanMine(
-		ctx.client,
-		{ circuit, usesRef, revoke: ctx.revokes.get(name(circuit)) ?? null },
-		at,
-	);
+	const mining = fabx
+		? fabxCanMine({ miner: await readFabxMiner(ctx.pool, circuit), usesRef })
+		: await readCanMine(
+				ctx.client,
+				{ circuit, usesRef, revoke: ctx.revokes.get(name(circuit)) ?? null },
+				at,
+			);
 	if (!mining.read) return { ok: false, detail: mining.detail };
 
 	return {
@@ -132,6 +148,48 @@ export async function buildResult(
 			mining: mining.facts,
 			miningContract: mining.mining,
 		}),
+	};
+}
+
+/** Netlists as stored, in place of a node: all of FabX's were read at one X Layer block. */
+function storedNetlists(pool: pg.Pool): NetlistSource {
+	return async (target) => {
+		const stored = await readStoredNetlist(pool, target);
+		if (!stored || stored.status === "not-read") {
+			return {
+				readable: false,
+				reason: "read-failed",
+				detail: `${name(target)}: netlist not in the index`,
+			};
+		}
+		if (stored.status === "unreadable") {
+			return {
+				readable: false,
+				reason: "netlist-unreadable",
+				detail: stored.detail,
+			};
+		}
+		const decoded = decodeNetlist(stored.bytes);
+		if ("unreadable" in decoded) {
+			return {
+				readable: false,
+				reason: "netlist-unreadable",
+				detail: decoded.unreadable,
+			};
+		}
+		return {
+			readable: true,
+			netlist: {
+				processor: target.processor,
+				id: target.id,
+				nIn: stored.nIn,
+				nOut: stored.nOut,
+				nState: stored.nState,
+				gateCount: stored.gateCount,
+				bytes: stored.bytes,
+				records: decoded.records,
+			},
+		};
 	};
 }
 

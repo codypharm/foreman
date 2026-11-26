@@ -17,6 +17,7 @@
 	},
 	"dependencies": {
 		"@foreman/chain-bnb": "workspace:*",
+		"@foreman/chain-xlayer": "workspace:*",
 		"@foreman/contract": "workspace:*",
 		"viem": "2.57.16"
 	},

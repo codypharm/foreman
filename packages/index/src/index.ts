@@ -14,10 +14,13 @@ export {
 	FREEZING,
 	fillFabxClaimTimes,
 	type Reviewed,
+	readFabxMiner,
+	readFabxMinerCircuits,
 	readFabxState,
 	saveFabxHistory,
 	saveFabxMiners,
 } from "./fabx.ts";
+export { type FabxFollow, followFabx } from "./fabx-follow.ts";
 export {
 	type FillResult,
 	fillCommitmentTimes,

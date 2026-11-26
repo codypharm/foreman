@@ -3,19 +3,6 @@
 
 export { RIG_VOUCHER, TAPEPOOL_FACTORY } from "./abi.ts";
 export {
-	type HeldVoucher,
-	type HeldVouchers,
-	readHeldVouchers,
-} from "./held-vouchers.ts";
-export {
-	type LendOffer,
-	readLendOffers,
-	readVoucher,
-	VOUCHER_READS_AT_ONCE,
-	type Voucher,
-} from "./lend.ts";
-export { readVoucherCircuit, type VoucherCircuit } from "./voucher-circuit.ts";
-export {
 	decodeFabxLogs,
 	FABX_FIRST_BLOCK,
 	FABX_MINING,
@@ -30,16 +17,30 @@ export {
 	type LogAt,
 } from "./fabx-events.ts";
 export {
+	FABX_MINER_FIXTURE_IDS,
+	type FabxMinerRecord,
+	type FabxMinerStatus,
+	type FabxMinersRead,
+	readFabxMiners,
+} from "./fabx-miners.ts";
+export {
+	type HeldVoucher,
+	type HeldVouchers,
+	readHeldVouchers,
+} from "./held-vouchers.ts";
+export {
+	type LendOffer,
+	readLendOffers,
+	readVoucher,
+	VOUCHER_READS_AT_ONCE,
+	type Voucher,
+} from "./lend.ts";
+export {
 	type LogNode,
 	type LogRead,
 	readLogs,
 	XLAYER_LOG_BLOCKS,
 	type XLayerLog,
 } from "./read-logs.ts";
-export {
-	FABX_MINER_FIXTURE_IDS,
-	type FabxMinerRecord,
-	type FabxMinersRead,
-	type FabxMinerStatus,
-	readFabxMiners,
-} from "./fabx-miners.ts";
+export { readVoucherCircuit, type VoucherCircuit } from "./voucher-circuit.ts";
+export { XLAYER_PUBLIC_NODES, xlayerMainnet } from "./xlayer-nodes.ts";

@@ -13,6 +13,7 @@ import {
 } from "./index.ts";
 import {
 	emptyIndexAt,
+	fabxIndexedDatabase,
 	fixtureIndexedDatabase,
 	TEST_DATABASE_URL,
 } from "./testing.ts";
@@ -130,6 +131,7 @@ describe.skipIf(!TEST_DATABASE_URL)("stored results", () => {
 			changesUpTo: 134_895_911n,
 			fullUpTo: 134_800_000n,
 			fullAt: 1_795_100_000n,
+			fabxChangesUpTo: null,
 		});
 	});
 
@@ -149,6 +151,7 @@ describe.skipIf(!TEST_DATABASE_URL)("stored results", () => {
 			changesUpTo: null,
 			fullUpTo: null,
 			fullAt: null,
+			fabxChangesUpTo: null,
 		});
 	});
 
@@ -203,6 +206,24 @@ describe.skipIf(!TEST_DATABASE_URL)("circuits touched since a rebuild", () => {
 	test("nothing new since the rebuild's block: nothing touched", async () => {
 		pool = await fixtureIndexedDatabase();
 		expect(await circuitsTouchedSince(pool, FIXTURE_BLOCK)).toEqual([]);
+	});
+
+	test("a FabX circuit taped out since the X Layer block touches itself and every identical circuit, on either chain", async () => {
+		// FabX #66 (block 73,045,389) has #24's netlist (taped out at 73,044,971): 2026-11-26-fabx-follow.md
+		pool = await fabxIndexedDatabase();
+		const FABX = "0x87bfca3494aa228ff589ab9b642143a5e8c8f9a6";
+		const touched = await circuitsTouchedSince(
+			pool,
+			FIXTURE_BLOCK,
+			73_045_000n,
+		);
+		touched.sort((a, b) => (a.id < b.id ? -1 : 1));
+		expect(touched).toEqual(
+			[24n, 66n, 1961n, 4206n, 6147n].map((id) => ({ processor: FABX, id })),
+		);
+		expect(
+			await circuitsTouchedSince(pool, FIXTURE_BLOCK, 76_847_895n),
+		).toEqual([]);
 	});
 
 	test("a miner start touches the miner and every circuit sharing its netlist hash", async () => {

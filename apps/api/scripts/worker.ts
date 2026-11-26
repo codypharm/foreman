@@ -1,11 +1,11 @@
 // The hosted worker (docs/decisions/2026-11-23-hosting.md, decision 2): every 5 minutes, follow the
-// index, refresh the results it touched, and publish what changed to the X Layer testnet. pg-boss
+// index and FabX (2026-11-26-fabx-follow.md), refresh the results they touched, and publish what changed to the X Layer testnet. pg-boss
 // keeps the schedule and a record of each run in Postgres, beside the index, and starts at most one
 // run at a time: a run still going when the next is due leaves one waiting, never two running.
 // It runs once at start too, so a deploy doesn't wait for the clock.
 //
 // Needs DATABASE_URL and BNB_ARCHIVE_RPC_URL (BNB_RECENT_RPC_URL, BNB_ARCHIVE_LOG_BLOCKS and
-// XLAYER_RPC_URL as for the commands). PUBLISHER_KEY, set on the host only, lets it publish; without
+// XLAYER_RPC_URL as for the commands; XLAYER_MAINNET_RPC_URL optional, for FabX). PUBLISHER_KEY, set on the host only, lets it publish; without
 // it the publish stage is skipped. The key is never logged.
 //
 //   pnpm --filter @foreman/api worker
@@ -40,6 +40,7 @@ const stages = workerStages(
 		BNB_RECENT_RPC_URL: process.env.BNB_RECENT_RPC_URL,
 		BNB_ARCHIVE_LOG_BLOCKS: process.env.BNB_ARCHIVE_LOG_BLOCKS,
 		XLAYER_RPC_URL: process.env.XLAYER_RPC_URL,
+		XLAYER_MAINNET_RPC_URL: process.env.XLAYER_MAINNET_RPC_URL,
 		PUBLISHER_KEY: process.env.PUBLISHER_KEY,
 	},
 	log,

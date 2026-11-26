@@ -1,5 +1,8 @@
 import { replayClient } from "@foreman/chain-bnb/fixture";
 import { describe, expect, test } from "vitest";
+import fabxNetlists from "../../index/fixtures/fabx-netlists-76847895.json" with {
+	type: "json",
+};
 import fixture from "../fixtures/bnb-circuits-134673279.json" with {
 	type: "json",
 };
@@ -215,3 +218,44 @@ function repointed(
 		records: n.records.map((r) => (r.op === "ref" ? { ...r, target } : r)),
 	};
 }
+
+describe("following a chain through netlists already read", () => {
+	// FabX's only two wrappers, #6147 and #6053, at X Layer block 76,847,895
+	// (packages/index/fixtures/fabx-netlists-76847895.json)
+	const FABX = "0x87bfca3494aa228ff589ab9b642143a5e8c8f9a6";
+	const XL = { blockNumber: 76_847_895n };
+	const xlayer = replayClient(fabxNetlists);
+	const read = (id: bigint) => readNetlist(xlayer, { processor: FABX, id }, XL);
+
+	test("names a FabX wrapper's target from the netlists it is given, reading no node", async () => {
+		const own = await read(6147n);
+		if (!own.readable) throw new Error(own.detail);
+		const asked: bigint[] = [];
+		const source = (t: { processor: `0x${string}`; id: bigint }) => {
+			asked.push(t.id);
+			return read(t.id);
+		};
+		expect(await checkWrapper(source, own.netlist, XL)).toEqual({
+			kind: "wrapper",
+			pointsTo: [{ processor: FABX, id: 4206n }],
+			finalTargets: [{ processor: FABX, id: 4206n }],
+			chainSteps: 1,
+		});
+		expect(asked).toEqual([4206n]);
+	});
+
+	test("a target the source can't give is Can't check, never a wrapper with no target", async () => {
+		const own = await read(6053n);
+		if (!own.readable) throw new Error(own.detail);
+		const none = async () =>
+			({
+				readable: false,
+				reason: "read-failed",
+				detail: "not in the index",
+			}) as const;
+		expect(await checkWrapper(none, own.netlist, XL)).toMatchObject({
+			kind: "cant-check",
+			reason: "read-failed",
+		});
+	});
+});

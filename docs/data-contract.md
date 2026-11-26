@@ -276,7 +276,7 @@ type OriginalityFact =
   | { fact: "also-identical"; to: CircuitRef; netlistHash: Hex32 }   // beside "wrapper": also identical to an earlier circuit
   | { fact: "can-mine"; state: "mining" }                            // every result carries exactly one can-mine fact
   | { fact: "can-mine"; state: "cant-mine"; reasons: CantMineReason[] } // every reason that applies, at least one
-  | { fact: "can-mine"; state: "stopped"; stoppedAt: bigint; canStartFrom: bigint } // cooling: stopBlock, and stopBlock + 1,200
+  | { fact: "can-mine"; state: "stopped"; stoppedAt: bigint; canStartFrom: bigint | null } // cooling: stopBlock, and stopBlock + 1,200; null on a FabX miner (2026-11-25-fabx-can-mine.md)
   | { fact: "can-mine"; state: "not-started" }                       // nothing rules it out; never a promise that it passes a task
   | { fact: "design-bonus"; holds: boolean; bonus: bigint }          // miners only, from getMiner (optimal, bonus); shown before the verdict
   | { fact: "design-shared"; miners: number };                      // miners in the index with the same netlist hash, this one included, up to the blocks in index.upTo; only when 2 or more, beside copy, too-small-to-tell and no-earlier-copy

@@ -26,6 +26,8 @@ export interface ResultsState {
 	fullUpTo: bigint | null;
 	/** When the last full rebuild ran, Unix seconds. */
 	fullAt: bigint | null;
+	/** The X Layer block FabX's results were last rebuilt at; null before, or without FabX. */
+	fabxChangesUpTo: bigint | null;
 }
 
 export async function saveResults(
@@ -34,6 +36,8 @@ export async function saveResults(
 		/** What the rebuild covered: partial (a build failed) saves rows but moves no block, so the next run retries. */
 		mode: "full" | "changes" | "partial";
 		indexBlock: bigint;
+		/** FabX's X Layer block when this rebuild covered FabX's results; null otherwise. */
+		xlayerBlock?: bigint | null;
 		builtAt: bigint;
 		results: Originality[];
 		/** Circuits that are no longer a miner or listed: their rows go. */
@@ -96,6 +100,11 @@ export async function saveResults(
 					: await db.query("select 1 from index_state");
 		if (state.rowCount !== 1) {
 			throw new Error("The index is not filled yet: no results without it");
+		}
+		if (input.mode !== "partial" && input.xlayerBlock != null) {
+			await db.query("update xlayer_state set results_up_to_block = $1", [
+				input.xlayerBlock.toString(),
+			]);
 		}
 		await db.query("commit");
 	} catch (error) {
@@ -197,6 +206,12 @@ export async function readResultsIndex(
 export async function circuitsTouchedSince(
 	pool: pg.Pool,
 	block: bigint,
+	/**
+	 * The X Layer block FabX's results were last built at; 0 for every FabX circuit; null when
+	 * FabX isn't followed. FabX miner records changing aren't tracked here: the hourly full
+	 * rebuild catches them (2026-11-26-fabx-follow.md).
+	 */
+	xlayerBlock: bigint | null = null,
 ): Promise<CircuitId[]> {
 	const { rows } = await pool.query<{ processor: string; id: string }>(
 		`with touched as (
@@ -206,16 +221,25 @@ export async function circuitsTouchedSince(
 		   where last_started_block > $1 or commitment_read_at_block > $1 or revoked_block > $1
 		   union
 		   select processor, token_id from market_listings where listed_block > $1 and open
+		   union
+		   select processor, id from xlayer_circuits
+		   where $2::bigint is not null and (taped_out_block > $2 or netlist_read_at_block > $2)
+		 ),
+		 -- Identical circuits are compared across both chains (2026-11-25-cross-chain-check.md)
+		 every_circuit as (
+		   select processor, id, netlist_hash from circuits
+		   union all
+		   select processor, id, netlist_hash from xlayer_circuits
 		 )
 		 select processor, id::text from touched
 		 union
-		 select c.processor, c.id::text from circuits c
+		 select c.processor, c.id::text from every_circuit c
 		 where c.netlist_hash in (
-		   select t.netlist_hash from circuits t join touched using (processor, id)
+		   select t.netlist_hash from every_circuit t join touched using (processor, id)
 		   where t.netlist_hash is not null
 		 )
 		 order by 1, 2`,
-		[block.toString()],
+		[block.toString(), xlayerBlock?.toString() ?? null],
 	);
 	return rows.map((r) => ({
 		processor: r.processor as CircuitId["processor"],
@@ -228,9 +252,12 @@ export async function readResultsState(pool: pg.Pool): Promise<ResultsState> {
 		results_changes_up_to_block: string | null;
 		results_full_up_to_block: string | null;
 		results_full_at: string | null;
+		fabx_results_up_to_block: string | null;
 	}>(
 		`select results_changes_up_to_block::text, results_full_up_to_block::text,
-		   results_full_at::text from index_state`,
+		   results_full_at::text,
+		   (select results_up_to_block::text from xlayer_state) as fabx_results_up_to_block
+		 from index_state`,
 	);
 	const r = rows[0];
 	const big = (v: string | null | undefined) => (v ? BigInt(v) : null);
@@ -238,6 +265,7 @@ export async function readResultsState(pool: pg.Pool): Promise<ResultsState> {
 		changesUpTo: big(r?.results_changes_up_to_block),
 		fullUpTo: big(r?.results_full_up_to_block),
 		fullAt: big(r?.results_full_at),
+		fabxChangesUpTo: big(r?.fabx_results_up_to_block),
 	};
 }
 

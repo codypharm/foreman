@@ -1,6 +1,6 @@
 // Test helpers: a fresh, migrated test database.
 
-import { podMiningAbi } from "@foreman/chain-bnb";
+import { minerKey, podMiningAbi } from "@foreman/chain-bnb";
 import { type Fixture, replayClient } from "@foreman/chain-bnb/fixture";
 import { parseHex32 } from "@foreman/contract";
 import type { MinerStart } from "@foreman/originality";
@@ -13,9 +13,19 @@ import {
 	type Address,
 	decodeFunctionResult,
 	type Hex,
+	keccak256,
+	toHex,
 	zeroAddress,
 } from "viem";
+import fabxNetlists from "../fixtures/fabx-netlists-76847895.json" with {
+	type: "json",
+};
 import { backfillNetlists } from "./backfill.ts";
+import {
+	backfillFabxNetlists,
+	saveFabxHistory,
+	saveFabxMiners,
+} from "./fabx.ts";
 import { migrate } from "./migrate.ts";
 import { backfillCommitments, saveMinerStarts } from "./miners.ts";
 import { type CompleteOwnerScan, isMint, saveOwnerScan } from "./owners.ts";
@@ -196,4 +206,250 @@ export async function ownersIndexedDatabase(
 		transfers: seedMints,
 	});
 	return pool;
+}
+
+/** FabX's processor and the X Layer block its test history is stored up to. */
+const FABX_P = "0x87bfca3494aa228ff589ab9b642143a5e8c8f9a6" as const;
+const FABX_BLOCK = 76_847_895n;
+
+/**
+ * The fixture's BNB Chain index with five real FabX circuits beside it, at X Layer block
+ * 76,847,895 (fixtures/fabx-netlists-76847895.json): #24, a miner; #66, a stopped miner with the
+ * same netlist, taped out after it; #4206, a miner; #6147, a wrapper of #4206 that isn't a
+ * miner; and #1961, a miner. Tape-outs, statuses and stop block are real; design commitments are
+ * left out, so every commitment is "none".
+ */
+export async function fabxIndexedDatabase(): Promise<pg.Pool> {
+	const pool = await fixtureIndexedDatabase();
+	const tapeOut = (
+		id: bigint,
+		block: bigint,
+		tx: number,
+		log: number,
+		time: bigint,
+		by: Address,
+	) => ({
+		processor: FABX_P,
+		id,
+		at: { block, tx, log },
+		time,
+		tapedOutBy: by,
+	});
+	await saveFabxHistory(
+		pool,
+		{
+			fromBlock: 73_042_958n,
+			toBlock: FABX_BLOCK,
+			history: {
+				ok: true,
+				tapeOuts: [
+					tapeOut(
+						24n,
+						73_044_971n,
+						22,
+						91,
+						1_791_814_007n,
+						"0xd2c3fadcdf186e82cf30d273154e7d7bb679bbee",
+					),
+					tapeOut(
+						66n,
+						73_045_389n,
+						23,
+						88,
+						1_791_814_425n,
+						"0x733b1e13dff45b2dbf472e12edc0917020448e49",
+					),
+					tapeOut(
+						1961n,
+						73_131_781n,
+						3,
+						5,
+						1_791_900_817n,
+						"0xf264c21243a974408d0564e50c54425904cd252e",
+					),
+					tapeOut(
+						4206n,
+						73_361_104n,
+						10,
+						38,
+						1_792_130_140n,
+						"0xf3f1c49df387bc9d23c8eeb1ef8bf67b033f0221",
+					),
+					tapeOut(
+						6147n,
+						73_831_216n,
+						4,
+						9,
+						1_792_600_252n,
+						"0x0b023ab5a493a3f282dc0659ef634710f05579b5",
+					),
+				],
+				commitments: [],
+				starts: [],
+				contractEvents: [],
+				otherLogs: 0,
+			},
+		},
+		{
+			implementation: "0x90681776c2d6be4676d83fa8fef22836b5dbbeeb",
+			atBlock: 73_517_253n,
+		},
+	);
+	const miner = (
+		id: bigint,
+		status: 1 | 3,
+		stopBlock: bigint | null,
+		taskId: number,
+	) => ({
+		processor: FABX_P,
+		id,
+		key: minerKey({ processor: FABX_P, id }),
+		status,
+		stopBlock,
+		registrant: "0x239611ea0488b8a4bfe3b7dcd205baebd6c3a99f" as Address,
+		taskId,
+		commitBlock: 0n,
+		firstUnusedId: 0n,
+	});
+	await saveFabxMiners(pool, {
+		complete: true,
+		block: FABX_BLOCK,
+		miners: [
+			miner(24n, 1, null, 0),
+			miner(66n, 3, 74_423_691n, 0),
+			miner(1961n, 1, null, 48),
+			miner(4206n, 1, null, 70),
+		],
+		notMiners: 1,
+	});
+	await backfillFabxNetlists(pool, replayClient(fabxNetlists));
+	return pool;
+}
+
+/** The block fabxFollowDatabase stores FabX's history up to, and where its follow test ends. */
+export const FABX_FOLLOW_FROM = 76_829_600n;
+export const FABX_FOLLOW_TO = 76_829_899n;
+
+/**
+ * FabX's history stored up to X Layer block 76,829,600 with two real circuits, #24 and #7160, and
+ * no miners yet: the start of the follow test, which reads on to block 76,829,899 and finds the
+ * real tape-outs #7161 to #7164 (fixtures/fabx-follow-76829899.json).
+ */
+export async function fabxFollowDatabase(): Promise<pg.Pool> {
+	const pool = await freshDatabase();
+	const tapeOut = (
+		id: bigint,
+		block: bigint,
+		tx: number,
+		log: number,
+		time: bigint,
+		by: Address,
+	) => ({
+		processor: FABX_P,
+		id,
+		at: { block, tx, log },
+		time,
+		tapedOutBy: by,
+	});
+	await saveFabxHistory(
+		pool,
+		{
+			fromBlock: 73_042_958n,
+			toBlock: FABX_FOLLOW_FROM,
+			history: {
+				ok: true,
+				tapeOuts: [
+					tapeOut(
+						24n,
+						73_044_971n,
+						22,
+						91,
+						1_791_814_007n,
+						"0xd2c3fadcdf186e82cf30d273154e7d7bb679bbee",
+					),
+					tapeOut(
+						7160n,
+						76_690_027n,
+						8,
+						10,
+						1_795_459_063n,
+						"0xa1ce751322fdec6365a9b5783c5291c8d889b844",
+					),
+				],
+				commitments: [],
+				starts: [],
+				contractEvents: [],
+				otherLogs: 0,
+			},
+		},
+		{
+			implementation: "0x90681776c2d6be4676d83fa8fef22836b5dbbeeb",
+			atBlock: 73_517_253n,
+		},
+	);
+	return pool;
+}
+
+/** A node's raw log, as eth_getLogs returns it. */
+export interface RawLog {
+	address: Address;
+	topics: Hex[];
+	data: Hex;
+	blockNumber: Hex;
+	transactionIndex: Hex;
+	logIndex: Hex;
+	transactionHash: Hex;
+	blockTimestamp: Hex;
+}
+
+/** A node that answers as `node` does, with `extra` logs added to each log read whose range holds them. */
+export function withExtraLogs<
+	N extends {
+		request(args: { method: string; params?: unknown }): Promise<unknown>;
+	},
+>(node: N, extra: RawLog[]): N {
+	return {
+		...node,
+		request: async (args: { method: string; params?: unknown }) => {
+			const result = await node.request(args);
+			if (args.method !== "eth_getLogs") return result;
+			const [q] = args.params as [{ fromBlock: Hex; toBlock: Hex }];
+			const added = extra.filter(
+				(l) =>
+					BigInt(l.blockNumber) >= BigInt(q.fromBlock) &&
+					BigInt(l.blockNumber) <= BigInt(q.toBlock),
+			);
+			return [...(result as RawLog[]), ...added];
+		},
+	};
+}
+
+/**
+ * Made up: a freezing event on FabX's mining contract at X Layer block 76,829,810, between the
+ * real tape-outs #7162 (block 76,829,798) and #7163 (block 76,829,819).
+ */
+export function fakeFabxChange(kind: "Upgraded" | "Paused"): RawLog {
+	const pad = (a: string) => `0x${a.slice(2).padStart(64, "0")}` as Hex;
+	const base = {
+		address: "0x4f6a2312d80753bdafd35ddb1bf4bb14c43f8265" as Address,
+		blockNumber: toHex(76_829_810n),
+		transactionIndex: "0x0" as Hex,
+		logIndex: "0x0" as Hex,
+		transactionHash: pad("0xfa4e") as Hex,
+		blockTimestamp: toHex(1_795_598_846n),
+	};
+	return kind === "Upgraded"
+		? {
+				...base,
+				topics: [
+					keccak256(toHex("Upgraded(address)")),
+					pad("0x000000000000000000000000000000000000dead"),
+				],
+				data: "0x",
+			}
+		: {
+				...base,
+				topics: [keccak256(toHex("Paused(address)"))],
+				data: pad("0xfb7708019e64462126bafffc30c03e770e455ef8"),
+			};
 }

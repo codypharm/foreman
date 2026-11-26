@@ -275,7 +275,7 @@ async function loadFabx(pool: pg.Pool): Promise<
 }
 
 /**
- * Any indexed circuit as the data contract's CircuitRef, whether or not its netlist could be
+ * Any indexed circuit, on BNB Chain or FabX's processor, as the data contract's CircuitRef, whether or not its netlist could be
  * read, so an unreadable one still gets its "Can't check" result. null when it isn't indexed:
  * the caller's "Can't check: outside the index", never a result (2026-11-20, complete or none).
  */
@@ -299,7 +299,7 @@ export async function readCircuitRef(
 		[circuit.processor.toLowerCase(), circuit.id.toString()],
 	);
 	const r = rows.rows[0];
-	if (!r) return null;
+	if (!r) return readFabxCircuitRef(pool, circuit);
 	if (
 		r.taped_out_time === null ||
 		(r.design_committed_at !== null && r.design_committed_time === null)
@@ -326,5 +326,50 @@ export async function readCircuitRef(
 						block: BigInt(r.design_committed_at),
 						time: BigInt(r.design_committed_time as string),
 					},
+	};
+}
+
+/** A circuit on FabX's processor; its design time counts a commitment only when confirmed. */
+async function readFabxCircuitRef(
+	pool: pg.Pool,
+	circuit: CircuitId,
+): Promise<CircuitRef | null> {
+	const rows = await pool.query<{
+		taped_out_block: string;
+		taped_out_tx: number;
+		taped_out_log: number;
+		taped_out_time: string;
+		taped_out_by: string;
+		commitment_status: string | null;
+		commit_block: string | null;
+		commitment_time: string | null;
+	}>(
+		`select x.taped_out_block, x.taped_out_tx, x.taped_out_log, x.taped_out_time, x.taped_out_by,
+		   f.commitment_status, f.commit_block, f.commitment_time
+		 from xlayer_circuits x left join fabx_miners f on f.processor = x.processor and f.id = x.id
+		 where x.processor = $1 and x.id = $2`,
+		[circuit.processor.toLowerCase(), circuit.id.toString()],
+	);
+	const r = rows.rows[0];
+	if (!r) return null;
+	return {
+		chainId: 196,
+		processor: parseAddress(circuit.processor.toLowerCase(), "processor"),
+		tokenId: circuit.id,
+		tapedOutAt: {
+			block: BigInt(r.taped_out_block),
+			txIndex: r.taped_out_tx,
+			logIndex: r.taped_out_log,
+			time: BigInt(r.taped_out_time),
+		},
+		tapedOutBy: parseAddress(r.taped_out_by, "tapedOutBy"),
+		// Only a commitment confirmed by its event counts (2026-11-25-fabx-copy-check.md, decision 5)
+		designCommittedAt:
+			r.commitment_status === "confirmed"
+				? {
+						block: BigInt(r.commit_block as string),
+						time: BigInt(r.commitment_time as string),
+					}
+				: null,
 	};
 }

@@ -1,5 +1,5 @@
 // FabX's miner records, as FabX's mining contract reports them (docs/decisions/2026-11-25-fabx-copy-check.md,
-// decisions 5 and 10): status, registrant, task, and the design commitment block and firstUnusedId,
+// decisions 5 and 10; 2026-11-25-fabx-can-mine.md): status, stop block, registrant, task, and the design commitment block and firstUnusedId,
 // which count only once confirmed by their event (packages/originality, confirmCommitment).
 // FabX's source isn't verified: its getMiner decodes with TapeOut's verified layout, which held
 // for all 7,164 of FabX's circuits on 25 Nov 2026. Read only.
@@ -13,7 +13,14 @@ const PER_BUNDLE = 400;
 const BUNDLES_AT_ONCE = 2;
 
 /** The circuits recorded in fixtures/fabx-miners-76847895.json. */
-export const FABX_MINER_FIXTURE_IDS = [24n, 1020n, 1648n, 1961n, 66n, 25n] as const;
+export const FABX_MINER_FIXTURE_IDS = [
+	24n,
+	1020n,
+	1648n,
+	1961n,
+	66n,
+	25n,
+] as const;
 
 /** TapeOut's status codes (verified PodMining: ST_ACTIVE 1, ST_REVOKED 2, ST_COOLING 3). */
 export type FabxMinerStatus = 1 | 2 | 3;
@@ -23,6 +30,8 @@ export interface FabxMinerRecord {
 	id: bigint;
 	key: Hex;
 	status: FabxMinerStatus;
+	/** The block it stopped at when stopped (status 3); null otherwise (2026-11-25-fabx-can-mine.md). */
+	stopBlock: bigint | null;
 	registrant: Address;
 	taskId: number;
 	/** 0 when no commitment; unconfirmed until its event is found. */
@@ -70,9 +79,11 @@ export async function readFabxMiners(
 				}),
 			);
 			for (const { id, r } of bundles.flat()) {
-				if (r.status !== "success") return { complete: false, detail: `getMiner for FabX #${id} failed` };
+				if (r.status !== "success")
+					return { complete: false, detail: `getMiner for FabX #${id} failed` };
 				const m = r.result as unknown as {
 					status: number;
+					stopBlock: bigint;
 					registrant: Address;
 					taskId: number;
 					commitBlock: bigint;
@@ -82,12 +93,25 @@ export async function readFabxMiners(
 					notMiners++;
 					continue;
 				}
-				if (m.status > 3) return { complete: false, detail: `FabX #${id} has unknown status ${m.status}` };
+				if (m.status > 3)
+					return {
+						complete: false,
+						detail: `FabX #${id} has unknown status ${m.status}`,
+					};
+				const stopBlock = BigInt(m.stopBlock);
+				// A stopped miner with no stop block is a layout FabX's code doesn't match: deny by default
+				if (m.status === 3 && stopBlock === 0n) {
+					return {
+						complete: false,
+						detail: `FabX #${id} is stopped with no stop block`,
+					};
+				}
 				miners.push({
 					processor: FABX_PROCESSOR,
 					id,
 					key: minerKey({ processor: FABX_PROCESSOR, id }),
 					status: m.status as FabxMinerStatus,
+					stopBlock: m.status === 3 ? stopBlock : null,
 					registrant: m.registrant.toLowerCase() as Address,
 					taskId: Number(m.taskId),
 					commitBlock: BigInt(m.commitBlock),
@@ -97,8 +121,12 @@ export async function readFabxMiners(
 		}
 	} catch (error) {
 		// viem's full message names the node's URL, which can carry a key: keep its short message
-		const short = (error as { shortMessage?: string }).shortMessage ?? "read failed";
-		return { complete: false, detail: `FabX miners at block ${query.blockNumber}: ${short}` };
+		const short =
+			(error as { shortMessage?: string }).shortMessage ?? "read failed";
+		return {
+			complete: false,
+			detail: `FabX miners at block ${query.blockNumber}: ${short}`,
+		};
 	}
 	return { complete: true, block: query.blockNumber, miners, notMiners };
 }

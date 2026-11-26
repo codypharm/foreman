@@ -9,7 +9,11 @@ import {
 	type FabxHistory,
 	type FabxMinersRead,
 } from "@foreman/chain-xlayer";
-import { type CommitmentEvent, confirmCommitment } from "@foreman/originality";
+import {
+	type CommitmentEvent,
+	confirmCommitment,
+	type FabxMinerState,
+} from "@foreman/originality";
 import type pg from "pg";
 import type { Address, PublicClient } from "viem";
 import {
@@ -17,12 +21,16 @@ import {
 	type BackfillResult,
 	backfillTable,
 } from "./backfill.ts";
+import { type Db, inTransaction } from "./transaction.ts";
 
 /** Contract changes that freeze FabX results when after the reviewed block (decision 6). */
 export const FREEZING: readonly FabxContractEventKind[] = [
 	"Upgraded",
 	"OwnershipTransferred",
 	"ProcessorSet",
+	// What a pause does is in FabX's unverified code (2026-11-26-fabx-follow.md, decision 1)
+	"Paused",
+	"Unpaused",
 ];
 
 export interface Reviewed {
@@ -43,7 +51,7 @@ export interface FabxState {
  * `reviewed` is stored with the first range only.
  */
 export async function saveFabxHistory(
-	pool: pg.Pool,
+	pool: Db,
 	range: {
 		fromBlock: bigint;
 		toBlock: bigint;
@@ -52,9 +60,7 @@ export async function saveFabxHistory(
 	reviewed: Reviewed,
 ): Promise<FabxState> {
 	const { fromBlock, toBlock, history: h } = range;
-	const client = await pool.connect();
-	try {
-		await client.query("begin");
+	await inTransaction(pool, async (client) => {
 		const state = await client.query<{ logs_up_to_block: string }>(
 			"select logs_up_to_block from xlayer_state for update",
 		);
@@ -155,13 +161,7 @@ export async function saveFabxHistory(
 			 where frozen_at_block is null`,
 			[FREEZING],
 		);
-		await client.query("commit");
-	} catch (error) {
-		await client.query("rollback");
-		throw error;
-	} finally {
-		client.release();
-	}
+	});
 	const after = await readFabxState(pool);
 	if (!after) throw new Error("FabX's state wasn't saved");
 	return after;
@@ -175,13 +175,11 @@ export async function saveFabxHistory(
  * (2026-11-25-fabx-copy-check.md, decision 5). Miners FabX no longer reports are removed.
  */
 export async function saveFabxMiners(
-	pool: pg.Pool,
+	pool: Db,
 	read: Extract<FabxMinersRead, { complete: true }>,
 ): Promise<{ confirmed: number; unconfirmed: number; none: number }> {
-	const client = await pool.connect();
 	const counts = { confirmed: 0, unconfirmed: 0, none: 0 };
-	try {
-		await client.query("begin");
+	await inTransaction(pool, async (client) => {
 		const state = await client.query<{ logs_up_to_block: string }>(
 			"select logs_up_to_block from xlayer_state for update",
 		);
@@ -307,10 +305,12 @@ export async function saveFabxMiners(
 						: null;
 			await client.query(
 				`insert into fabx_miners (processor, id, key, status, registrant, task_id, commit_block, first_unused_id,
-				   read_at_block, commitment_status, confirmed_by_block, confirmed_by_tx, confirmed_by_log, commitment_time)
-				 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+				   read_at_block, commitment_status, confirmed_by_block, confirmed_by_tx, confirmed_by_log, commitment_time,
+				   stop_block)
+				 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 				 on conflict (processor, id) do update set
-				   key = excluded.key, status = excluded.status, registrant = excluded.registrant,
+				   key = excluded.key, status = excluded.status, stop_block = excluded.stop_block,
+				   registrant = excluded.registrant,
 				   task_id = excluded.task_id, first_unused_id = excluded.first_unused_id,
 				   read_at_block = excluded.read_at_block, commit_block = excluded.commit_block,
 				   commitment_status = excluded.commitment_status,
@@ -333,6 +333,7 @@ export async function saveFabxMiners(
 					by?.tx ?? null,
 					by?.log ?? null,
 					by?.time ?? null,
+					m.stopBlock?.toString() ?? null,
 				],
 			);
 		}
@@ -343,17 +344,11 @@ export async function saveFabxMiners(
 		await client.query("update xlayer_state set miners_read_at_block = $1", [
 			read.block.toString(),
 		]);
-		await client.query("commit");
-	} catch (error) {
-		await client.query("rollback");
-		throw error;
-	} finally {
-		client.release();
-	}
+	});
 	return counts;
 }
 
-export async function readFabxState(pool: pg.Pool): Promise<FabxState | null> {
+export async function readFabxState(pool: Db): Promise<FabxState | null> {
 	const { rows } = await pool.query<{
 		logs_up_to_block: string;
 		reviewed_implementation: string;
@@ -381,7 +376,7 @@ export async function readFabxState(pool: pg.Pool): Promise<FabxState | null> {
  * stores nothing, and the index isn't loaded while any is missing.
  */
 export async function fillFabxClaimTimes(
-	pool: pg.Pool,
+	pool: Db,
 	client: PublicClient,
 ): Promise<{ filled: number }> {
 	const { rows } = await pool.query<{ commit_block: string }>(
@@ -424,4 +419,38 @@ export async function backfillFabxNetlists(
 		state.logsUpToBlock,
 		options,
 	);
+}
+
+/**
+ * A FabX circuit's miner record as stored, read at the block FabX's history is stored up to
+ * (2026-11-25-fabx-can-mine.md, decision 4); null when FabX has no miner for it.
+ */
+export async function readFabxMiner(
+	pool: pg.Pool,
+	circuit: { processor: Address; id: bigint },
+): Promise<FabxMinerState | null> {
+	const r = (
+		await pool.query<{ status: number; stop_block: string | null }>(
+			"select status, stop_block from fabx_miners where processor = $1 and id = $2",
+			[circuit.processor.toLowerCase(), circuit.id.toString()],
+		)
+	).rows[0];
+	if (!r) return null;
+	return {
+		status: r.status as FabxMinerState["status"],
+		stopBlock: r.stop_block === null ? null : BigInt(r.stop_block),
+	};
+}
+
+/** Every circuit FabX has a miner record for, in id order: the FabX results the job stores. */
+export async function readFabxMinerCircuits(
+	pool: Db,
+): Promise<{ processor: Address; id: bigint }[]> {
+	const { rows } = await pool.query<{ processor: string; id: string }>(
+		"select processor, id::text from fabx_miners order by id",
+	);
+	return rows.map((r) => ({
+		processor: r.processor as Address,
+		id: BigInt(r.id),
+	}));
 }

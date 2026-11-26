@@ -215,6 +215,19 @@ describe("an Originality on the wire", () => {
 			}),
 		],
 		[
+			"a stopped FabX miner, with its stop block only",
+			fabxWire({
+				facts: [
+					{
+						fact: "can-mine",
+						state: "stopped",
+						stoppedAt: "73900000",
+						canStartFrom: null,
+					},
+				],
+			}),
+		],
+		[
 			"a listed circuit that isn't a miner",
 			wire({
 				scope: "listed",
@@ -271,6 +284,20 @@ describe("an Originality on the wire", () => {
 						state: "stopped",
 						stoppedAt: "134590000",
 						canStartFrom: "134590001",
+					},
+				],
+			},
+			"o.facts[0].canStartFrom",
+		],
+		[
+			"a stopped TapeOut miner with no block it can start again from",
+			{
+				facts: [
+					{
+						fact: "can-mine",
+						state: "stopped",
+						stoppedAt: "134590000",
+						canStartFrom: null,
 					},
 				],
 			},
@@ -427,6 +454,20 @@ describe("an Originality on the wire", () => {
 				],
 			},
 			"o.facts[0].reasons[0]",
+		],
+		[
+			"a stopped FabX miner with a block it can start again from",
+			{
+				facts: [
+					{
+						fact: "can-mine",
+						state: "stopped",
+						stoppedAt: "73900000",
+						canStartFrom: "73901200",
+					},
+				],
+			},
+			"o.facts[0].canStartFrom",
 		],
 		[
 			"a copy of a BNB Chain circuit taped out in the same second",

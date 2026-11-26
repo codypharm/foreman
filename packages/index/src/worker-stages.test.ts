@@ -21,6 +21,7 @@ describe.skipIf(!TEST_DATABASE_URL)("worker stages", () => {
 		pool = await freshDatabase();
 		expect(await readStages(pool)).toEqual([
 			{ stage: "follow", lastDone: null, lastSkipped: null, lastFailed: null },
+			{ stage: "fabx", lastDone: null, lastSkipped: null, lastFailed: null },
 			{ stage: "refresh", lastDone: null, lastSkipped: null, lastFailed: null },
 			{ stage: "publish", lastDone: null, lastSkipped: null, lastFailed: null },
 		]);
@@ -69,7 +70,7 @@ describe.skipIf(!TEST_DATABASE_URL)("worker stages", () => {
 			{ status: "done", summary: "nothing changed" },
 			1_600n,
 		);
-		const publish = (await readStages(pool))[2];
+		const publish = (await readStages(pool)).find((s) => s.stage === "publish");
 		expect(publish?.lastDone).toEqual({ at: 1_600n, text: "nothing changed" });
 		expect(publish?.lastSkipped).toEqual({ at: 1_000n, text: "no key" });
 	});

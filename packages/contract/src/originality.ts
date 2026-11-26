@@ -107,12 +107,15 @@ export type OriginalityFact =
 	/** Every result carries exactly one can-mine fact. */
 	| { fact: "can-mine"; state: "mining" }
 	| { fact: "can-mine"; state: "cant-mine"; reasons: CantMineReason[] }
-	/** Cooling: stopBlock, and stopBlock + 1,200. */
+	/**
+	 * Cooling: stopBlock, and stopBlock + 1,200. A FabX miner's canStartFrom is null: its cooldown
+	 * is in unverified code (2026-11-25-fabx-can-mine.md, decision 1).
+	 */
 	| {
 			fact: "can-mine";
 			state: "stopped";
 			stoppedAt: bigint;
-			canStartFrom: bigint;
+			canStartFrom: bigint | null;
 	  }
 	/** Nothing rules it out; never a promise that it passes a task. */
 	| { fact: "can-mine"; state: "not-started" }
@@ -584,6 +587,16 @@ function parseCanMine(
 		}
 		case "stopped": {
 			const stoppedAt = parseUint(w.stoppedAt, `${field}.stoppedAt`);
+			if (fabx) {
+				if (w.canStartFrom !== null) {
+					throw new ContractParseError(
+						`${field}.canStartFrom`,
+						"null on a FabX miner: its cooldown isn't read",
+						w.canStartFrom,
+					);
+				}
+				return { fact: "can-mine", state, stoppedAt, canStartFrom: null };
+			}
 			const canStartFrom = parseUint(w.canStartFrom, `${field}.canStartFrom`);
 			if (canStartFrom !== stoppedAt + STOP_COOLDOWN_BLOCKS) {
 				throw new ContractParseError(

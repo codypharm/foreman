@@ -1,6 +1,7 @@
 import { replayClient } from "@foreman/chain-bnb/fixture";
 import { parseOriginality, serialiseOriginality } from "@foreman/contract";
 import {
+	fabxIndexedDatabase,
 	fixtureIndexedDatabase,
 	TEST_DATABASE_URL,
 } from "@foreman/index/testing";
@@ -89,6 +90,100 @@ describe.skipIf(!TEST_DATABASE_URL)("one circuit's result", () => {
 		expect(read).toEqual({
 			ok: false,
 			detail: `${MINE6}/999999 is outside the index`,
+		});
+	});
+});
+
+// FabX circuits beside the fixture's BNB Chain index, at X Layer block 76,847,895
+// (@foreman/index/testing, fabxIndexedDatabase; 2026-11-25-fabx-can-mine.md).
+const FABX = "0x87bfca3494aa228ff589ab9b642143a5e8c8f9a6";
+const FABX_MINING = {
+	chainId: 196,
+	contract: "0x4f6a2312d80753bdafd35ddb1bf4bb14c43f8265",
+};
+
+describe.skipIf(!TEST_DATABASE_URL)("a FabX circuit's result", () => {
+	let pool: pg.Pool | undefined;
+	afterEach(async () => {
+		await pool?.end();
+	});
+
+	async function context() {
+		pool = await fabxIndexedDatabase();
+		// The BNB Chain node is only replayed: a FabX result reads nothing from it
+		const loaded = await loadResultContext(pool, replayClient(circuits));
+		if (!loaded.ready) throw new Error(loaded.detail);
+		return loaded.context;
+	}
+
+	test("a stopped FabX miner: copy of FabX #24, stopped at its X Layer block with no restart block, in FabX's mining contract", async () => {
+		const read = await buildResult(
+			await context(),
+			{ processor: FABX, id: 66n },
+			"miner",
+		);
+		if (!read.ok) throw new Error(read.detail);
+		const o = read.originality;
+		expect(o.circuit).toMatchObject({ chainId: 196, tokenId: 66n });
+		expect(o.mining).toEqual(FABX_MINING);
+		expect(o.result).toMatchObject({
+			verdict: "copy",
+			of: { chainId: 196, tokenId: 24n },
+			earlierBy: "tape-out",
+			bytesIdentical: true,
+		});
+		expect(o.facts.some((f) => f.fact === "design-bonus")).toBe(false);
+		expect(o.facts.at(-1)).toEqual({
+			fact: "can-mine",
+			state: "stopped",
+			stoppedAt: 74_423_691n,
+			canStartFrom: null,
+		});
+		expect(o.index.upTo).toEqual([
+			{ chainId: 56, block: INDEX_BLOCK },
+			{ chainId: 196, block: 76_847_895n },
+		]);
+		expect(o.ruleVersion).toBe(
+			"hash 2026-11-20, floor 4, chain 10, BNB Chain and X Layer by second, FabX commitments by event",
+		);
+		expect(parseOriginality(serialiseOriginality(o, "o"), "o")).toEqual(o);
+	});
+
+	test("a FabX wrapper that isn't a miner: wrapper of FabX #4206 from the stored netlists, can't mine, no mining contract", async () => {
+		const read = await buildResult(
+			await context(),
+			{ processor: FABX, id: 6147n },
+			"pasted",
+		);
+		if (!read.ok) throw new Error(read.detail);
+		const o = read.originality;
+		expect(o.mining).toBeNull();
+		expect(o.result).toMatchObject({
+			verdict: "wrapper",
+			pointsTo: [{ chainId: 196, tokenId: 4206n }],
+			finalTargets: [{ chainId: 196, tokenId: 4206n }],
+			chainSteps: 1,
+		});
+		expect(o.facts.at(-1)).toEqual({
+			fact: "can-mine",
+			state: "cant-mine",
+			reasons: [{ reason: "uses-ref" }],
+		});
+		expect(parseOriginality(serialiseOriginality(o, "o"), "o")).toEqual(o);
+	});
+
+	test("a FabX miner is mining now when FabX reports it active", async () => {
+		const read = await buildResult(
+			await context(),
+			{ processor: FABX, id: 24n },
+			"miner",
+		);
+		if (!read.ok) throw new Error(read.detail);
+		expect(read.originality.mining).toEqual(FABX_MINING);
+		expect(read.originality.result.verdict).toBe("no-earlier-copy");
+		expect(read.originality.facts.at(-1)).toEqual({
+			fact: "can-mine",
+			state: "mining",
 		});
 	});
 });

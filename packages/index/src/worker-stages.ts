@@ -4,10 +4,11 @@
 
 import type pg from "pg";
 
-export type WorkerStage = "follow" | "refresh" | "publish";
+export type WorkerStage = "follow" | "fabx" | "refresh" | "publish";
 
 export const WORKER_STAGES: readonly WorkerStage[] = [
 	"follow",
+	"fabx",
 	"refresh",
 	"publish",
 ];

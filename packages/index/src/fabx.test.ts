@@ -15,14 +15,16 @@ import claimTimes from "../fixtures/fabx-claim-times.json" with {
 import netlists from "../fixtures/fabx-netlists-76847895.json" with {
 	type: "json",
 };
+import { readStoredNetlist } from "./backfill.ts";
 import {
 	backfillFabxNetlists,
 	fillFabxClaimTimes,
+	readFabxMiner,
 	readFabxState,
 	saveFabxHistory,
 	saveFabxMiners,
 } from "./fabx.ts";
-import { loadCircuitIndex } from "./load-index.ts";
+import { loadCircuitIndex, readCircuitRef } from "./load-index.ts";
 import {
 	fixtureIndexedDatabase,
 	freshDatabase,
@@ -113,6 +115,40 @@ describe.skipIf(!TEST_DATABASE_URL)("saving FabX's history", () => {
 		expect((await readFabxState(pool))?.frozenAtBlock).toBe(76_900_000n);
 	});
 
+	test.each(["Paused", "Unpaused"] as const)(
+		"a %s event after the reviewed block freezes FabX too",
+		async (kind) => {
+			// made up: FabX has never paused (2026-11-26-fabx-follow.md, decision 1)
+			pool = await freshDatabase();
+			await saveFabxHistory(pool, { ...FIRST, history }, REVIEWED);
+			const upgrade = history.contractEvents.find(
+				(e) => e.kind === "Upgraded",
+			)!;
+			const fake = {
+				...upgrade,
+				kind,
+				at: { block: 76_900_000n, tx: 0, log: 0 },
+				detail: { account: "0xfb7708019e64462126bafffc30c03e770e455ef8" },
+			};
+			await saveFabxHistory(
+				pool,
+				{
+					fromBlock: 76_847_896n,
+					toBlock: 76_950_000n,
+					history: {
+						...history,
+						tapeOuts: [],
+						commitments: [],
+						starts: [],
+						contractEvents: [fake],
+					},
+				},
+				REVIEWED,
+			);
+			expect((await readFabxState(pool))?.frozenAtBlock).toBe(76_900_000n);
+		},
+	);
+
 	test("a range that doesn't start right after the stored one is refused, leaving no gap", async () => {
 		pool = await freshDatabase();
 		await saveFabxHistory(pool, { ...FIRST, history }, REVIEWED);
@@ -181,6 +217,7 @@ const record = (
 	id,
 	key: hash(Number(id)),
 	status: 1,
+	stopBlock: null,
 	registrant: OWNER,
 	taskId: 48,
 	commitBlock,
@@ -241,6 +278,29 @@ describe.skipIf(!TEST_DATABASE_URL)("saving FabX's miners", () => {
 			(await pool.query("select miners_read_at_block from xlayer_state"))
 				.rows[0].miners_read_at_block,
 		).toBe("76847895");
+	});
+
+	test("a stopped miner is stored with the block it stopped at", async () => {
+		// #66 stopped at X Layer block 74,423,691 (fixtures/fabx-miners-76847895.json)
+		pool = await freshDatabase();
+		await saveFabxHistory(pool, { ...FIRST, history: minersHistory }, REVIEWED);
+		await saveFabxMiners(
+			pool,
+			read(76_847_895n, [
+				record(24n, 0n, 0n),
+				{ ...record(1020n, 0n, 0n), status: 3, stopBlock: 74_423_691n },
+			]),
+		);
+		expect(
+			(
+				await pool.query(
+					"select id, status, stop_block from fabx_miners order by id",
+				)
+			).rows,
+		).toEqual([
+			{ id: "24", status: 1, stop_block: null },
+			{ id: "1020", status: 3, stop_block: "74423691" },
+		]);
 	});
 
 	test("miners read at a block FabX's events aren't stored up to are refused", async () => {
@@ -410,5 +470,42 @@ describe.skipIf(!TEST_DATABASE_URL)("loading FabX into the index", () => {
 		expect(fabx[0]?.netlistHash).toBe(
 			"0xb546f5b9789f61b5a9a497a5545356df53317cf36919a934925411ffdf19184c",
 		);
+	});
+
+	test("looks up a FabX circuit by its processor: its CircuitRef on chain 196, its stored netlist and its miner record", async () => {
+		pool = await fixtureIndexedDatabase();
+		await saveFabxHistory(pool, { ...FIRST, history: twoHistory }, REVIEWED);
+		await saveFabxMiners(pool, {
+			...twoMiners,
+			miners: [
+				{ ...record(24n, 0n, 0n), status: 3, stopBlock: 74_423_691n },
+				record(1961n, 73_115_351n, 1960n),
+			],
+		});
+		await backfillFabxNetlists(pool, replayClient(netlists));
+		const f1961 = { processor: P, id: 1961n } as const;
+		// An unconfirmed commitment never sets the design time
+		expect(await readCircuitRef(pool, f1961)).toMatchObject({
+			chainId: 196,
+			processor: P,
+			tokenId: 1961n,
+			designCommittedAt: null,
+		});
+		expect(
+			await readStoredNetlist(pool, { processor: P, id: 24n }),
+		).toMatchObject({
+			status: "read",
+			readAtBlock: 76_847_895n,
+			gateCount: 140,
+		});
+		expect(await readFabxMiner(pool, { processor: P, id: 24n })).toEqual({
+			status: 3,
+			stopBlock: 74_423_691n,
+		});
+		expect(await readFabxMiner(pool, f1961)).toEqual({
+			status: 1,
+			stopBlock: null,
+		});
+		expect(await readFabxMiner(pool, { processor: P, id: 25n })).toBeNull();
 	});
 });

@@ -109,6 +109,55 @@ describe("healthOf", () => {
 });
 
 // The publisher wallet's balance (docs/decisions/2026-11-23-low-balance-warning.md)
+describe("healthOf with FabX's follow", () => {
+	// 2026-11-26-fabx-follow.md, decision 4
+	const others = [
+		state("follow", { lastDone: done(4) }),
+		state("refresh", { lastDone: done(4) }),
+		state("publish", { lastDone: done(4) }),
+	];
+	const fabxStage = (s: StageState) => [others[0]!, s, ...others.slice(1)];
+
+	test("FabX followed within 30 minutes is ok", () => {
+		const h = healthOf(
+			fabxStage(state("fabx", { lastDone: done(4) })),
+			NOW,
+			null,
+			{ frozenAtBlock: null },
+		);
+		expect(h.status).toBe("ok");
+		expect(h.stages[1]?.health).toBe("ok");
+	});
+
+	test("FabX not followed in 30 minutes, and not frozen, is behind: 503", () => {
+		const h = healthOf(
+			fabxStage(state("fabx", { lastDone: done(31), lastFailed: done(1) })),
+			NOW,
+			null,
+			{ frozenAtBlock: null },
+		);
+		expect(h.status).toBe("behind");
+		expect(h.stages[1]?.health).toBe("behind");
+	});
+
+	test("a frozen FabX is reported as frozen, never behind, however long ago it last followed", () => {
+		const h = healthOf(
+			fabxStage(state("fabx", { lastDone: done(600), lastSkipped: done(2) })),
+			NOW,
+			null,
+			{ frozenAtBlock: 76_829_810n },
+		);
+		expect(h.status).toBe("ok");
+		expect(h.stages[1]?.health).toBe("frozen");
+	});
+
+	test("without FabX's history stored, FabX isn't followed and isn't judged", () => {
+		const h = healthOf(fabxStage(state("fabx")), NOW, null, null);
+		expect(h.status).toBe("ok");
+		expect(h.stages[1]?.health).toBe("not-following");
+	});
+});
+
 describe("healthOf with the publisher's balance", () => {
 	const fresh = [
 		state("follow", { lastDone: done(3) }),

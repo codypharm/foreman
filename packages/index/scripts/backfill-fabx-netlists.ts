@@ -2,7 +2,7 @@
 // history is stored up to, and stores its bytes, counts and hashes with the same hash rule as
 // BNB Chain's (docs/decisions/2026-11-25-fabx-storage.md). Read only on chain. Safe to stop and
 // run again: it carries on where it left off, and retries reads that failed. Needs DATABASE_URL
-// (.env); XLAYER_RPC_URL is optional, the public node otherwise (it serves old state).
+// (.env); XLAYER_MAINNET_RPC_URL is optional, the public node otherwise (it serves old state).
 //
 //   pnpm --filter @foreman/index backfill-fabx-netlists [--limit N] [--concurrency N]
 //
@@ -14,9 +14,10 @@ import { createPublicClient, http } from "viem";
 import { xLayer } from "viem/chains";
 import { backfillFabxNetlists, migrate } from "../src/index.ts";
 
-const RPC = process.env.XLAYER_RPC_URL || "https://rpc.xlayer.tech";
+const RPC = process.env.XLAYER_MAINNET_RPC_URL || "https://rpc.xlayer.tech";
 const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) throw new Error("DATABASE_URL is not set (see .env.example)");
+if (!DATABASE_URL)
+	throw new Error("DATABASE_URL is not set (see .env.example)");
 
 const { values } = parseArgs({
 	options: {
@@ -47,7 +48,9 @@ try {
 			last = Date.now();
 			const s = (Date.now() - started) / 1000;
 			const eta = done ? Math.round(((total - done) * s) / done / 60) : "?";
-			console.log(`${Math.round(s)} s: ${done} of ${total} circuits, about ${eta} min left`);
+			console.log(
+				`${Math.round(s)} s: ${done} of ${total} circuits, about ${eta} min left`,
+			);
 		},
 	});
 	for (const f of result.failed) {

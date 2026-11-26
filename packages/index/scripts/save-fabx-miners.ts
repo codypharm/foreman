@@ -16,9 +16,12 @@ import {
 import { migrate } from "../src/index.ts";
 
 const client = createPublicClient({
-	transport: http(process.env.XLAYER_RPC_URL || "https://rpc.xlayer.tech", {
-		timeout: 30_000,
-	}),
+	transport: http(
+		process.env.XLAYER_MAINNET_RPC_URL || "https://rpc.xlayer.tech",
+		{
+			timeout: 30_000,
+		},
+	),
 });
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 try {

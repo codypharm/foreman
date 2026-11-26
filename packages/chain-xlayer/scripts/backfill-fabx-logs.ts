@@ -10,20 +10,25 @@
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { createPublicClient, http, keccak256, toHex } from "viem";
-import { type XLayerLog, readLogs } from "../src/read-logs.ts";
+import { readLogs, type XLayerLog } from "../src/read-logs.ts";
 
 /** CLAUDE.md, "On-chain facts", 25 Nov 2026. */
 const FABX_PROCESSOR = "0x87bfca3494aa228ff589ab9b642143a5e8c8f9a6" as const;
 const FABX_MINING = "0x4f6a2312d80753bdafd35ddb1bf4bb14c43f8265" as const;
 /** The processor's creation block; the mining contract came later, at 73,100,842. */
 const FROM = 73_042_958n;
-const PUBLIC_NODES = ["https://rpc.xlayer.tech", "https://xlayerrpc.okx.com", "https://xlayer.drpc.org"];
+const PUBLIC_NODES = [
+	"https://rpc.xlayer.tech",
+	"https://xlayerrpc.okx.com",
+	"https://xlayer.drpc.org",
+];
 
 const topic = (signature: string) => keccak256(toHex(signature));
 const NAMES: Record<string, string> = {
 	[topic("TapedOut(uint256,address,uint32,uint32)")]: "TapedOut",
 	[topic("Transfer(address,address,uint256)")]: "Transfer",
-	[topic("DesignCommitted(bytes32,address,address,uint256,uint64)")]: "DesignCommitted",
+	[topic("DesignCommitted(bytes32,address,address,uint256,uint64)")]:
+		"DesignCommitted",
 	[topic("ProcessorSet(address,uint256)")]: "ProcessorSet",
 	[topic("Upgraded(address)")]: "Upgraded",
 	[topic("OwnershipTransferred(address,address)")]: "OwnershipTransferred",
@@ -33,11 +38,23 @@ const NAMES: Record<string, string> = {
 };
 const TAPED_OUT = topic("TapedOut(uint256,address,uint32,uint32)");
 
-const urls = [...(process.env.XLAYER_RPC_URL ? [process.env.XLAYER_RPC_URL] : []), ...PUBLIC_NODES];
-const nodes = urls.map((url) => createPublicClient({ transport: http(url, { retryCount: 0, timeout: 20_000 }) }));
+const urls = [
+	...(process.env.XLAYER_MAINNET_RPC_URL
+		? [process.env.XLAYER_MAINNET_RPC_URL]
+		: []),
+	...PUBLIC_NODES,
+];
+const nodes = urls.map((url) =>
+	createPublicClient({
+		transport: http(url, { retryCount: 0, timeout: 20_000 }),
+	}),
+);
 
 const toArg = process.argv.indexOf("--to");
-const to = toArg > 0 ? BigInt(process.argv[toArg + 1] ?? "") : await nodes[0]!.getBlockNumber();
+const to =
+	toArg > 0
+		? BigInt(process.argv[toArg + 1] ?? "")
+		: await nodes[0]!.getBlockNumber();
 mkdirSync("../../data", { recursive: true });
 const file = `../../data/fabx-logs-${to}.jsonl`;
 
@@ -46,7 +63,9 @@ if (existsSync(file))
 	for (const line of readFileSync(file, "utf8").split("\n"))
 		if (line) done.add(JSON.parse(line).fromBlock);
 const total = Number((to - FROM) / 100n) + 1;
-console.log(`FabX logs, X Layer blocks ${FROM} to ${to}: ${total} pieces, ${done.size} already saved, ${urls.length} nodes`);
+console.log(
+	`FabX logs, X Layer blocks ${FROM} to ${to}: ${total} pieces, ${done.size} already saved, ${urls.length} nodes`,
+);
 
 let saved = done.size;
 const started = Date.now();
@@ -56,7 +75,10 @@ const read = await readLogs(
 	{
 		skip: (from) => done.has(from.toString()),
 		onPiece: ({ fromBlock, toBlock, logs }) => {
-			appendFileSync(file, `${JSON.stringify({ fromBlock: fromBlock.toString(), toBlock: toBlock.toString(), logs }, big)}\n`);
+			appendFileSync(
+				file,
+				`${JSON.stringify({ fromBlock: fromBlock.toString(), toBlock: toBlock.toString(), logs }, big)}\n`,
+			);
 			if (++saved % 1000 === 0) {
 				const rate = (saved - done.size) / ((Date.now() - started) / 1000);
 				console.log(`${saved} of ${total} pieces, ${rate.toFixed(1)} a second`);
@@ -65,7 +87,9 @@ const read = await readLogs(
 	},
 );
 if (!read.complete) {
-	console.error(`Stopped: ${read.detail}. Run again with --to ${to} to resume.`);
+	console.error(
+		`Stopped: ${read.detail}. Run again with --to ${to} to resume.`,
+	);
 	process.exit(1);
 }
 
@@ -91,17 +115,35 @@ for (const l of logs) {
 }
 console.log("logs by contract and event:", counts);
 
-const tapeOuts = logs.filter((l) => l.address === FABX_PROCESSOR && l.topics[0] === TAPED_OUT);
+const tapeOuts = logs.filter(
+	(l) => l.address === FABX_PROCESSOR && l.topics[0] === TAPED_OUT,
+);
 const issued = (await nodes[0]!.readContract({
 	address: FABX_PROCESSOR,
-	abi: [{ name: "nextId", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] }],
+	abi: [
+		{
+			name: "nextId",
+			type: "function",
+			stateMutability: "view",
+			inputs: [],
+			outputs: [{ type: "uint256" }],
+		},
+	],
 	functionName: "nextId",
 	blockNumber: to,
 })) as bigint;
 const known = tapeOuts.find((l) => BigInt(l.topics[1] ?? "0x0") === 24n);
-console.log(`TapedOut events: ${tapeOuts.length}; nextId() at block ${to}: ${issued}`);
-console.log(`Known tape-out #24: ${known ? `found at block ${known.blockNumber}` : "MISSING"}`);
-if (BigInt(tapeOuts.length) !== issued || !known || BigInt(known.blockNumber) !== 73_044_971n) {
+console.log(
+	`TapedOut events: ${tapeOuts.length}; nextId() at block ${to}: ${issued}`,
+);
+console.log(
+	`Known tape-out #24: ${known ? `found at block ${known.blockNumber}` : "MISSING"}`,
+);
+if (
+	BigInt(tapeOuts.length) !== issued ||
+	!known ||
+	BigInt(known.blockNumber) !== 73_044_971n
+) {
 	console.error("The check failed: don't use this read.");
 	process.exit(1);
 }

@@ -3,7 +3,7 @@
 // netlists; it never evaluates a circuit.
 
 import type { Address, PublicClient } from "viem";
-import { type Netlist, readNetlist } from "./read-netlist.ts";
+import { type Netlist, type NetlistRead, readNetlist } from "./read-netlist.ts";
 
 export interface CircuitId {
 	processor: Address;
@@ -40,8 +40,16 @@ export type WrapperCheck =
 			chainSteps: number;
 	  };
 
+/**
+ * Where a chain's netlists come from in place of a node: FabX's, as stored at the X Layer block
+ * its history is read up to (2026-11-25-fabx-can-mine.md, decision 4). A target it can't give is
+ * Can't check.
+ */
+export type NetlistSource = (target: CircuitId) => Promise<NetlistRead>;
+
 export async function checkWrapper(
-	client: PublicClient,
+	/** A node that reads netlists at `at`, or the netlists already read. */
+	source: PublicClient | NetlistSource,
 	netlist: Netlist,
 	at: { blockNumber: bigint },
 ): Promise<WrapperCheck> {
@@ -70,7 +78,10 @@ export async function checkWrapper(
 		steps: number,
 	): Promise<CantCheck | null> => {
 		chainSteps = Math.max(chainSteps, steps);
-		const read = await readNetlist(client, target, at);
+		const read =
+			typeof source === "function"
+				? await source(target)
+				: await readNetlist(source, target, at);
 		if (!read.readable)
 			return { kind: "cant-check", reason: read.reason, detail: read.detail };
 		if (!isPureWrapper(read.netlist)) {

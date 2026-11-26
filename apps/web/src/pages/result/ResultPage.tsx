@@ -204,12 +204,18 @@ function Header({ page }: { page: CircuitPage }) {
 					Can’t mine: {canMine.reasons.map(cantMine).join("; ")}.
 				</p>
 			)}
-			{canMine?.state === "stopped" && (
-				<p className={s.held}>
-					Stopped at BNB block {formatCount(canMine.stoppedAt)}. It can start
-					again from block {formatCount(canMine.canStartFrom)}.
-				</p>
-			)}
+			{canMine?.state === "stopped" &&
+				(canMine.canStartFrom === null ? (
+					// A FabX miner: its cooldown is in unverified code (2026-11-25-fabx-can-mine.md)
+					<p className={s.held}>
+						Stopped at X Layer block {formatCount(canMine.stoppedAt)}.
+					</p>
+				) : (
+					<p className={s.held}>
+						Stopped at BNB block {formatCount(canMine.stoppedAt)}. It can start
+						again from block {formatCount(canMine.canStartFrom)}.
+					</p>
+				))}
 		</>
 	);
 }
