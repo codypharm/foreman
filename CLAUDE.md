@@ -220,7 +220,9 @@ The build order table in `docs/PRODUCT.md` is the order. Build so each step work
 
 **Feature freeze is 5 December 2026.** After that: bug fixes, the demo video and the submission only.
 
-**Cut list, in this order, if behind on 1 December:** FabX copy check, unless a FabX miner shows a correct verdict end to end on 1 December (`2026-11-25-fabx-copy-check.md`; if cut, the README names FabX under "Limits today") → DeWEB mirror (`2026-11-23-hosting.md`) → copy alert notifications (Telegram, browser; `2026-11-23-copy-alert-notifications.md`) → OCCC status → copy alert → Lend read (show "not checked") → X Layer mainnet (publish on testnet for the demo).
+**Cut list, in this order, if behind on 1 December:** DeWEB mirror (`2026-11-23-hosting.md`) → copy alert notifications (Telegram, browser; `2026-11-23-copy-alert-notifications.md`) → OCCC status → copy alert → Lend read (show "not checked") → X Layer mainnet (publish on testnet for the demo).
+
+The FabX copy check left the cut list on 26 Nov 2026: its go criteria held on the live site (`2026-11-26-fabx-go.md`).
 
 **Never cut:** the evidence behind every originality result, the inputs behind every value, and publishing results on X Layer.
 
