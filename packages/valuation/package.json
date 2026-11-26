@@ -1,6 +1,7 @@
 {
 	"name": "@foreman/valuation",
 	"private": true,
+	"license": "MIT",
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",

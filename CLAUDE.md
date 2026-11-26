@@ -287,7 +287,7 @@ The `grill-me` queue. Strike an item when an ADR settles it.
 - ~~The results contract on X Layer: its shape, tooling, and who holds the publisher key.~~ Settled: `docs/decisions/2026-11-21-results-contract.md`.
 - Price conversion: ~~BNB against BEM~~ settled by `docs/decisions/2026-11-20-payback-and-bem-price.md` (the BEM/WBNB pool's 30-minute average). Still open: OKB against BEM, for RIG vouchers priced on X Layer.
 - ~~Hosting for the API, the jobs and Postgres.~~ Settled: `docs/decisions/2026-11-23-hosting.md`.
-- Furqaan's agreement to reuse his code in the submission, and how he's credited.
+- ~~Furqaan's agreement to reuse his code in the submission, and how he's credited.~~ Settled: MIT, William decides, credited in the README and the copyright line, `docs/decisions/2026-11-26-license.md`.
 
 ---
 

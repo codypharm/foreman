@@ -1,6 +1,7 @@
 {
 	"name": "@foreman/api",
 	"private": true,
+	"license": "MIT",
 	"type": "module",
 	"scripts": {
 		"test": "vitest run",

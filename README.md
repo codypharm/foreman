@@ -245,3 +245,7 @@ The rules behind every verdict and value are in `docs/decisions/`, each dated, a
 ## Credits
 
 Built by William. **Furqaan Nabi** ([@furqaannabi](https://github.com/furqaannabi)) built the data contract (`packages/contract`), the BNB Chain reader (`packages/chain-bnb`) and the archive backfill, which Foreman reuses.
+
+## License
+
+MIT, see [`LICENSE`](LICENSE).
