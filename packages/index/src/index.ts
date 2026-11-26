@@ -110,6 +110,16 @@ export {
 	saveScan,
 } from "./store.ts";
 export {
+	type FollowOutcome,
+	followAddress,
+	readFollows,
+	readSent,
+	recordSent,
+	stopChat,
+	type TelegramFollow,
+	unfollowAddress,
+} from "./telegram-follows.ts";
+export {
 	type PublisherBalance,
 	readPublisherBalance,
 	readStages,

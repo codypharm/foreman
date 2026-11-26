@@ -47,10 +47,10 @@ The market is small and early, and growing on X Layer: the time to put trust in 
 | Who | Free, live today | Paid, next |
 | --- | --- | --- |
 | Buyers | Every verdict, estimated value, payback and published result | Nothing |
-| Owners | Your miners and copy alerts in the app | **Foreman Pro:** copy alerts by Telegram and browser notification, many wallets watched, value history |
+| Owners | Your miners and copy alerts in the app, and copy alerts by Telegram for one address ([@ForemanCopyAlertsBot](https://t.me/ForemanCopyAlertsBot)) | **Foreman Pro:** Telegram alerts for up to 20 addresses, browser notifications, value history |
 | Markets, wallets, lenders | Reading published results on X Layer | **The API:** a check before a circuit is listed, bulk results, estimated values, and a webhook when a copy is listed |
 
-Owners would keep paying because a copy of their miner can be listed at any time. Markets and lenders would pay because listing or lending against a copy costs them their users' trust, and the API is cheaper than indexing every circuit on two chains themselves. The published results stay free: they are the public record anyone can re-check. Foreman Pro and the API aren't built yet.
+Owners would keep paying because a copy of their miner can be listed at any time. Markets and lenders would pay because listing or lending against a copy costs them their users' trust, and the API is cheaper than indexing every circuit on two chains themselves. The published results stay free: they are the public record anyone can re-check. Foreman Pro and the API aren't built yet; free Telegram alerts are live.
 
 ### Reaching users
 
@@ -215,7 +215,7 @@ No verdict, value or comparison comes from a model: code decides, from chain dat
 - **BNB Chain circuits and FabX's.** The other 449 processors in TapeOut's X Layer factory aren't indexed.
 - **FabX isn't valued**, and FabX's market isn't read. FabX results stop if FabX changes its mining contract, until the change is reviewed.
 - **Reordered gates aren't detected.** Only identical netlists, including swapped gate inputs, count as copies.
-- **Copy alerts show in the app** while a wallet is connected. Telegram and browser notifications aren't built.
+- **Copy alerts come in the app and by Telegram,** one followed address per chat. Browser notifications aren't built, and Foreman Pro, which raises the limit, isn't either.
 - **Your miners shows TapeOut miners and RIG vouchers only.** A FabX miner's result is reached through the Check box ("FabX 1234") or its result page.
 
 ## Run it locally

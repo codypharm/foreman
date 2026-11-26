@@ -12,7 +12,8 @@
 		"circuit-page": "node --env-file-if-exists=../../.env scripts/circuit-page.ts",
 		"record:page": "node --env-file-if-exists=../../.env scripts/record-page-fixture.ts",
 		"serve": "node --env-file-if-exists=../../.env scripts/serve.ts",
-		"worker": "node --env-file-if-exists=../../.env scripts/worker.ts"
+		"worker": "node --env-file-if-exists=../../.env scripts/worker.ts",
+		"bot": "node --env-file-if-exists=../../.env scripts/bot.ts"
 	},
 	"dependencies": {
 		"@foreman/chain-bnb": "workspace:*",

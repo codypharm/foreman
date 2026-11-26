@@ -9,11 +9,20 @@
 // publishes FabX results too). PUBLISHER_KEY, set on the host only, lets it publish; without
 // it the publish stage is skipped. The key is never logged.
 //
+// TELEGRAM_BOT_TOKEN, set on the host only, turns on the Telegram bot: it answers commands while the
+// worker runs and sends copy alerts after each run (2026-11-26-telegram-alerts-for-pro.md). WEB_URL
+// is the web app the alerts link to. Without the token there is no bot. The token is never logged.
+//
 //   pnpm --filter @foreman/api worker
 
+import { xlayerMainnet } from "@foreman/chain-xlayer";
 import { migrate, recordStage } from "@foreman/index";
 import pg from "pg";
 import { PgBoss } from "pg-boss";
+import { FREE_FOLLOWS } from "../src/alerts/bot.ts";
+import { pollCommands } from "../src/alerts/poll.ts";
+import { sendAlerts } from "../src/alerts/send.ts";
+import { telegramClient } from "../src/alerts/telegram.ts";
 import { runCycle } from "../src/worker/cycle.ts";
 import { workerStages } from "../src/worker/stages.ts";
 
@@ -47,6 +56,20 @@ const stages = workerStages(
 	},
 	log,
 );
+
+// The Telegram bot, when its token is set. No chat has Foreman Pro until payments are built, so
+// every chat follows one address.
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const WEB_URL = process.env.WEB_URL ?? "https://foreman-eight-beta.vercel.app";
+const telegram = TELEGRAM_BOT_TOKEN ? telegramClient(TELEGRAM_BOT_TOKEN) : null;
+const botStop = new AbortController();
+if (telegram) {
+	void pollCommands(
+		{ pool, telegram, limitFor: async () => FREE_FOLLOWS },
+		botStop.signal,
+		log,
+	);
+}
 
 const boss = new PgBoss({ connectionString: DATABASE_URL });
 boss.on("error", (error) => log(`pg-boss: ${error.message}`));
@@ -111,10 +134,32 @@ await boss.work(QUEUE, { localConcurrency: 1 }, async () => {
 		);
 	}
 	log(`run done in ${took}`);
+	// Copy alerts after a whole run, from the listings and results it just saved. A failure is
+	// logged and never fails the run; the next run tries again.
+	if (telegram) {
+		try {
+			const sent = await sendAlerts(
+				{
+					pool,
+					xlayer: xlayerMainnet(process.env.XLAYER_MAINNET_RPC_URL).client,
+					telegram,
+					webUrl: WEB_URL,
+				},
+				log,
+			);
+			log(
+				`alerts: ${sent.sent} sent, ${sent.failed} not sent, ${sent.stopped} chats forgotten`,
+			);
+		} catch (error) {
+			log(
+				`alerts: failed: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
+	}
 });
 await boss.send(QUEUE, null);
 log(
-	`worker started: ${QUEUE} every 5 minutes (UTC)${process.env.PUBLISHER_KEY ? `, publishing to X Layer testnet${process.env.PUBLISH_FABX === "1" ? ", FabX results included" : ", FabX results not (PUBLISH_FABX unset)"}` : ", not publishing (no PUBLISHER_KEY)"}`,
+	`worker started: ${QUEUE} every 5 minutes (UTC)${process.env.PUBLISHER_KEY ? `, publishing to X Layer testnet${process.env.PUBLISH_FABX === "1" ? ", FabX results included" : ", FabX results not (PUBLISH_FABX unset)"}` : ", not publishing (no PUBLISHER_KEY)"}${telegram ? ", Telegram bot on" : ", no Telegram bot (no TELEGRAM_BOT_TOKEN)"}`,
 );
 
 let stopping = false;
@@ -124,6 +169,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
 		stopping = true;
 		// A deploy sends SIGTERM: let a run in progress finish its current step, for up to 2 minutes
 		log(`${signal}: stopping`);
+		botStop.abort();
 		await boss.stop({ graceful: true, timeout: 120_000 });
 		await pool.end();
 		process.exit(0);

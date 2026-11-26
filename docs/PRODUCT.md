@@ -29,7 +29,7 @@ For any miner or RIG voucher, Foreman answers three questions, and publishes the
 | User | What they want | What they get | Pays? |
 | --- | --- | --- | --- |
 | **Buyer** (primary) | Not to pay for a copy or a wrapper, and not to overpay | Originality, value range and payback for any listing | Free |
-| **Owner** | Know if someone copied their circuit; know what their miner is worth | Copy alert; value; what they can do with it | Free in the app; **Foreman Pro** (next): alerts by Telegram and browser, many wallets, value history |
+| **Owner** | Know if someone copied their circuit; know what their miner is worth | Copy alert; value; what they can do with it | Free: in the app, and by Telegram for one address; **Foreman Pro** (next): Telegram for up to 20 addresses, browser notifications, value history |
 | **Markets and wallets** (TapeOut's market, OwlGate) | Stop listing copies and wrappers as compliant | Originality results on X Layer, readable on chain, and an API | Published results free; **the API** (next) |
 | **Lenders** (TapePool) | Not to lend against a copy, and a second opinion on value | The same results on X Layer, before a loan | Published results free; **the API** (next) |
 
@@ -88,7 +88,7 @@ Build so each step works end to end before the next.
 | **5 Dec** | **Feature freeze**; demo video |
 | 6 Dec | Submit, a day before the provisional 7 Dec deadline |
 
-**Cut list, in this order, if behind on 1 December:** DeWEB mirror (`decisions/2026-11-23-hosting.md`) → copy alert notifications by Telegram and browser (`decisions/2026-11-23-copy-alert-notifications.md`) → OCCC status → copy alert → Lend read (show "not checked") → X Layer mainnet (publish on testnet for the demo).
+**Cut list, in this order, if behind on 1 December:** payments for Foreman Pro (cut unless working end to end on the evening of 2 December) → API keys for markets and lenders (`decisions/2026-11-26-telegram-alerts-for-pro.md`) → DeWEB mirror (`decisions/2026-11-23-hosting.md`) → copy alert notifications by Telegram and browser (`decisions/2026-11-23-copy-alert-notifications.md`) → OCCC status → copy alert → Lend read (show "not checked") → X Layer mainnet (publish on testnet for the demo).
 
 **Never cut:** the evidence behind every originality result, the inputs behind every value, and publishing results on X Layer (the hackathon's hard requirement).
 
