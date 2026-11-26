@@ -28,10 +28,10 @@ For any miner or RIG voucher, Foreman answers three questions, and publishes the
 
 | User | What they want | What they get | Pays? |
 | --- | --- | --- | --- |
-| **Buyer** (primary) | Not to pay for a copy or a wrapper, and not to overpay | Originality, value range and payback for any listing | Free; premium alerts later |
-| **Owner** | Know if someone copied their circuit; know what their miner is worth | Copy alert; value; what they can do with it | Free |
-| **Markets and wallets** (TapeOut's market, OwlGate) | Stop listing copies and wrappers as compliant | Originality results on X Layer, readable on chain, and an API | API |
-| **Lenders** (TapePool) | Not to lend against a copy, and a second opinion on value | The same results on X Layer, before a loan | API |
+| **Buyer** (primary) | Not to pay for a copy or a wrapper, and not to overpay | Originality, value range and payback for any listing | Free |
+| **Owner** | Know if someone copied their circuit; know what their miner is worth | Copy alert; value; what they can do with it | Free in the app; **Foreman Pro** (next): alerts by Telegram and browser, many wallets, value history |
+| **Markets and wallets** (TapeOut's market, OwlGate) | Stop listing copies and wrappers as compliant | Originality results on X Layer, readable on chain, and an API | Published results free; **the API** (next) |
+| **Lenders** (TapePool) | Not to lend against a copy, and a second opinion on value | The same results on X Layer, before a loan | Published results free; **the API** (next) |
 
 ## How it works
 
@@ -94,13 +94,16 @@ Build so each step works end to end before the next.
 
 ## Demo story (three minutes)
 
-1. A real listing on TapeOut's market. Paste it into Foreman.
-2. **Original?** "Wrapper: REF records only, points to circuit #X" (or "Copy of #X, taped out 3 days earlier"), with the evidence.
-3. **Worth?** The value range from its own weight, next to the asking price.
-4. **Options?** Hold, Sell, Lend and Rent as they really are.
-5. The result is published on X Layer; show the transaction and read it back from the contract.
-6. The live-listings page: how many of today's listings are copies or wrappers.
-7. An owner connects a wallet and sees "a copy of your miner was just listed".
+Rewritten 26 Nov 2026 to cover what the hackathon asks the video for: the problem, the core features, the users and business model, and how Foreman uses TapeOut. The full script is `docs/demo-script.md`.
+
+| Time | Scene |
+| --- | --- |
+| 0:00–0:20 | **The problem.** Anyone can tape out an identical copy of a miner, or a wrapper of REF records, and list it (TAPs issue #102) |
+| 0:20–0:30 | **What Foreman is.** Three questions, answered from chain data and published on X Layer |
+| 0:30–1:50 | **The core features, live.** Live listings: how many are copies. A real listing in the Check box: the copy verdict with its evidence; Worth? beside the ask; Options as they really are; the result published on X Layer and read back. "FabX 24": a copy across two chains. Your miners with copy alerts |
+| 1:50–2:20 | **How it uses TapeOut and X Layer.** The architecture diagram and the contracts read |
+| 2:20–2:50 | **Users and business model.** Free to check; Foreman Pro and the API next; reach through community, shared links and partners (`decisions/2026-11-26-revenue-and-reach.md`) |
+| 2:50–3:00 | **Close.** The link and the rule: say only what was checked |
 
 ## Still open
 

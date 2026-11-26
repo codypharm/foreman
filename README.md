@@ -40,7 +40,23 @@ The market is small and early, and growing on X Layer: the time to put trust in 
 | **Markets and wallets** | Originality results on X Layer that any contract or app can read, to stop listing copies and wrappers as compliant |
 | **Lenders** (such as TapePool) | The same results before a loan, and a second opinion on value |
 
-Foreman is free for buyers and owners. Markets and lenders can read the published results on X Layer today; an API for them, and premium alerts, are the paths to revenue.
+### Business model
+
+**Free to check, pay to be watched, pay to integrate** (`docs/decisions/2026-11-26-revenue-and-reach.md`).
+
+| Who | Free, live today | Paid, next |
+| --- | --- | --- |
+| Buyers | Every verdict, estimated value, payback and published result | Nothing |
+| Owners | Your miners and copy alerts in the app | **Foreman Pro:** copy alerts by Telegram and browser notification, many wallets watched, value history |
+| Markets, wallets, lenders | Reading published results on X Layer | **The API:** a check before a circuit is listed, bulk results, estimated values, and a webhook when a copy is listed |
+
+Owners would keep paying because a copy of their miner can be listed at any time. Markets and lenders would pay because listing or lending against a copy costs them their users' trust, and the API is cheaper than indexing every circuit on two chains themselves. The published results stay free: they are the public record anyone can re-check. Foreman Pro and the API aren't built yet.
+
+### Reaching users
+
+1. **Facts where TapeOut's users already are,** in TapeOut's community channels and on X, each with a link to check your own miner. For example, 4,982 of FabX's 7,145 miners are identical to an earlier circuit.
+2. **Every result page is a link** a buyer can paste into a trade chat before a deal.
+3. **Partners:** the markets and tools buyers already use, such as OwlGate, TapePool, TapeOut's circuit market and FabX, reading the published results and then the API.
 
 ## How it uses TapeOut and X Layer
 
