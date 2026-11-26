@@ -221,7 +221,7 @@ The build order table in `docs/PRODUCT.md` is the order. Build so each step work
 
 **Feature freeze is 5 December 2026.** After that: bug fixes, the demo video and the submission only.
 
-**Cut list, in this order, if behind on 1 December:** payments for Foreman Pro (cut unless working end to end on the evening of 2 December) → API keys for markets and lenders (`2026-11-26-telegram-alerts-for-pro.md`) → DeWEB mirror (`2026-11-23-hosting.md`) → copy alert notifications (Telegram, browser; `2026-11-23-copy-alert-notifications.md`) → OCCC status → copy alert → Lend read (show "not checked") → X Layer mainnet (publish on testnet for the demo).
+**Cut list, in this order, if behind on 1 December:** the paid API tier (`2026-11-26-paid-api-tier.md`; cut unless working end to end on the evening of 2 December) → payments for Foreman Pro (cut unless working end to end on the evening of 2 December) → API keys for markets and lenders (`2026-11-26-telegram-alerts-for-pro.md`) → DeWEB mirror (`2026-11-23-hosting.md`) → copy alert notifications (Telegram, browser; `2026-11-23-copy-alert-notifications.md`) → OCCC status → copy alert → Lend read (show "not checked") → X Layer mainnet (publish on testnet for the demo).
 
 The FabX copy check left the cut list on 26 Nov 2026: its go criteria held on the live site (`2026-11-26-fabx-go.md`).
 
