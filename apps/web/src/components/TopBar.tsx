@@ -66,7 +66,7 @@ export function TopBar() {
 						href="/wallet"
 						aria-current={location.startsWith("/wallet") ? "page" : undefined}
 					>
-						Your miners
+						My miners
 					</Link>
 					<Link
 						href="/api"
@@ -105,7 +105,7 @@ export function TopBar() {
 }
 
 /**
- * The Check box: a listing number, RIG voucher, miner key or circuit, resolved by the API to one
+ * The Check box: a listing number, RIG voucher, miner key, circuit or TapeOut's label (13931.30), resolved by the API to one
  * circuit, whose result page opens. What isn't found is said under the box, never guessed.
  */
 function CheckBox() {
@@ -126,7 +126,7 @@ function CheckBox() {
 			setProblem(
 				error instanceof ApiProblem
 					? error.problem.error === "not-recognised"
-						? "Paste a listing number (28074), a RIG voucher (RIG voucher #19), a miner key or a circuit (its processor, then its id)."
+						? "Paste a listing number (28074), a RIG voucher (RIG voucher #19), a miner key, a circuit (its processor, then its id) or TapeOut’s label (13931.30)."
 						: error.problem.detail
 					: error instanceof AppOutdated
 						? error.message

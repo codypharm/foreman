@@ -1,4 +1,4 @@
-// Your miners (docs/mocks/2026-11-23-copy-alerts-by-design.html, chosen 23 Nov 2026, with the Telegram
+// My miners, called Your miners until 27 Nov 2026 (docs/mocks/2026-11-23-copy-alerts-by-design.html, chosen 23 Nov 2026, with the Telegram
 // button from 2026-11-26-telegram-button.html): the connected
 // wallet's miners, one copy alert per design, and every miner with its verdict, from
 // GET /wallet/:address/miners. Facts, never accusations; nothing here decides a verdict.
@@ -39,7 +39,7 @@ export function WalletPage() {
 	const { address, status } = useConnection();
 
 	useEffect(() => {
-		document.title = "Foreman · Your miners";
+		document.title = "Foreman · My miners";
 		return () => {
 			document.title = "Foreman · Live listings";
 		};
@@ -51,7 +51,7 @@ export function WalletPage() {
 			<div className={s.page}>
 				<main>
 					<section className={s.intro}>
-						<h1>Your miners</h1>
+						<h1>My miners</h1>
 						{looking ? (
 							<p>Looking for your wallet…</p>
 						) : (
@@ -85,7 +85,7 @@ function Miners({ address }: { address: string }) {
 			<div className={s.page}>
 				<main>
 					<section className={s.intro}>
-						<h1>Your miners</h1>
+						<h1>My miners</h1>
 						<p>{shortHex(address)}</p>
 					</section>
 					{page.isError ? (
@@ -119,7 +119,7 @@ function Miners({ address }: { address: string }) {
 		<div className={s.page}>
 			<main>
 				<section className={s.intro}>
-					<h1>Your miners</h1>
+					<h1>My miners</h1>
 					<p>
 						{formatCount(n)} miner{n === 1 ? "" : "s"} held by{" "}
 						{shortHex(w.wallet)}, watched for copies

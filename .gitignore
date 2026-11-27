@@ -36,3 +36,7 @@ data/publish-plan-*.json
 
 # FabX log backfill (packages/chain-xlayer): large, re-read from chain
 data/fabx-logs-*.jsonl
+
+# Demo video recordings and renders: large, kept out of git (docs/demo-script.md)
+video/clips/
+video/renders/

@@ -20,7 +20,8 @@
 		"record:market-scan": "node --env-file-if-exists=../../.env scripts/record-market-scan-fixture.ts",
 		"record:bem-price": "node --env-file-if-exists=../../.env scripts/record-bem-price-fixture.ts",
 		"record:network-days": "node --env-file-if-exists=../../.env scripts/record-network-days-fixture.ts",
-		"record:transfers": "node --env-file-if-exists=../../.env scripts/record-transfers-fixture.ts"
+		"record:transfers": "node --env-file-if-exists=../../.env scripts/record-transfers-fixture.ts",
+		"record:processor-at": "node scripts/record-processor-at-fixture.ts"
 	},
 	"dependencies": {
 		"@foreman/contract": "workspace:*",

@@ -3,6 +3,7 @@
 // listing number. Whatever isn't found says so in plain words with the block the index reached; a
 // failed read is a failed read, never "not found".
 
+import { readProcessorAt } from "@foreman/chain-bnb";
 import { FABX_PROCESSOR, readVoucherCircuit } from "@foreman/chain-xlayer";
 import {
 	type Address,
@@ -24,7 +25,9 @@ export type CheckInput =
 	| { kind: "listing"; id: bigint }
 	| { kind: "voucher"; id: bigint }
 	| { kind: "miner"; key: Hex32 }
-	| { kind: "circuit"; processor: Address; id: bigint };
+	| { kind: "circuit"; processor: Address; id: bigint }
+	/** TapeOut's label: a circuit's id, then its processor's place in the BNB Chain factory. */
+	| { kind: "label"; id: bigint; position: bigint };
 
 /** What the Check box accepts, for "Not recognised". */
 export const CHECK_ACCEPTS = [
@@ -33,6 +36,7 @@ export const CHECK_ACCEPTS = [
 	"a miner key: 0x followed by 64 hexadecimal characters",
 	"a circuit: its processor address, then its id, such as 0x1f5c…912c 2421",
 	"a FabX circuit: FabX, then its id, such as FabX 1234",
+	"a circuit as TapeOut’s BNB Chain market labels it, such as 13931.30",
 ];
 
 const NUMBER = "#?\\s*([1-9]\\d{0,77})";
@@ -43,6 +47,8 @@ const VOUCHER = new RegExp(
 );
 /** FabX's circuits on X Layer by their id (2026-11-25-fabx-copy-check.md, decision 8). */
 const FABX = new RegExp(`^fabx\\s*${NUMBER}$`, "i");
+/** "13931.30", as TapeOut's market labels a circuit (2026-11-27-tapeout-circuit-label.md). */
+const LABEL = /^([1-9]\d{0,77})\.(0|[1-9]\d{0,9})$/;
 const MINER = /^0x[0-9a-f]{64}$/i;
 const CIRCUIT = /^(0x[0-9a-f]{40})\s*(?:[\s/#]|\/#)\s*#?\s*([1-9]\d{0,77})$/i;
 
@@ -67,6 +73,14 @@ export function readCheckInput(q: string): CheckInput | null {
 			id: BigInt(fabx[1] as string),
 		};
 	}
+	const label = LABEL.exec(s);
+	if (label) {
+		return {
+			kind: "label",
+			id: BigInt(label[1] as string),
+			position: BigInt(label[2] as string),
+		};
+	}
 	const voucher = VOUCHER.exec(s);
 	if (voucher) return { kind: "voucher", id: BigInt(voucher[1] as string) };
 	const listing = LISTING.exec(s);
@@ -79,7 +93,7 @@ export type CheckRead =
 	| { ok: false; error: ApiError };
 
 export async function resolveCheck(
-	deps: { pool: pg.Pool; xlayer: PublicClient },
+	deps: { pool: pg.Pool; xlayer: PublicClient; bnb: PublicClient },
 	q: string,
 ): Promise<CheckRead> {
 	const input = readCheckInput(q);
@@ -135,6 +149,27 @@ export async function resolveCheck(
 				return fail(
 					/not read yet/.test(detail) ? "not-ready" : "read-failed",
 					detail,
+				);
+			}
+		}
+
+		case "label": {
+			// TapeOut's BNB Chain label; the result page says whether the index holds the circuit
+			try {
+				const blockNumber = await deps.bnb.getBlockNumber();
+				const p = await readProcessorAt(deps.bnb, {
+					position: input.position,
+					blockNumber,
+				});
+				if (p.found) return found(p.processor, input.id);
+				return fail(
+					"unknown-circuit",
+					`No processor #${input.position} in TapeOut’s BNB Chain factory, which had ${count(p.count)} at BNB block ${count(p.blockNumber)}`,
+				);
+			} catch (error) {
+				return fail(
+					"read-failed",
+					`Reading processor #${input.position} on BNB Chain failed: ${plain(error)}`,
 				);
 			}
 		}

@@ -1,6 +1,6 @@
 // Connect wallet (docs/decisions/2026-11-23-wallet-connect.md): one wallet found connects at once,
 // several open a short list with OKX Wallet first, none says how to get one. Connected, it shows the
-// address with a menu for Your miners and Disconnect. Foreman reads the address. It asks for a
+// address with a menu for My miners and Disconnect. Foreman reads the address. It asks for a
 // signature only on the API page, to make an API key (docs/decisions/2026-11-26-self-serve-api-keys.md),
 // and a transaction only on the Pro page, to pay for Foreman Pro (2026-11-26-pro-payments.md).
 
@@ -95,7 +95,7 @@ export function WalletButton({
 								className={s.item}
 								onClick={() => setOpen(false)}
 							>
-								Your miners
+								My miners
 							</Link>
 							<button
 								type="button"

@@ -35,6 +35,11 @@ export {
 	readSales,
 } from "./market.ts";
 export { minerKey } from "./miner-key.ts";
+export {
+	PROCESSOR_FACTORY,
+	type ProcessorAtRead,
+	readProcessorAt,
+} from "./processor-at.ts";
 export { readMiner } from "./read-miner.ts";
 export { readNetworkState } from "./read-network.ts";
 export {

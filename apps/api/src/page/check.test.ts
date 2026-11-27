@@ -1,4 +1,7 @@
 import { replayClient } from "@foreman/chain-bnb/fixture";
+import processorAtFixture from "@foreman/chain-bnb/fixtures/bnb-processor-at.json" with {
+	type: "json",
+};
 import voucherFixture from "@foreman/chain-xlayer/fixtures/xlayer-voucher-circuit.json" with {
 	type: "json",
 };
@@ -37,6 +40,11 @@ describe("reading what was typed into the Check box", () => {
 		["FabX 1234", { kind: "circuit", processor: FABX, id: 1234n }],
 		["fabx #1234", { kind: "circuit", processor: FABX, id: 1234n }],
 		[" FABX#1234 ", { kind: "circuit", processor: FABX, id: 1234n }],
+		// A circuit as TapeOut's market labels it: its id, then its processor's place in TapeOut's
+		// BNB Chain factory (2026-11-27-tapeout-circuit-label.md)
+		["13931.30", { kind: "label", id: 13931n, position: 30n }],
+		[" 2.5 ", { kind: "label", id: 2n, position: 5n }],
+		["12.0", { kind: "label", id: 12n, position: 0n }],
 	])("%j", (q, expected) => {
 		expect(readCheckInput(q)).toEqual(expected);
 	});
@@ -47,7 +55,11 @@ describe("reading what was typed into the Check box", () => {
 		["0"],
 		["listing 0"],
 		["-5"],
-		["2.5"],
+		["0.30"],
+		["13931.030"],
+		["13931."],
+		[".30"],
+		["13931.30.1"],
 		[PROCESSOR],
 		[`0x${"72".repeat(31)}`],
 		["https://tapeout.example/listing/28074"],
@@ -93,10 +105,11 @@ describe.skipIf(!TEST_DATABASE_URL)(
 			);
 			return p;
 		}
-		const deps = (p: pg.Pool, xlayer = replayClient(voucherFixture)) => ({
-			pool: p,
-			xlayer,
-		});
+		const deps = (
+			p: pg.Pool,
+			xlayer = replayClient(voucherFixture),
+			bnb = replayClient(processorAtFixture),
+		) => ({ pool: p, xlayer, bnb });
 
 		test("a listing number opens its circuit", async () => {
 			pool = await indexed();
@@ -230,13 +243,52 @@ describe.skipIf(!TEST_DATABASE_URL)(
 			});
 		});
 
+		test("TapeOut's label opens the circuit on the processor at that place in the factory", async () => {
+			pool = await indexed();
+			expect(await resolveCheck(deps(pool), "13931.30")).toEqual({
+				ok: true,
+				answer: {
+					processor: "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
+					tokenId: 13931n,
+				},
+			});
+		});
+
+		test("a label whose processor place the factory hasn't reached says so, with its count and block", async () => {
+			pool = await indexed();
+			expect(await resolveCheck(deps(pool), "5.1000000")).toEqual({
+				ok: false,
+				error: {
+					error: "unknown-circuit",
+					detail:
+						"No processor #1000000 in TapeOut’s BNB Chain factory, which had 1,499 at BNB block 136,041,885",
+				},
+			});
+		});
+
+		test("BNB Chain failing on a label is a failed read, never 'no such processor'", async () => {
+			pool = await indexed();
+			const read = await resolveCheck(
+				deps(
+					pool,
+					replayClient(voucherFixture),
+					replayClient({ ...processorAtFixture, calls: [] }),
+				),
+				"13931.30",
+			);
+			expect(read).toMatchObject({
+				ok: false,
+				error: { error: "read-failed" },
+			});
+		});
+
 		test("anything else is not recognised, with what the Check box accepts", async () => {
 			pool = await indexed();
 			const read = await resolveCheck(deps(pool), "hello");
 			expect(read.ok).toBe(false);
 			if (read.ok) return;
 			expect(read.error.error).toBe("not-recognised");
-			expect("accepted" in read.error && read.error.accepted.length).toBe(5);
+			expect("accepted" in read.error && read.error.accepted.length).toBe(6);
 		});
 
 		test("X Layer failing is a failed read, never 'no such voucher'", async () => {

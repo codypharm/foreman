@@ -356,7 +356,7 @@ interface PublishedResult {
 | Endpoint | Returns | For |
 | --- | --- | --- |
 | `GET /listings?set=mining\|all&verdict=…&cursor=…` | `ListingsPage` | Live listings (the landing page) |
-| `GET /check?q=…` | `{ processor, tokenId }` or `ApiError` | The Check box: resolves a listing number, miner key, processor and id, or RIG voucher number |
+| `GET /check?q=…` | `{ processor, tokenId }` or `ApiError` | The Check box: resolves a listing number, miner key, processor and id, RIG voucher number, or TapeOut’s label such as `13931.30` (`2026-11-27-tapeout-circuit-label.md`) |
 | `GET /circuit/:processor/:tokenId` | `CircuitPage` | The result page |
 | `GET /wallet/:address/miners` | `WalletMiners` | Your miners and copy alerts |
 | `POST /v1/results`, with an API key | `BulkResults` or `ApiError` | Markets and lenders: up to 100 circuits' results at once (approved by William 26 Nov 2026, `2026-11-26-api-keys.md`) |
