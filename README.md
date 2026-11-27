@@ -44,13 +44,15 @@ The market is small and early, and growing on X Layer: the time to put trust in 
 
 **Free to check, pay to be watched, pay to integrate** (`docs/decisions/2026-11-26-revenue-and-reach.md`).
 
-| Who | Free, live today | Paid, next |
-| --- | --- | --- |
-| Buyers | Every verdict, estimated value, payback and published result | Nothing |
-| Owners | Your miners and copy alerts in the app, and copy alerts by Telegram for one address ([@ForemanCopyAlertsBot](https://t.me/ForemanCopyAlertsBot)) | **Foreman Pro:** Telegram alerts for up to 20 addresses, browser notifications, value history |
-| Markets, wallets, lenders | Reading published results on X Layer, and the API with a key on request ([below](#api-for-markets-and-lenders)) | **The paid API:** billing per key, estimated values, and a webhook when a copy is listed |
+| Who | Free, live today | Paid, live on the X Layer testnet | Next |
+| --- | --- | --- | --- |
+| Buyers | Every verdict, estimated value, payback and published result | Nothing | Nothing |
+| Owners | Your miners and copy alerts in the app, and copy alerts by Telegram for one address ([@ForemanCopyAlertsBot](https://t.me/ForemanCopyAlertsBot)) | **Foreman Pro:** Telegram alerts for up to 20 addresses for 30 days, paid from the bot's `/pro` link | Browser notifications, value history |
+| Markets, wallets, lenders | Reading published results on X Layer, and the API with a key made by a wallet signature, 60 calls a minute ([below](#api-for-markets-and-lenders)) | **10× the calls:** 600 a minute for 30 days, paid by the key's wallet on the API page | Estimated values, and a webhook when a copy is listed |
 
-Owners would keep paying because a copy of their miner can be listed at any time. Markets and lenders would pay because listing or lending against a copy costs them their users' trust, and the API is cheaper than indexing every circuit on two chains themselves. The published results stay free: they are the public record anyone can re-check. Foreman Pro and billing aren't built yet; free Telegram alerts and the API, with keys on request, are live.
+Owners would keep paying because a copy of their miner can be listed at any time. Markets and lenders would pay because listing or lending against a copy costs them their users' trust, and the API is cheaper than indexing every circuit on two chains themselves. The published results stay free: they are the public record anyone can re-check.
+
+Both payments work end to end today: 0.01 test OKB for 30 days, to Foreman's ForemanPro contract on the X Layer testnet, checked from the chain and counted once (`docs/decisions/2026-11-26-pro-payments.md`, `2026-11-26-paid-api-tier.md`). It is a test amount; the real price isn't set.
 
 ### Reaching users
 
@@ -175,7 +177,7 @@ curl -X POST https://api-production-7065c976.up.railway.app/v1/results \
 }] }
 ```
 
-Make a key on the site's **API** page (`#/api`): connect a wallet and sign a message. Signing is free and sends no transaction. One key per wallet, shown once; it doesn't expire, and making a new one ends the old (`docs/decisions/2026-11-26-self-serve-api-keys.md`). Each key may make 60 calls a minute; more is HTTP 429 with `Retry-After`. A missing or revoked key is HTTP 401. The call is server to server only, so a key can't be used from a web page. The shapes are in `docs/data-contract.md`, "API responses".
+Make a key on the site's **API** page (`#/api`): connect a wallet and sign a message. Signing is free and sends no transaction. One key per wallet, shown once; it doesn't expire, and making a new one ends the old (`docs/decisions/2026-11-26-self-serve-api-keys.md`). The page shows a key's last 4 characters, so you can tell which one is live (`2026-11-27-key-ending.md`). Each key may make 60 calls a minute, or 600 while its wallet has paid: 0.01 test OKB for 30 days, paid on the same page by the wallet that made the key, and kept if the wallet makes a new key (`2026-11-26-paid-api-tier.md`). More is HTTP 429 with `Retry-After`; for a wallet whose paid time has ended, the 429 says so and where to pay again. A missing or revoked key is HTTP 401. The call is server to server only, so a key can't be used from a web page. The shapes are in `docs/data-contract.md`, "API responses".
 
 ## The forecast backtest
 
@@ -195,6 +197,7 @@ Every contract address Foreman reads or writes, each confirmed on chain before u
 | Chain | Contract | Address | Used for |
 | --- | --- | --- | --- |
 | X Layer testnet (1952) | ForemanResults | `0xe1b2343d3da66afec740c0fcaf40a701e2d513e8` | Foreman's published results |
+| X Layer testnet (1952) | ForemanPro | `0x77196c8cd21681c61ec9e150e7f8af4f55f433ac` | Payments for Foreman Pro and the paid API: 0.01 test OKB each |
 | BNB Chain (56) | PoD mining contract (proxy) | `0x7e2e0dc66a3bd9103e69b766afa62d9f7b697b46` | Miners, weights, design commitments, claims |
 | BNB Chain (56) | PoD mining logic | `0xa3dbe873da37cd4e4a13c7cef23a7db6ca60f898` | Verified source behind the proxy |
 | BNB Chain (56) | BEM token | `0x5ce033b2bfca3af30b3e8c8457deaf776a8b695a` | Emission and claims |
@@ -235,8 +238,8 @@ No verdict, value or comparison comes from a model: code decides, from chain dat
 - **BNB Chain circuits and FabX's.** The other 449 processors in TapeOut's X Layer factory aren't indexed.
 - **FabX isn't valued**, and FabX's market isn't read. FabX results stop if FabX changes its mining contract, until the change is reviewed.
 - **Reordered gates aren't detected.** Only identical netlists, including swapped gate inputs, count as copies.
-- **Copy alerts come in the app and by Telegram,** one followed address per chat. Browser notifications aren't built, and Foreman Pro, which raises the limit, isn't either.
-- **API keys are issued by hand,** with no billing, values or webhook yet.
+- **Copy alerts come in the app and by Telegram,** one followed address per chat, or up to 20 with Foreman Pro. Browser notifications aren't built.
+- **Payments are a test amount on the X Layer testnet.** The real prices aren't set. The API has no estimated values or webhook yet.
 - **Your miners shows TapeOut miners and RIG vouchers only.** A FabX miner's result is reached through the Check box ("FabX 1234") or its result page.
 
 ## Run it locally

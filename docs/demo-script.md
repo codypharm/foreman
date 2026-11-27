@@ -79,9 +79,9 @@ Numbers in ⟨angle brackets⟩ change every day. They show what the live site s
 
 ### 2:30–2:50 · Users and business model
 
-**On screen:** the README's business model table.
+**On screen:** the README's business model table. No payment is shown (`docs/decisions/2026-11-26-paid-api-tier.md`, decision 8).
 
-> Buyers and owners use Foreman free. Next, owners pay for Foreman Pro, with alerts by Telegram, and markets and lenders pay for an API to check circuits before they list or lend. The published results stay free. We reach users with these facts in TapeOut's community, through result links shared before a trade, and through partners like OwlGate and TapePool.
+> Buyers use Foreman free. Owners pay for Foreman Pro, copy alerts by Telegram for up to twenty addresses, and businesses pay on X Layer for ten times the API calls. Both work today on the X Layer testnet, with a test amount. The published results stay free. We reach users through TapeOut's community, result links shared before a trade, and partners like OwlGate and TapePool.
 
 ### 2:50–3:00 · Close
 
@@ -91,4 +91,4 @@ Numbers in ⟨angle brackets⟩ change every day. They show what the live site s
 
 ## Words to keep
 
-From CLAUDE.md, "Copy" and "Domain language": "copy of circuit #X", "no earlier copy found", "estimated value", "range". Never "original" on its own, "fake", "stolen", "scam", "price" for Foreman's numbers, or "official" for FabX. Foreman Pro and the API are always "next".
+From CLAUDE.md, "Copy" and "Domain language": "copy of circuit #X", "no earlier copy found", "estimated value", "range". Never "original" on its own, "fake", "stolen", "scam", "price" for Foreman's numbers, or "official" for FabX. Foreman Pro and the paid API work "on the X Layer testnet, with a test amount": never a price, and never on mainnet.

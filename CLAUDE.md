@@ -225,6 +225,8 @@ The build order table in `docs/PRODUCT.md` is the order. Build so each step work
 
 The FabX copy check left the cut list on 26 Nov 2026: its go criteria held on the live site (`2026-11-26-fabx-go.md`).
 
+Both payments met their 2 December bar early: Foreman Pro was paid end to end from the bot's link on 26 Nov 2026, and the paid API tier from the live API page on 27 Nov 2026 (the dev wallet's `paidUntil` became 27 Dec 2026). Neither is cut for being unproven.
+
 **Never cut:** the evidence behind every originality result, the inputs behind every value, and publishing results on X Layer.
 
 ---

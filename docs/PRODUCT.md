@@ -29,9 +29,9 @@ For any miner or RIG voucher, Foreman answers three questions, and publishes the
 | User | What they want | What they get | Pays? |
 | --- | --- | --- | --- |
 | **Buyer** (primary) | Not to pay for a copy or a wrapper, and not to overpay | Originality, value range and payback for any listing | Free |
-| **Owner** | Know if someone copied their circuit; know what their miner is worth | Copy alert; value; what they can do with it | Free: in the app, and by Telegram for one address; **Foreman Pro** (next): Telegram for up to 20 addresses, browser notifications, value history |
-| **Markets and wallets** (TapeOut's market, OwlGate) | Stop listing copies and wrappers as compliant | Originality results on X Layer, readable on chain, and an API | Published results free; **the API** (next) |
-| **Lenders** (TapePool) | Not to lend against a copy, and a second opinion on value | The same results on X Layer, before a loan | Published results free; **the API** (next) |
+| **Owner** | Know if someone copied their circuit; know what their miner is worth | Copy alert; value; what they can do with it | Free: in the app, and by Telegram for one address; **Foreman Pro** (live on the X Layer testnet, 0.01 test OKB for 30 days): Telegram for up to 20 addresses; next: browser notifications, value history |
+| **Markets and wallets** (TapeOut's market, OwlGate) | Stop listing copies and wrappers as compliant | Originality results on X Layer, readable on chain, and an API | Published results free; the API free at 60 calls a minute, **600 a minute** for 0.01 test OKB for 30 days (live on the X Layer testnet) |
+| **Lenders** (TapePool) | Not to lend against a copy, and a second opinion on value | The same results on X Layer, before a loan | Published results free; the API as for markets |
 
 ## How it works
 
@@ -88,7 +88,7 @@ Build so each step works end to end before the next.
 | **5 Dec** | **Feature freeze**; demo video |
 | 6 Dec | Submit, a day before the provisional 7 Dec deadline |
 
-**Cut list, in this order, if behind on 1 December:** the paid API tier (`decisions/2026-11-26-paid-api-tier.md`; cut unless working end to end on the evening of 2 December) → payments for Foreman Pro (cut unless working end to end on the evening of 2 December) → API keys for markets and lenders (`decisions/2026-11-26-telegram-alerts-for-pro.md`) → DeWEB mirror (`decisions/2026-11-23-hosting.md`) → copy alert notifications by Telegram and browser (`decisions/2026-11-23-copy-alert-notifications.md`) → OCCC status → copy alert → Lend read (show "not checked") → X Layer mainnet (publish on testnet for the demo).
+**Cut list, in this order, if behind on 1 December:** the paid API tier (`decisions/2026-11-26-paid-api-tier.md`; cut unless working end to end on the evening of 2 December; it did on 27 Nov 2026, paid from the live API page) → payments for Foreman Pro (cut unless working end to end on the evening of 2 December; it did on 26 Nov 2026, paid from the bot's link) → API keys for markets and lenders (`decisions/2026-11-26-telegram-alerts-for-pro.md`) → DeWEB mirror (`decisions/2026-11-23-hosting.md`) → copy alert notifications by Telegram and browser (`decisions/2026-11-23-copy-alert-notifications.md`) → OCCC status → copy alert → Lend read (show "not checked") → X Layer mainnet (publish on testnet for the demo).
 
 **Never cut:** the evidence behind every originality result, the inputs behind every value, and publishing results on X Layer (the hackathon's hard requirement).
 
@@ -102,7 +102,7 @@ Rewritten 26 Nov 2026 to cover what the hackathon asks the video for: the proble
 | 0:20–0:30 | **What Foreman is.** Three questions, answered from chain data and published on X Layer |
 | 0:30–1:50 | **The core features, live.** Live listings: how many are copies. A real listing in the Check box: the copy verdict with its evidence; Worth? beside the ask; Options as they really are; the result published on X Layer and read back. "FabX 24": a copy across two chains. Your miners with copy alerts |
 | 1:50–2:20 | **How it uses TapeOut and X Layer.** The architecture diagram and the contracts read |
-| 2:20–2:50 | **Users and business model.** Free to check; Foreman Pro and the API next; reach through community, shared links and partners (`decisions/2026-11-26-revenue-and-reach.md`) |
+| 2:20–2:50 | **Users and business model.** Free to check; owners pay for Foreman Pro and businesses pay on X Layer for 10× the API calls, both live on the testnet with a test amount; reach through community, shared links and partners (`decisions/2026-11-26-revenue-and-reach.md`, `2026-11-26-paid-api-tier.md`) |
 | 2:50–3:00 | **Close.** The link and the rule: say only what was checked |
 
 ## Still open
