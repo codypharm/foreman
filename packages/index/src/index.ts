@@ -101,6 +101,7 @@ export {
 	type ProReminder,
 	proCode,
 	proReminderSent,
+	readApiPaidUntil,
 	readProChats,
 	readProUntil,
 	readUntoldProPayments,

@@ -51,3 +51,18 @@ export function proCodeWord(code: string): `0x${string}` {
 		throw new Error("a Pro code is 16 bytes of lowercase hex");
 	return `${code}${"0".repeat(32)}` as `0x${string}`;
 }
+
+/** The 12 bytes after a wallet's address in its API payment code: ASCII "foreman-api:". */
+const API_CODE_TAG = "666f72656d616e2d6170693a";
+
+/**
+ * The 32 bytes a payment for a wallet's API calls carries (docs/decisions/2026-11-26-paid-api-tier.md,
+ * decision 4): the wallet's 20-byte address, then "foreman-api:". Its last bytes aren't zero, so it is
+ * never a chat's code.
+ */
+export function apiPaymentCode(wallet: string): `0x${string}` {
+	const address = wallet.toLowerCase();
+	if (!/^0x[0-9a-f]{40}$/.test(address))
+		throw new Error("an API payment code is made from a wallet address");
+	return `${address}${API_CODE_TAG}` as `0x${string}`;
+}

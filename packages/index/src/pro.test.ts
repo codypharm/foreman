@@ -1,9 +1,11 @@
+import { apiPaymentCode } from "@foreman/chain-xlayer/pro";
 import type pg from "pg";
 import { afterEach, describe, expect, test } from "vitest";
 import {
 	PRO_DAYS,
 	type ProPayment,
 	proCode,
+	readApiPaidUntil,
 	readProUntil,
 	recordProPayment,
 	stopChat,
@@ -108,5 +110,38 @@ describe.skipIf(!TEST_DATABASE_URL)("Foreman Pro", () => {
 		await stopChat(pool, CHAT);
 		expect(await readProUntil(pool, CHAT)).toEqual(at(105));
 		expect(await proCode(pool, CHAT)).toBe(code);
+	});
+
+	// The paid API tier (docs/decisions/2026-11-26-paid-api-tier.md, decisions 2 to 4)
+	test("a wallet's API payments add 30 days the same way, and count for no chat", async () => {
+		pool = await freshDatabase();
+		const wallet = "0x077ea6b4c1dfc7f7ec253d736c56898dfc192ea5";
+		const forWallet = (days: number) => ({
+			...paid("0x00", days, 500 + days),
+			code: apiPaymentCode(wallet),
+		});
+		const at = (days: number) => new Date(T0 + days * DAY);
+		expect(await readApiPaidUntil(pool, wallet)).toBeNull();
+
+		expect(await recordProPayment(pool, forWallet(0))).toEqual({
+			counted: true,
+			chatId: null,
+		});
+		expect(await readApiPaidUntil(pool, wallet)).toEqual(at(30));
+		await recordProPayment(pool, forWallet(10)); // a renewal before the end
+		expect(await readApiPaidUntil(pool, wallet)).toEqual(at(60));
+		// However the address is cased
+		expect(
+			await readApiPaidUntil(pool, wallet.toUpperCase().replace("0X", "0x")),
+		).toEqual(at(60));
+
+		// A chat's payment, and another wallet's, don't count for this wallet
+		await recordProPayment(pool, paid(await proCode(pool, CHAT), 20));
+		await recordProPayment(pool, {
+			...paid("0x00", 21, 900),
+			code: apiPaymentCode(PAYER),
+		});
+		expect(await readApiPaidUntil(pool, wallet)).toEqual(at(60));
+		expect(await readApiPaidUntil(pool, PAYER)).toEqual(at(51));
 	});
 });

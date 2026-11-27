@@ -1,8 +1,10 @@
 // Payments for Foreman Pro (docs/decisions/2026-11-26-pro-payments.md): each Telegram chat's code,
-// the ForemanPro payments counted for it, and when its Pro ends. /stop forgets a chat's follows,
+// the ForemanPro payments counted for it, and when its Pro ends. The paid API tier is paid through
+// the same contract, with a wallet's code (2026-11-26-paid-api-tier.md): when it ends, too. /stop forgets a chat's follows,
 // never its code or what it paid.
 
 import { randomBytes } from "node:crypto";
+import { apiPaymentCode } from "@foreman/chain-xlayer/pro";
 import type pg from "pg";
 import type { Hex } from "viem";
 import type { Db } from "./transaction.ts";
@@ -96,9 +98,31 @@ export async function readProUntil(
 		"select paid_at from pro_payments where chat_id = $1 order by block, log_index",
 		[chatId],
 	);
+	return paidUntil(rows.map((r) => r.paid_at));
+}
+
+/**
+ * When a wallet's paid API tier ends (docs/decisions/2026-11-26-paid-api-tier.md, decisions 2 to 4):
+ * its payments are those carrying its code, counted as Pro's are. Null when it never paid. The end may
+ * be in the past; the caller compares it with now.
+ */
+export async function readApiPaidUntil(
+	pool: Db,
+	wallet: string,
+): Promise<Date | null> {
+	const code = Buffer.from(apiPaymentCode(wallet).slice(2), "hex");
+	const { rows } = await pool.query<{ paid_at: Date }>(
+		"select paid_at from pro_payments where code = $1 order by block, log_index",
+		[code],
+	);
+	return paidUntil(rows.map((r) => r.paid_at));
+}
+
+/** 30 days a payment, each from the later of its own time and the end so far, in chain order. */
+function paidUntil(paidAts: Date[]): Date | null {
 	let until: number | null = null;
-	for (const { paid_at } of rows) {
-		until = Math.max(until ?? 0, paid_at.getTime()) + PRO_MS;
+	for (const at of paidAts) {
+		until = Math.max(until ?? 0, at.getTime()) + PRO_MS;
 	}
 	return until === null ? null : new Date(until);
 }
