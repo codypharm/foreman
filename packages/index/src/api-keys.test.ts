@@ -97,7 +97,9 @@ describe.skipIf(!TEST_DATABASE_URL)("API keys", () => {
 		);
 		expect(live?.id).toBe(second.id);
 		expect(live?.madeAt).toBeInstanceOf(Date);
-		expect(Object.keys(live ?? {}).sort()).toEqual(["id", "madeAt"]);
+		// The key's last 4 characters, so the page can say which key it is (2026-11-27-key-ending.md)
+		expect(live?.ending).toBe(second.key.slice(-4));
+		expect(Object.keys(live ?? {}).sort()).toEqual(["ending", "id", "madeAt"]);
 		expect(
 			await readWalletApiKey(
 				pool,
@@ -113,5 +115,21 @@ describe.skipIf(!TEST_DATABASE_URL)("API keys", () => {
 			[V, false],
 			[W, true],
 		]);
+	});
+
+	test("a key made before endings were kept reads back with no ending, never a guessed one", async () => {
+		pool = await freshDatabase();
+		const W = "0x2ef2fed3f9b3d5385499008051031320b1fb49ef";
+		const made = await createWalletApiKey(pool, W, new Date());
+		if (!made.made) throw new Error("no key made");
+		// What every key made before 27 Nov 2026 looks like: only its hash was stored
+		await pool.query("update api_keys set key_ending = null where id = $1", [
+			made.id,
+		]);
+		expect(await readWalletApiKey(pool, W)).toEqual({
+			id: made.id,
+			madeAt: expect.any(Date),
+			ending: null,
+		});
 	});
 });

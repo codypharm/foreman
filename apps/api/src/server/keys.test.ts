@@ -174,13 +174,17 @@ describe.skipIf(!TEST_DATABASE_URL)("POST /keys", () => {
 			expect(JSON.stringify(body)).not.toContain("fmn_");
 			return parseApiKeyStatus(body, "body");
 		};
-		expect((await status(set.wallet.address)).madeAt).toBeNull();
+		const none = await status(set.wallet.address);
+		expect([none.madeAt, none.keyEnding]).toEqual([null, null]);
 
 		const made = await post(set.app, await signed(set.wallet, NOW));
 		expect(made.status).toBe(200);
+		const { key } = parseApiKeyAnswer(await made.json(), "body");
 		const after = await status(set.wallet.address);
 		expect(after.wallet).toBe(set.wallet.address.toLowerCase());
 		expect(after.madeAt).not.toBeNull();
+		// The key's last 4 characters, so the page can say which key it is (2026-11-27-key-ending.md)
+		expect(after.keyEnding).toBe(key.slice(-4));
 
 		// The paid API tier's end (2026-11-26-paid-api-tier.md, decision 7): null until the wallet pays,
 		// then 30 days from the payment, and null again once that has passed

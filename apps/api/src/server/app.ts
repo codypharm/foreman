@@ -165,6 +165,8 @@ export function createApp(
 					madeAt: live
 						? BigInt(Math.floor(live.madeAt.getTime() / 1000))
 						: null,
+					// Which key it is, by its last 4 characters; null for one made before they were kept
+					keyEnding: live?.ending ?? null,
 					paidUntil:
 						paidUntil && paidUntil.getTime() > now()
 							? BigInt(Math.floor(paidUntil.getTime() / 1000))

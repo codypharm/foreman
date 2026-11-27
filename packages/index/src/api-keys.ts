@@ -1,6 +1,8 @@
 // API keys for markets and lenders (docs/decisions/2026-11-26-api-keys.md, decisions 5 and 6). A key
 // is random, shown once by createApiKey and never stored: only its SHA-256 hash is. Keys are random
-// enough that a plain hash can't be reversed, so no slow hash is needed.
+// enough that a plain hash can't be reversed, so no slow hash is needed. Its last 4 characters are
+// kept too, so the API page can say which key a wallet has (2026-11-27-key-ending.md): 4 of its 32
+// random characters, too few to help anyone guess the rest.
 
 import { createHash, randomBytes } from "node:crypto";
 import type pg from "pg";
@@ -21,6 +23,7 @@ export interface ApiKeyRecord extends ApiKeyHolder {
 
 const hash = (key: string) => createHash("sha256").update(key).digest();
 const newKey = () => `fmn_${randomBytes(24).toString("base64url")}`;
+const ending = (key: string) => key.slice(-4);
 
 /** Makes a key for `holder`. The returned key is the only copy: it can't be read back. */
 export async function createApiKey(
@@ -29,8 +32,8 @@ export async function createApiKey(
 ): Promise<{ id: number; key: string }> {
 	const key = newKey();
 	const { rows } = await pool.query<{ id: number }>(
-		"insert into api_keys (holder, key_hash) values ($1, $2) returning id",
-		[holder, hash(key)],
+		"insert into api_keys (holder, key_hash, key_ending) values ($1, $2, $3) returning id",
+		[holder, hash(key), ending(key)],
 	);
 	const id = rows[0]?.id;
 	if (id === undefined) throw new Error("the new API key wasn't saved");
@@ -70,9 +73,9 @@ export async function createWalletApiKey(
 			[address],
 		);
 		const { rows } = await client.query<{ id: number }>(
-			`insert into api_keys (holder, key_hash, wallet, signed_at) values ($1, $2, $1, $3)
-			 returning id`,
-			[address, hash(key), signedAt],
+			`insert into api_keys (holder, key_hash, wallet, signed_at, key_ending)
+			 values ($1, $2, $1, $3, $4) returning id`,
+			[address, hash(key), signedAt, ending(key)],
 		);
 		await client.query("commit");
 		const id = rows[0]?.id;
@@ -100,19 +103,26 @@ export async function findApiKey(
 }
 
 /**
- * Whether `wallet` has a live key made by signature, and when it was made, for the API page
- * (data contract, `ApiKeyStatus`). Never the key: only its hash is stored. Null when it has none.
+ * Whether `wallet` has a live key made by signature, when it was made and its last 4 characters, for
+ * the API page (data contract, `ApiKeyStatus`). Never the key: only its hash is stored. `ending` is
+ * null for a key made before endings were kept. Null when the wallet has no key.
  */
 export async function readWalletApiKey(
 	pool: pg.Pool,
 	wallet: string,
-): Promise<{ id: number; madeAt: Date } | null> {
-	const { rows } = await pool.query<{ id: number; created_at: Date }>(
-		"select id, created_at from api_keys where wallet = $1 and revoked_at is null",
+): Promise<{ id: number; madeAt: Date; ending: string | null } | null> {
+	const { rows } = await pool.query<{
+		id: number;
+		created_at: Date;
+		key_ending: string | null;
+	}>(
+		"select id, created_at, key_ending from api_keys where wallet = $1 and revoked_at is null",
 		[wallet.toLowerCase()],
 	);
 	const row = rows[0];
-	return row ? { id: row.id, madeAt: row.created_at } : null;
+	return row
+		? { id: row.id, madeAt: row.created_at, ending: row.key_ending }
+		: null;
 }
 
 /** Revokes a key; false when there's no such key or it was already revoked. */

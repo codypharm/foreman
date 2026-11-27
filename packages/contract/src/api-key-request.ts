@@ -116,6 +116,9 @@ export function serialiseApiKeyAnswer(
 export interface ApiKeyStatus {
 	wallet: Address;
 	madeAt: bigint | null;
+	/** The key's last 4 characters, so the page can say which key it is; null when the wallet has no
+	 * key, or for a key made before endings were kept (docs/decisions/2026-11-27-key-ending.md). */
+	keyEnding: string | null;
 	/** When the wallet's paid API tier ends (Unix seconds); null when it never paid or it has ended
 	 * (docs/decisions/2026-11-26-paid-api-tier.md, decision 7). */
 	paidUntil: bigint | null;
@@ -130,6 +133,31 @@ export function parseApiKeyStatus(wire: unknown, field: string): ApiKeyStatus {
 			"…",
 		);
 	}
+	if (!("keyEnding" in w)) {
+		throw new ContractParseError(
+			`${field}.keyEnding`,
+			"4 characters or null",
+			"missing",
+		);
+	}
+	const keyEnding = w.keyEnding;
+	if (
+		keyEnding !== null &&
+		!(typeof keyEnding === "string" && /^[A-Za-z0-9_-]{4}$/.test(keyEnding))
+	) {
+		throw new ContractParseError(
+			`${field}.keyEnding`,
+			"a key's last 4 characters, or null",
+			String(keyEnding).slice(0, 8),
+		);
+	}
+	if (keyEnding !== null && w.madeAt === null) {
+		throw new ContractParseError(
+			`${field}.keyEnding`,
+			"null for a wallet with no key",
+			keyEnding,
+		);
+	}
 	if (!("paidUntil" in w)) {
 		throw new ContractParseError(
 			`${field}.paidUntil`,
@@ -140,6 +168,7 @@ export function parseApiKeyStatus(wire: unknown, field: string): ApiKeyStatus {
 	return {
 		wallet: parseAddress(w.wallet, `${field}.wallet`),
 		madeAt: w.madeAt === null ? null : parseUint(w.madeAt, `${field}.madeAt`),
+		keyEnding,
 		paidUntil:
 			w.paidUntil === null
 				? null
@@ -157,6 +186,7 @@ export function serialiseApiKeyStatus(
 			status.madeAt === null
 				? null
 				: serialiseUint(status.madeAt, `${field}.madeAt`),
+		keyEnding: status.keyEnding,
 		paidUntil:
 			status.paidUntil === null
 				? null

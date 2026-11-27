@@ -131,6 +131,8 @@ function MakeKey() {
 		enabled: Boolean(address),
 	});
 	const madeAt = address ? (status.data?.madeAt ?? null) : null;
+	// Which key it is, so an owner can match it to the one they saved (2026-11-27-key-ending.md)
+	const keyEnding = address ? (status.data?.keyEnding ?? null) : null;
 	const checking = Boolean(address) && status.isPending;
 	const failed = address && status.isError ? status.error : null;
 
@@ -223,7 +225,7 @@ function MakeKey() {
 					{EXAMPLE.processor}", "tokenId": "{EXAMPLE.tokenId}"{"}"}]{"}"}'
 				</pre>
 				<button type="button" className={s.again} onClick={make}>
-					Make a new key (ends this one)
+					Make another key (ends this one)
 				</button>
 			</section>
 		);
@@ -277,7 +279,7 @@ function MakeKey() {
 				</h2>
 				<p>
 					{madeAt !== null
-						? `Made ${formatDate(madeAt)} for ${shortHex((address as string).toLowerCase())}. Foreman keeps only a scrambled copy, so it can’t show the key again. Lost it? Sign to make a new one; the old one stops working at once.`
+						? `Made ${formatDate(madeAt)} for ${shortHex((address as string).toLowerCase())}, ${keyEnding !== null ? `ending in …${keyEnding}` : "before Foreman kept key endings"}. Foreman keeps only a scrambled copy, so it can’t show the key again. Lost it? Make another one; the old one stops working at once.`
 						: address
 							? `Sign a message with ${shortHex(address.toLowerCase())}.`
 							: "Connect a wallet, then sign a message."}{" "}
@@ -303,7 +305,7 @@ function MakeKey() {
 							: step.at === "making"
 								? "Making your key…"
 								: madeAt !== null
-									? "Sign to make a new key"
+									? "Make another key"
 									: "Sign to make a key"}
 					</button>
 				)}
