@@ -13,6 +13,7 @@ import { useConnection, useSignMessage } from "wagmi";
 import {
 	API_URL,
 	ApiProblem,
+	AppOutdated,
 	createApiKey,
 	readApiKeyStatus,
 } from "../../api.ts";
@@ -121,14 +122,17 @@ function MakeKey() {
 	const [step, setStep] = useState<Step>({ at: "idle" });
 	const [copied, setCopied] = useState(false);
 	const queries = useQueryClient();
-	// Whether this wallet already has a key, so the band says so rather than offering a first one. If
-	// the read fails the band still says a new key ends the old
+	// Whether this wallet already has a key, so the band says so rather than offering a first one.
+	// Until the answer comes, and when it fails, the band says that instead: an unanswered read is
+	// never shown as "no key" (CLAUDE.md, "Missing is missing")
 	const status = useQuery({
 		queryKey: ["api-key", address?.toLowerCase()],
 		queryFn: () => readApiKeyStatus((address as string).toLowerCase()),
 		enabled: Boolean(address),
 	});
 	const madeAt = address ? (status.data?.madeAt ?? null) : null;
+	const checking = Boolean(address) && status.isPending;
+	const failed = address && status.isError ? status.error : null;
 
 	// A different wallet starts over, and the shown key goes with the wallet that made it
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reset on a change of wallet only
@@ -221,6 +225,46 @@ function MakeKey() {
 				<button type="button" className={s.again} onClick={make}>
 					Make a new key (ends this one)
 				</button>
+			</section>
+		);
+	}
+
+	if (checking || failed) {
+		return (
+			<section className={s.band} aria-labelledby="make-key">
+				<div>
+					<h2 id="make-key">
+						{failed
+							? "Couldn’t check this wallet’s key"
+							: "Checking this wallet’s key"}
+					</h2>
+					<p role={failed ? "alert" : undefined}>
+						{failed
+							? `${failed instanceof ApiProblem ? failed.problem.detail : failed instanceof AppOutdated ? failed.message : "Foreman’s answer couldn’t be read."} Until it’s checked, this page doesn’t offer a key: a new one would end any key ${shortHex((address as string).toLowerCase())} already has.`
+							: `Asking Foreman whether ${shortHex((address as string).toLowerCase())} already has a key.`}
+					</p>
+				</div>
+				<div>
+					<button
+						type="button"
+						className={s.cta}
+						disabled={!failed || status.isFetching}
+						onClick={() =>
+							failed instanceof AppOutdated
+								? window.location.reload()
+								: void status.refetch()
+						}
+					>
+						{!failed || status.isFetching
+							? "Checking…"
+							: failed instanceof AppOutdated
+								? "Reload"
+								: "Try again"}
+					</button>
+					<p className={s.fine}>
+						Use the key from your server, never in a web page.
+					</p>
+				</div>
 			</section>
 		);
 	}
