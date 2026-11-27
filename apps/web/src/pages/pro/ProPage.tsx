@@ -4,36 +4,17 @@
 // the receipt itself and says when that chat's Pro now ends. Without a code it can't pay, so it sends
 // people to the bot. Nothing here decides what was paid: the chain and the API do.
 
-import {
-	FOREMAN_PRO,
-	foremanProAbi,
-	PRO_PRICE_WEI,
-	proCodeWord,
-} from "@foreman/chain-xlayer/pro";
-import { type Hex32, parseHex32 } from "@foreman/contract";
-import { useEffect, useState } from "react";
-import { formatUnits } from "viem";
-import {
-	useBalance,
-	useConnection,
-	usePublicClient,
-	useSwitchChain,
-	useWriteContract,
-} from "wagmi";
+import { FOREMAN_PRO, proCodeWord } from "@foreman/chain-xlayer/pro";
+import type { Hex32 } from "@foreman/contract";
+import { useEffect } from "react";
 import { useParams } from "wouter";
-import { ApiProblem, reportProPayment } from "../../api.ts";
 import { WalletButton } from "../../components/WalletButton.tsx";
 import { formatDate, shortHex } from "../../format.ts";
-import { xLayerTestnet } from "../../wallet.ts";
+import { FAUCET_URL, okb, useProPayment } from "../../pay.ts";
 import s from "./ProPage.module.css";
 
 /** Foreman's Telegram bot, where /pro gives a chat its pay link. */
 const BOT_URL = "https://t.me/ForemanCopyAlertsBot";
-/** The X Layer team's testnet faucet, on OKX's own site: 0.2 test OKB a day (checked 26 Nov 2026). */
-const FAUCET_URL = "https://web3.okx.com/xlayer/faucet";
-
-/** Tries of the report while the API can't read the transaction yet, 3 seconds apart. */
-const REPORT_TRIES = 10;
 
 export function ProPage() {
 	const params = useParams<{ code?: string }>();
@@ -157,113 +138,24 @@ function Rules({ short = false }: { short?: boolean }) {
 	);
 }
 
-type Step =
-	| { at: "idle" }
-	| { at: "wallet" }
-	| { at: "block"; hash: Hex32 }
-	| { at: "counting"; hash: Hex32 }
-	| { at: "counted"; hash: Hex32; proUntil: bigint | null }
-	/** Paid, but the API hasn't counted it: the worker's own read will. */
-	| { at: "uncounted"; hash: Hex32 }
-	| { at: "problem"; detail: string };
-
 /** #/pro/<code>: what this pays for, one button, then the rules. */
 function Checkout({ code }: { code: `0x${string}` }) {
-	const { address, chainId } = useConnection();
-	const balance = useBalance({
+	const {
 		address,
-		chainId: xLayerTestnet.id,
-		query: { enabled: Boolean(address) },
-	});
-	const client = usePublicClient({ chainId: xLayerTestnet.id });
-	const switchChain = useSwitchChain();
-	const write = useWriteContract();
-	const [step, setStep] = useState<Step>({ at: "idle" });
-
-	// Another wallet starts over
-	// biome-ignore lint/correctness/useExhaustiveDependencies: reset on a change of wallet only
-	useEffect(() => {
-		setStep((now) =>
-			now.at === "idle" || now.at === "problem" ? { at: "idle" } : now,
-		);
-	}, [address]);
+		step,
+		pay,
+		switchToTestnet,
+		switching,
+		onTestnet,
+		held,
+		heldUnreadable,
+		short,
+		busy,
+		ready,
+	} = useProPayment(proCodeWord(code));
 
 	if (step.at === "counted" || step.at === "uncounted") {
 		return <Paid step={step} />;
-	}
-
-	const busy =
-		step.at === "wallet" || step.at === "block" || step.at === "counting";
-	const onTestnet = chainId === xLayerTestnet.id;
-	const held = balance.data?.value;
-	const short = held !== undefined && held < PRO_PRICE_WEI;
-
-	async function pay() {
-		if (!address || !client) return;
-		setStep({ at: "wallet" });
-		let hash: Hex32;
-		try {
-			hash = parseHex32(
-				(
-					await write.mutateAsync({
-						address: FOREMAN_PRO.address as `0x${string}`,
-						abi: foremanProAbi,
-						functionName: "pay",
-						args: [proCodeWord(code)],
-						value: PRO_PRICE_WEI,
-						chainId: xLayerTestnet.id,
-					})
-				).toLowerCase(),
-				"tx",
-			);
-		} catch (error) {
-			const name = (error as { name?: string }).name ?? "";
-			setStep({
-				at: "problem",
-				detail: /UserRejected/.test(name)
-					? "You didn’t confirm in your wallet, so nothing was paid."
-					: "Your wallet couldn’t send the payment, so nothing was paid.",
-			});
-			return;
-		}
-
-		// X Layer receipts can take minutes (CLAUDE.md, "X Layer public node limits")
-		setStep({ at: "block", hash });
-		try {
-			const receipt = await client.waitForTransactionReceipt({
-				hash,
-				timeout: 180_000,
-			});
-			if (receipt.status !== "success") {
-				setStep({
-					at: "problem",
-					detail: "The payment failed on chain, so nothing was paid.",
-				});
-				void balance.refetch();
-				return;
-			}
-		} catch {
-			// The receipt read gave up; the payment may still land. The API and the worker read it
-			// from the chain, so it is counted if it did
-			setStep({ at: "uncounted", hash });
-			return;
-		}
-		void balance.refetch();
-
-		setStep({ at: "counting", hash });
-		for (let i = 0; i < REPORT_TRIES; i++) {
-			try {
-				const answer = await reportProPayment(hash);
-				setStep({ at: "counted", hash, proUntil: answer.proUntil });
-				return;
-			} catch (error) {
-				const notYet =
-					error instanceof ApiProblem && error.problem.error === "not-ready";
-				if (!notYet) break;
-				await new Promise((r) => setTimeout(r, 3000));
-			}
-		}
-		setStep({ at: "uncounted", hash });
 	}
 
 	return (
@@ -290,7 +182,7 @@ function Checkout({ code }: { code: `0x${string}` }) {
 							<dt>Your wallet holds</dt>
 							<dd>
 								{held === undefined
-									? balance.isError
+									? heldUnreadable
 										? "Couldn’t read"
 										: "…"
 									: `${okb(held)} test OKB`}
@@ -307,22 +199,10 @@ function Checkout({ code }: { code: `0x${string}` }) {
 					<button
 						type="button"
 						className={s.cta}
-						disabled={switchChain.isPending}
-						onClick={() =>
-							switchChain.mutate(
-								{ chainId: xLayerTestnet.id },
-								{
-									onError: () =>
-										setStep({
-											at: "problem",
-											detail:
-												"Your wallet didn’t switch to the X Layer testnet. Switch it there, then pay.",
-										}),
-								},
-							)
-						}
+						disabled={switching}
+						onClick={switchToTestnet}
 					>
-						{switchChain.isPending
+						{switching
 							? "Waiting for your wallet…"
 							: "Switch to X Layer testnet"}
 					</button>
@@ -331,7 +211,7 @@ function Checkout({ code }: { code: `0x${string}` }) {
 						type="button"
 						className={s.cta}
 						onClick={pay}
-						disabled={busy || short || !client}
+						disabled={busy || short || !ready}
 					>
 						{step.at === "wallet"
 							? "Confirm in your wallet…"
@@ -428,11 +308,4 @@ function Paid({
 			<p className={s.tx}>Paid in X Layer testnet transaction {tx}</p>
 		</section>
 	);
-}
-
-/** Test OKB from wei, to at most 4 decimals: "0.42", "0.0041". Display only. */
-function okb(wei: bigint): string {
-	const [whole, frac = ""] = formatUnits(wei, 18).split(".");
-	const cut = frac.slice(0, 4).replace(/0+$/, "");
-	return cut ? `${whole}.${cut}` : (whole ?? "0");
 }

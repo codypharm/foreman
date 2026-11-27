@@ -1,0 +1,186 @@
+<!--
+  The API page's paid tier (docs/decisions/2026-11-26-paid-api-tier.md, decisions 1, 5 and 6).
+  27 Nov 2026: William chose B, "a band of its own", of three (A "in the key band", C "free beside paid"),
+  then asked for better button colours. Before, B had two black buttons of equal weight. Of two
+  treatments he chose "Ink" (27 Nov 2026): the pay button stays black (white in dark mode), like every
+  other main button, and a small lime "10×" tag sits in the heading. "Lime", the pay button in the lime
+  accent, is removed here. The key band's "Sign to make a new key" becomes an outlined button once the
+  wallet has a key, so each screen has one main button. It is
+  drawn for the dev wallet 0x077e…2ea5, which has a key made 26 Nov 2026: before paying,
+  and while paid (to 27 Dec 2026). Everything above the key band (the call beside its answer) is as
+  shipped and isn't drawn.
+  Paying works as on the Pro page (docs/mocks/2026-11-26-pro-page.html): switch to the X Layer testnet
+  if needed, pay 0.01 test OKB with the wallet's code, wait for a block, report the transaction to
+  POST /pro/payments, then read GET /keys/:wallet again for paidUntil. So the data contract doesn't
+  change again: the payment check's answer stays as it is, and the date comes from the key status.
+  States not drawn, the same in every direction: no wallet, or a wallet with no key (no pay control:
+  make a key first, decision 6); another network; too little test OKB (with the testnet faucet);
+  waiting for the wallet, a block, the count; refused in the wallet; paid but not counted yet ("Foreman
+  counts it within about half an hour"); ended ("600 a minute ended on 27 Dec 2026", the pay control
+  back). Static: nothing here reads the chain or the API.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API Pay Band</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --raise:#F5F5F5; --ink:#000000; --ink-2:#6B6B6B; --ink-3:#9A9A9A; --line:#EBEBEB;
+  --accent:#C2F24B; --on-accent:#000000; --new:#567300; --live:#14A44D;
+  --btn:#000000; --on-btn:#FFFFFF; --frame:#F0F0F0;
+  --sans:"Geist",system-ui,sans-serif; --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+    --live:#3DDC84; --new:#C2F24B; --btn:#FFFFFF; --on-btn:#000000; --frame:#0A0A0A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000; --raise:#141414; --ink:#FFFFFF; --ink-2:#9A9A9A; --ink-3:#6B6B6B; --line:#1F1F1F;
+  --live:#3DDC84; --new:#C2F24B; --btn:#FFFFFF; --on-btn:#000000; --frame:#0A0A0A;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--frame);color:var(--ink);font:400 15px/1.5 var(--sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{background:var(--frame)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+
+.pick{max-width:1200px;margin:0 auto;padding:24px 16px 16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.pick h1{font:600 20px/1.2 var(--sans);letter-spacing:-.02em}
+.pick p{margin-top:4px;font-size:13px;color:var(--ink-2);max-width:70ch}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{all:unset;cursor:pointer;font:600 13px/1 var(--sans);padding:10px 14px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line)}
+.tabs button[aria-pressed=true]{background:var(--btn);color:var(--on-btn);box-shadow:none}
+.about{max-width:1200px;margin:0 auto 14px;padding:0 16px;font-size:13px;color:var(--ink-2)}
+.about b{color:var(--ink);font-weight:600}
+.cap{max-width:1200px;margin:0 auto 8px;padding:0 16px;font:600 12px/1.3 var(--sans);color:var(--ink-2);text-transform:uppercase;letter-spacing:.06em}
+.dir{display:none}
+.dir.on{display:block}
+.frame{max-width:1200px;margin:0 auto 20px;background:var(--bg);border-radius:20px;box-shadow:0 0 0 1px var(--line);overflow:hidden}
+.gap{height:28px}
+@media (max-width:640px){ .frame{border-radius:0;box-shadow:none} }
+
+.page{padding:32px 32px 40px}
+@media (max-width:760px){ .page{padding:24px 16px 32px} }
+.above{font-size:13px;color:var(--ink-2);padding-bottom:18px;border-bottom:1px dashed var(--line)}
+.mono{font-family:var(--mono);font-size:12.5px}
+
+/* the key band, as shipped */
+.band{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:32px;align-items:center;margin-top:28px;padding:24px;border-radius:20px;background:var(--raise)}
+.band h2{font:600 21px/1.2 var(--sans);letter-spacing:-.02em}
+.band p{margin-top:8px;font-size:14px;line-height:1.5;color:var(--ink-2)}
+.cta{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:46px;border-radius:999px;background:var(--btn);color:var(--on-btn);font:600 15px/1 var(--sans)}
+.ghost{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:42px;border-radius:999px;font:600 14px/1 var(--sans);box-shadow:inset 0 0 0 1px var(--line);background:var(--bg)}
+.fine{margin-top:10px;font-size:12px;line-height:1.5;color:var(--ink-2)}
+@media (max-width:760px){ .band{grid-template-columns:minmax(0,1fr);gap:16px;padding:20px 16px} }
+.ok{display:inline-flex;align-items:center;gap:8px;font:600 13px/1 var(--sans);color:var(--new)}
+.ok i{width:8px;height:8px;border-radius:50%;background:var(--live)}
+
+/* B: a band of its own */
+.paid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:32px;align-items:start;margin-top:16px;padding:24px;border-radius:20px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line)}
+.paid h2{font:600 21px/1.2 var(--sans);letter-spacing:-.02em}
+.paid p{margin-top:8px;font-size:14px;line-height:1.5;color:var(--ink-2)}
+.facts{display:grid;grid-template-columns:minmax(0,1fr) auto;margin-bottom:14px}
+.facts dt,.facts dd{padding:9px 0;border-top:1px solid var(--line);font-size:13px}
+.facts dt{color:var(--ink-2)}
+.facts dd{text-align:right;font-weight:600}
+@media (max-width:760px){ .paid{grid-template-columns:minmax(0,1fr);gap:16px;padding:20px 16px} }
+
+
+/* the pay button, two treatments */
+.pay{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:48px;border-radius:999px;font:600 15px/1 var(--sans);transition:filter .15s ease,transform .15s ease}
+.pay:active{transform:translateY(1px)}
+.ink .pay{background:var(--btn);color:var(--on-btn)}
+.ink .pay:hover{filter:brightness(1.25)}
+.pay svg{width:16px;height:16px}
+.ghost{height:44px;transition:box-shadow .15s ease}
+.ghost:hover{box-shadow:inset 0 0 0 1px var(--ink-3)}
+.ink .paid .tenx{display:inline-block;padding:3px 8px;margin-right:6px;border-radius:999px;background:var(--accent);color:var(--on-accent);font:600 13px/1.2 var(--sans);vertical-align:3px;letter-spacing:0}
+</style>
+</head>
+<body>
+
+<div class="pick">
+  <div>
+    <h1>The API page's paid tier: B, Ink</h1>
+    <p>Chosen by William, 27 Nov 2026: B, a band of its own, with the Ink buttons. One main button per screen. Add #dark to the address for dark mode.</p>
+  </div>
+</div>
+<p class="about" data-for="ink"><b>Ink.</b> The pay button stays black (white in dark mode), like every other main button on the site; the lime goes on a small "10×" tag in the heading instead.</p>
+
+<section class="dir on ink" id="ink">
+<p class="cap">Before paying</p>
+<div class="frame"><div class="page">
+  <p class="above">Above: "Check every circuit before it's listed", the call beside its answer, as shipped.</p>
+  <section class="band">
+    <div>
+      <h2>This wallet has a key</h2>
+      <p>Made 26 Nov 2026 for 0x077e…2ea5. Foreman keeps only a scrambled copy, so it can’t show the key again. Lost it? Sign to make a new one; the old one stops working at once. Signing is free: no transaction, no gas.</p>
+    </div>
+    <div>
+      <button class="ghost" type="button">Sign to make a new key</button>
+      <p class="fine">Use the key from your server, never in a web page.</p>
+    </div>
+  </section>
+  <section class="paid">
+    <div>
+      <h2><span class="tenx">10×</span>the calls</h2>
+      <p>600 calls a minute instead of 60, for 30 days. The same answers and up to 100 circuits a call. It stays with this wallet, even if you make a new key; when it ends, the key goes back to 60 and keeps working.</p>
+    </div>
+    <div>
+      <dl class="facts">
+        <dt>Now</dt><dd>60 calls a minute</dd>
+        <dt>After paying</dt><dd>600 until 27 Dec 2026</dd>
+        <dt>Amount</dt><dd>0.01 test OKB, X Layer testnet</dd>
+        <dt>This wallet holds</dt><dd>0.2 test OKB</dd>
+      </dl>
+      <button class="pay" type="button">Pay 0.01 test OKB</button>
+      <p class="fine">A test payment: the real price isn’t set. To Foreman’s contract <span class="mono">0x7719…33ac</span>, plus a small network fee.</p>
+    </div>
+  </section>
+</div></div>
+
+<p class="cap">While paid</p>
+<div class="frame"><div class="page">
+  <section class="band">
+    <div>
+      <h2>This wallet has a key</h2>
+      <p>Made 26 Nov 2026 for 0x077e…2ea5. Foreman keeps only a scrambled copy, so it can’t show the key again.</p>
+    </div>
+    <div>
+      <button class="ghost" type="button">Sign to make a new key</button>
+    </div>
+  </section>
+  <section class="paid">
+    <div>
+      <span class="ok"><i></i>Paid</span>
+      <h2 style="margin-top:10px">600 calls a minute until 27 Dec 2026</h2>
+      <p>Then back to 60; the key keeps working. Paying again adds 30 days.</p>
+    </div>
+    <div>
+      <dl class="facts">
+        <dt>Now</dt><dd>600 calls a minute</dd>
+        <dt>Ends</dt><dd>27 Dec 2026</dd>
+      </dl>
+      <button class="ghost" type="button">Add 30 days for 0.01 test OKB</button>
+    </div>
+  </section>
+</div></div>
+<div class="gap"></div>
+</section>
+
+<script>
+const h=location.hash.slice(1);
+if(h==="light"||h==="dark")document.documentElement.dataset.theme=h;
+</script>
+</body>
+</html>
