@@ -116,6 +116,9 @@ export function serialiseApiKeyAnswer(
 export interface ApiKeyStatus {
 	wallet: Address;
 	madeAt: bigint | null;
+	/** When the wallet's paid API tier ends (Unix seconds); null when it never paid or it has ended
+	 * (docs/decisions/2026-11-26-paid-api-tier.md, decision 7). */
+	paidUntil: bigint | null;
 }
 
 export function parseApiKeyStatus(wire: unknown, field: string): ApiKeyStatus {
@@ -127,9 +130,20 @@ export function parseApiKeyStatus(wire: unknown, field: string): ApiKeyStatus {
 			"…",
 		);
 	}
+	if (!("paidUntil" in w)) {
+		throw new ContractParseError(
+			`${field}.paidUntil`,
+			"a time or null",
+			"missing",
+		);
+	}
 	return {
 		wallet: parseAddress(w.wallet, `${field}.wallet`),
 		madeAt: w.madeAt === null ? null : parseUint(w.madeAt, `${field}.madeAt`),
+		paidUntil:
+			w.paidUntil === null
+				? null
+				: parseUint(w.paidUntil, `${field}.paidUntil`),
 	};
 }
 
@@ -143,6 +157,10 @@ export function serialiseApiKeyStatus(
 			status.madeAt === null
 				? null
 				: serialiseUint(status.madeAt, `${field}.madeAt`),
+		paidUntil:
+			status.paidUntil === null
+				? null
+				: serialiseUint(status.paidUntil, `${field}.paidUntil`),
 	};
 	parseApiKeyStatus(wire, field);
 	return wire;

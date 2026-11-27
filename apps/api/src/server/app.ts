@@ -156,6 +156,8 @@ export function createApp(
 			});
 		}
 		const live = await readWalletApiKey(deps.pool, wallet);
+		// The paid API tier's end, or null when it never paid or it has ended (2026-11-26-paid-api-tier.md)
+		const paidUntil = await readApiPaidUntil(deps.pool, wallet);
 		return c.json(
 			serialiseApiKeyStatus(
 				{
@@ -163,6 +165,10 @@ export function createApp(
 					madeAt: live
 						? BigInt(Math.floor(live.madeAt.getTime() / 1000))
 						: null,
+					paidUntil:
+						paidUntil && paidUntil.getTime() > now()
+							? BigInt(Math.floor(paidUntil.getTime() / 1000))
+							: null,
 				},
 				"body",
 			),

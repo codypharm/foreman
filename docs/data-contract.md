@@ -362,7 +362,7 @@ interface PublishedResult {
 | `POST /v1/results`, with an API key | `BulkResults` or `ApiError` | Markets and lenders: up to 100 circuits' results at once (approved by William 26 Nov 2026, `2026-11-26-api-keys.md`) |
 | `POST /keys` | `ApiKeyAnswer` or `ApiError` | The API page: a key made with a free wallet signature (approved by William 26 Nov 2026, `2026-11-26-self-serve-api-keys.md`) |
 | `POST /pro/payments` | `ProPaymentAnswer` or `ApiError` | The Pro page: a Foreman Pro payment, by its transaction, and when the paying chat's Pro now ends (approved by William 26 Nov 2026, `2026-11-26-pro-payments.md`, decision 5) |
-| `GET /keys/:wallet` | `ApiKeyStatus` or `ApiError` | The API page: whether a wallet already has a live key, and when it was made, never the key (approved by William 26 Nov 2026) |
+| `GET /keys/:wallet` | `ApiKeyStatus` or `ApiError` | The API page: whether a wallet already has a live key, and when it was made, never the key, and when its paid API tier ends (approved by William 26 Nov 2026) |
 
 Every response follows the wire format above. Counts of things (listings, circuits, copies) are JSON numbers, as in `Offer` and `Originality`.
 
@@ -570,6 +570,7 @@ type ApiKeyAnswer = {
 type ApiKeyStatus = {         // GET /keys/:wallet; a wallet that isn't an address is not-recognised (400)
   wallet: Address;            // lowercase
   madeAt: bigint | null;      // a time (Unix seconds) the wallet's live key was made; null when it has none. Never the key
+  paidUntil: bigint | null;   // a time (Unix seconds) the wallet's paid API tier (600 calls a minute) ends; null when it never paid or it has ended. Missing is refused, never read as unpaid. Added with William's approval, 26 Nov 2026 (`docs/decisions/2026-11-26-paid-api-tier.md`, decision 7)
 };
 ```
 

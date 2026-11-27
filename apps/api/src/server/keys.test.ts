@@ -1,4 +1,5 @@
 import { replayClient } from "@foreman/chain-bnb/fixture";
+import { apiPaymentCode } from "@foreman/chain-xlayer/pro";
 import {
 	apiKeyMessage,
 	parseAddress,
@@ -6,7 +7,7 @@ import {
 	parseApiKeyAnswer,
 	parseApiKeyStatus,
 } from "@foreman/contract";
-import { readApiKeys } from "@foreman/index";
+import { readApiKeys, recordProPayment } from "@foreman/index";
 import { TEST_DATABASE_URL } from "@foreman/index/testing";
 import circuits from "@foreman/originality/fixtures/bnb-circuits-134673279.json" with {
 	type: "json",
@@ -180,6 +181,25 @@ describe.skipIf(!TEST_DATABASE_URL)("POST /keys", () => {
 		const after = await status(set.wallet.address);
 		expect(after.wallet).toBe(set.wallet.address.toLowerCase());
 		expect(after.madeAt).not.toBeNull();
+
+		// The paid API tier's end (2026-11-26-paid-api-tier.md, decision 7): null until the wallet pays,
+		// then 30 days from the payment, and null again once that has passed
+		expect(after.paidUntil).toBeNull();
+		const DAY = 86_400_000;
+		await recordProPayment(set.pool, {
+			txHash: `0x${"5".repeat(64)}`,
+			logIndex: 0,
+			block: 47_300_000n,
+			paidAt: new Date(NOW - DAY),
+			code: apiPaymentCode(set.wallet.address),
+			payer: set.wallet.address,
+			amount: 10_000_000_000_000_000n,
+		});
+		expect((await status(set.wallet.address)).paidUntil).toBe(
+			BigInt((NOW + 29 * DAY) / 1000),
+		);
+		set.setNow(NOW + 30 * DAY);
+		expect((await status(set.wallet.address)).paidUntil).toBeNull();
 
 		const bad = await set.app.request("/keys/0x123");
 		expect(bad.status).toBe(400);
