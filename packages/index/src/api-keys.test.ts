@@ -28,6 +28,7 @@ describe.skipIf(!TEST_DATABASE_URL)("API keys", () => {
 		expect(await findApiKey(pool, made.key)).toEqual({
 			id: made.id,
 			holder: "OwlGate",
+			wallet: null,
 		});
 		expect(await findApiKey(pool, `${made.key}x`)).toBeNull();
 		expect(await findApiKey(pool, "")).toBeNull();
@@ -80,6 +81,7 @@ describe.skipIf(!TEST_DATABASE_URL)("API keys", () => {
 		expect(await findApiKey(pool, second.key)).toEqual({
 			id: second.id,
 			holder: W,
+			wallet: W,
 		});
 		expect(await findApiKey(pool, other.key)).not.toBeNull();
 

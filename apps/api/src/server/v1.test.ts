@@ -1,4 +1,5 @@
 import { replayClient } from "@foreman/chain-bnb/fixture";
+import { apiPaymentCode } from "@foreman/chain-xlayer/pro";
 import {
 	parseAddress,
 	parseApiError,
@@ -7,8 +8,10 @@ import {
 } from "@foreman/contract";
 import {
 	createApiKey,
+	createWalletApiKey,
 	readApiKeys,
 	readStoredResult,
+	recordProPayment,
 	recordPublished,
 	revokeApiKey,
 } from "@foreman/index";
@@ -215,5 +218,56 @@ describe.skipIf(!TEST_DATABASE_URL)("POST /v1/results", () => {
 		expect((await post(set.app, set.key, body)).status).toBe(200);
 		const [owl] = await readApiKeys(pool);
 		expect(owl?.days.map((d) => d.calls)).toEqual([61]);
+	});
+
+	// The paid API tier (docs/decisions/2026-11-26-paid-api-tier.md, decisions 1, 2 and 5)
+	const WALLET = "0x077ea6b4c1dfc7f7ec253d736c56898dfc192ea5";
+	const DAY = 86_400_000;
+	async function walletKeyPaid(
+		set: Awaited<ReturnType<typeof setUp>>,
+		paidAt: number,
+	) {
+		const made = await createWalletApiKey(set.pool, WALLET, new Date(paidAt));
+		if (!made.made) throw new Error("no key");
+		await recordProPayment(set.pool, {
+			txHash: `0x${"7".repeat(64)}`,
+			logIndex: 0,
+			block: 47_300_000n,
+			paidAt: new Date(paidAt),
+			code: apiPaymentCode(WALLET),
+			payer: WALLET,
+			amount: 10_000_000_000_000_000n,
+		});
+		return made.key;
+	}
+	const body = {
+		circuits: [
+			wire({ processor: PAGE_CIRCUITS.mining.processor, id: 999_999n }),
+		],
+	};
+
+	test("a key whose wallet paid is past 60 calls a minute", async () => {
+		const now = Date.UTC(2026, 10, 27, 12, 0, 10);
+		const set = await setUp(() => now);
+		pool = set.pool;
+		const key = await walletKeyPaid(set, now - DAY);
+		for (let i = 0; i < 61; i++) {
+			expect((await post(set.app, key, body)).status).toBe(200);
+		}
+	});
+
+	test("once the wallet's paid time ends, its key is back to 60 and the 429 says so", async () => {
+		const now = Date.UTC(2026, 10, 27, 12, 0, 10);
+		const set = await setUp(() => now);
+		pool = set.pool;
+		const key = await walletKeyPaid(set, now - 40 * DAY); // ended 10 days ago
+		for (let i = 0; i < 60; i++) {
+			expect((await post(set.app, key, body)).status).toBe(200);
+		}
+		const refused = await post(set.app, key, body);
+		expect(refused.status).toBe(429);
+		expect(parseApiError(await refused.json(), "error").detail).toBe(
+			"At most 60 calls a minute: this wallet's 600 a minute ended on 17 Nov 2026. Pay again on Foreman's API page; try again in 50 s",
+		);
 	});
 });

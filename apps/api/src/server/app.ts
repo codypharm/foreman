@@ -24,6 +24,7 @@ import {
 import {
 	createWalletApiKey,
 	findApiKey,
+	readApiPaidUntil,
 	readWalletApiKey,
 	recordApiUsage,
 } from "@foreman/index";
@@ -31,12 +32,17 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { verifyMessage } from "viem";
+import { formatDay } from "../alerts/message.ts";
 import { resolveCheck } from "../page/check.ts";
 import { type PageDeps, readCircuitPage } from "../page/circuit-page.ts";
 import { readListingsPage } from "../page/listings-page.ts";
 import { readWalletMiners } from "../page/wallet-page.ts";
 import { checkProPayment, type ProChain } from "../pro/payment.ts";
-import { rateLimiter } from "../v1/rate-limit.ts";
+import {
+	CALLS_PER_MINUTE,
+	PAID_CALLS_PER_MINUTE,
+	rateLimiter,
+} from "../v1/rate-limit.ts";
 import { readBulkResults } from "../v1/results.ts";
 import { readHealth } from "./health.ts";
 
@@ -223,12 +229,26 @@ export function createApp(
 					"Send an API key as 'Authorization: Bearer fmn_…'. Ask Foreman for a key",
 			});
 		}
-		const admitted = admit(holder.id);
+		// 600 a minute while the key's wallet has paid, else 60 (2026-11-26-paid-api-tier.md, decisions 1
+		// and 5). Keys made by hand have no wallet
+		const paidUntil = holder.wallet
+			? await readApiPaidUntil(deps.pool, holder.wallet)
+			: null;
+		const paid = paidUntil !== null && paidUntil.getTime() > now();
+		const admitted = admit(
+			holder.id,
+			paid ? PAID_CALLS_PER_MINUTE : CALLS_PER_MINUTE,
+		);
 		if (!admitted.ok) {
 			c.header("Retry-After", String(admitted.retryAfterSeconds));
+			const wait = `try again in ${admitted.retryAfterSeconds} s`;
 			return sendError(c, {
 				error: "too-many-calls",
-				detail: `At most 60 calls a minute per key; try again in ${admitted.retryAfterSeconds} s`,
+				detail: paid
+					? `At most ${PAID_CALLS_PER_MINUTE} calls a minute for this wallet's key; ${wait}`
+					: paidUntil
+						? `At most ${CALLS_PER_MINUTE} calls a minute: this wallet's ${PAID_CALLS_PER_MINUTE} a minute ended on ${formatDay(paidUntil)}. Pay again on Foreman's API page; ${wait}`
+						: `At most ${CALLS_PER_MINUTE} calls a minute per key; ${wait}`,
 			});
 		}
 		let request: ReturnType<typeof parseBulkRequest>;

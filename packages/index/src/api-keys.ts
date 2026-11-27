@@ -8,11 +8,11 @@ import type pg from "pg";
 export interface ApiKeyHolder {
 	id: number;
 	holder: string;
+	/** The wallet that signed for a key made on the API page; null for one made by hand. */
+	wallet: string | null;
 }
 
 export interface ApiKeyRecord extends ApiKeyHolder {
-	/** The wallet that signed for a key made on the API page; null for one made by hand. */
-	wallet: string | null;
 	createdAt: Date;
 	revoked: boolean;
 	/** Calls and circuits per UTC day, oldest first. */
@@ -93,7 +93,7 @@ export async function findApiKey(
 ): Promise<ApiKeyHolder | null> {
 	if (!key.startsWith("fmn_")) return null;
 	const { rows } = await pool.query<ApiKeyHolder>(
-		"select id, holder from api_keys where key_hash = $1 and revoked_at is null",
+		"select id, holder, wallet from api_keys where key_hash = $1 and revoked_at is null",
 		[hash(key)],
 	);
 	return rows[0] ?? null;
